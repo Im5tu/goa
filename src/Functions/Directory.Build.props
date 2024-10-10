@@ -1,6 +1,6 @@
 <Project>
     <Import Project="$([MSBuild]::GetPathOfFileAbove('Directory.Build.props', '$(MSBuildThisFileDirectory)../'))" Condition="Exists($([MSBuild]::GetPathOfFileAbove('Directory.Build.props', '$(MSBuildThisFileDirectory)../')))" />
-    
+
     <!-- Ensure that we always include a reference to the core project for things like extensions -->
     <ItemGroup>
         <ProjectReference Include="..\..\Goa.Core\Goa.Core.csproj" Condition="'$(IsGeneratorProject)' != 'true'" />
@@ -8,7 +8,7 @@
 
     <!-- Ensure that we pack the nuget automagic goodness that makes the dev experience a lot better -->
     <ItemGroup Condition="$(IsGeneratorProject) != 'true' AND !$(MSBuildProjectName.EndsWith('.Core'))">
-        <None Include="$(MSBuildThisFileDirectory)generator.props" Pack="true" PackagePath="build/" />
+        <None Include="$(MSBuildThisFileDirectory)Goa.props" Pack="true" PackagePath="build/" />
         <None Include="$(PackageId).props" Pack="true" PackagePath="build/" />
         <None Include="$(PackageId).targets" Pack="true" PackagePath="build/" Condition="Exists('$(PackageId).targets')" />
     </ItemGroup>

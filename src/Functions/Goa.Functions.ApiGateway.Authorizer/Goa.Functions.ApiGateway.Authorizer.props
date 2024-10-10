@@ -1,4 +1,4 @@
 <Project>
     <!-- Import the shared Goa settings for function apps -->
-    <Import Project="Goa.props" />
+    <Import Project="$(MSBuildThisFileDirectory)Goa.props" />
 </Project>

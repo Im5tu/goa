@@ -13,7 +13,7 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Functions", "Functions", "{51395382-E73F-4070-A65A-C2D5ADF9D5A8}"
 	ProjectSection(SolutionItems) = preProject
 		src\Functions\Directory.Build.props = src\Functions\Directory.Build.props
-		src\Functions\generator.props = src\Functions\generator.props
+		src\Functions\Goa.props = src\Functions\Goa.props
 	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Clients", "Clients", "{14163F55-30AB-44EF-899E-19790A93BB37}"

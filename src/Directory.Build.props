@@ -1,10 +1,12 @@
 <Project>
     <Import Project="$([MSBuild]::GetPathOfFileAbove('Directory.Build.props', '$(MSBuildThisFileDirectory)../'))" Condition="Exists($([MSBuild]::GetPathOfFileAbove('Directory.Build.props', '$(MSBuildThisFileDirectory)../')))" />
-    
-    <!-- We need to determine whether or not this is a enerator project -->
+
     <PropertyGroup>
+        <!-- We need to determine whether or not this is a enerator project -->
         <IsGeneratorProject Condition="'$(MSBuildProjectName)' == ''">false</IsGeneratorProject>
         <IsGeneratorProject Condition="'$(MSBuildProjectName.EndsWith(.Generator))'">true</IsGeneratorProject>
+        <!-- Skip versioning on debug builds for performance -->
+        <MinVerSkip Condition="'$(Configuration)' == 'Debug'">true</MinVerSkip>
     </PropertyGroup>
 
     <!-- Ensure that our packages are built properly for none generator projects-->
@@ -33,8 +35,12 @@
         <None Include="$(TargetDir)..\..\$(ProjectName).Generator\$(Configuration.ToLower())\$(ProjectName).Generator.dll" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" />
     </ItemGroup>
 
-    <!-- Ensure that we have reproducible builds and analyzers for all projects -->
+    <!-- Ensure that we have versioning, reproducible builds and analyzers for all projects -->
     <ItemGroup>
+        <PackageReference Include="MinVer" Version="6.0.0">
+            <PrivateAssets>all</PrivateAssets>
+            <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+        </PackageReference>
         <PackageReference Include="DotNet.ReproducibleBuilds" Version="1.2.25">
             <PrivateAssets>all</PrivateAssets>
             <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
@@ -44,5 +50,5 @@
             <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
         </PackageReference>
     </ItemGroup>
-    
+
 </Project>
