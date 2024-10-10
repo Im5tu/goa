@@ -1,0 +1,21 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+
+    <Target Name="ModifyNuspecToAddDependency" AfterTargets="GenerateNuspec">
+        <!-- Step 1: Add <dependencies> if it does not exist -->
+        <XmlPoke
+                XmlInputPath="$(IntermediateOutputPath)$(PackageId).$(PackageVersion).nuspec"
+                Query="/package/metadata"
+                Value="&lt;dependencies&gt;&lt;/dependencies&gt;"
+                Condition="!Exists('//dependencies')" />
+
+        <!-- Step 2: Add the new dependency inside the <dependencies> block -->
+        <XmlPoke
+                XmlInputPath="$(IntermediateOutputPath)$(PackageId).$(PackageVersion).nuspec"
+                Query="/package/metadata/dependencies"
+                Value="&lt;dependency id=&apos;Goa.Functions.ApiGateway.Generator&apos; version=&apos;1.0.0&apos; developmentDependency=&apos;true&apos; /&gt;&lt;/dependencies&gt;"
+        />
+
+    </Target>
+    
+</Project>

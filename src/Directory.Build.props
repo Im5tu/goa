@@ -1,0 +1,48 @@
+<Project>
+    <Import Project="$([MSBuild]::GetPathOfFileAbove('Directory.Build.props', '$(MSBuildThisFileDirectory)../'))" Condition="Exists($([MSBuild]::GetPathOfFileAbove('Directory.Build.props', '$(MSBuildThisFileDirectory)../')))" />
+    
+    <!-- We need to determine whether or not this is a enerator project -->
+    <PropertyGroup>
+        <IsGeneratorProject Condition="'$(MSBuildProjectName)' == ''">false</IsGeneratorProject>
+        <IsGeneratorProject Condition="'$(MSBuildProjectName.EndsWith(.Generator))'">true</IsGeneratorProject>
+    </PropertyGroup>
+
+    <!-- Ensure that our packages are built properly for none generator projects-->
+    <PropertyGroup Condition="$(IsGeneratorProject) != 'true'">
+        <IsPackable>true</IsPackable>
+        <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+        <UseArtifactsOutput>true</UseArtifactsOutput>
+        <EnablePackageValidation>true</EnablePackageValidation>
+        <DebugSymbols>true</DebugSymbols>
+        <DebugType>embedded</DebugType>
+    </PropertyGroup>
+
+    <!-- For generator projects we need to modify the settings in a different way -->
+    <PropertyGroup Condition="$(IsGeneratorProject) == 'true'">
+        <IsPackable>false</IsPackable>
+        <TargetFramework>netstandard2.0</TargetFramework>
+        <LangVersion>latest</LangVersion>
+        <OutputType>Library</OutputType>
+        <IsRoslynComponent>true</IsRoslynComponent>
+        <EnforceExtendedAnalyzerRules>true</EnforceExtendedAnalyzerRules>
+        <IncludeBuildOutput>false</IncludeBuildOutput>
+    </PropertyGroup>
+
+    <!-- If the package has a corresponding generator, ensure that's packaged properly as well -->
+    <ItemGroup Condition="Exists('../$(ProjectName).Generator/$(ProjectName).Generator.csproj')">
+        <None Include="$(TargetDir)..\..\$(ProjectName).Generator\$(Configuration.ToLower())\$(ProjectName).Generator.dll" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" />
+    </ItemGroup>
+
+    <!-- Ensure that we have reproducible builds and analyzers for all projects -->
+    <ItemGroup>
+        <PackageReference Include="DotNet.ReproducibleBuilds" Version="1.2.25">
+            <PrivateAssets>all</PrivateAssets>
+            <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+        </PackageReference>
+        <PackageReference Include="Microsoft.VisualStudio.Threading.Analyzers" Version="17.11.20">
+            <PrivateAssets>all</PrivateAssets>
+            <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+        </PackageReference>
+    </ItemGroup>
+    
+</Project>

@@ -1,0 +1,15 @@
+# Ensure consistent line endings across different OS environments
+* text=auto eol=lf
+
+# Treat common binary file formats as binary
+*.dll binary
+*.exe binary
+*.pdb binary
+*.png binary
+*.jpg binary
+*.gif binary
+*.ico binary
+*.zip binary
+*.tar binary
+*.gz binary
+*.7z binary
