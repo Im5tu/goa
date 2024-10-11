@@ -14,8 +14,14 @@
         <PublishSingleFile>true</PublishSingleFile>
         <!-- Ensure publishing is always in Release mode by default -->
         <PublishRelease>true</PublishRelease>
+        <!-- Invarient Globalization by default -->
+        <InvariantGlobalization>true</InvariantGlobalization>
         <!-- Embed any symbols for a truely single file build -->
         <DebugSymbols>true</DebugSymbols>
         <DebugType>embedded</DebugType>
+        <!-- Enable Concurrent Garbage Collection -->
+        <ConcurrentGarbageCollection>true</ConcurrentGarbageCollection>
+        <!-- Disable Server Garbage Collection, forcing Workstation GC, better for lower latency on lambda -->
+        <ServerGarbageCollection>false</ServerGarbageCollection>
     </PropertyGroup>
 </Project>
