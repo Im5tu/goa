@@ -10,18 +10,13 @@
         <!-- Bring the .NET runtime with us, trimming out and optimising anything we don't need -->
         <SelfContained>true</SelfContained>
         <PublishTrimmed>true</PublishTrimmed>
-        <PublishAot>true</PublishAot>
-        <PublishSingleFile>true</PublishSingleFile>
+        <PublishAot Condition="'$(OS)' == 'Linux'">true</PublishAot>
         <!-- Ensure publishing is always in Release mode by default -->
         <PublishRelease>true</PublishRelease>
         <!-- Invarient Globalization by default -->
         <InvariantGlobalization>true</InvariantGlobalization>
         <!-- Embed any symbols for a truely single file build -->
-        <DebugSymbols>true</DebugSymbols>
+        <DebugSymbols>false</DebugSymbols>
         <DebugType>embedded</DebugType>
-        <!-- Enable Concurrent Garbage Collection -->
-        <ConcurrentGarbageCollection>true</ConcurrentGarbageCollection>
-        <!-- Disable Server Garbage Collection, forcing Workstation GC, better for lower latency on lambda -->
-        <ServerGarbageCollection>false</ServerGarbageCollection>
     </PropertyGroup>
 </Project>

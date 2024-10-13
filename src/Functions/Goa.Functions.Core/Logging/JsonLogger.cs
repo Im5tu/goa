@@ -27,14 +27,14 @@ internal sealed class JsonLogger : ILogger
     private static readonly string LogLevelCritical = nameof(LogLevel.Critical);
 
     private readonly string _categoryName;
-    private readonly LogLevel _logLevel;
+    private readonly LogLevel _minimumLogLevel;
     private readonly IExternalScopeProvider _scopeProvider;
     private readonly JsonSerializerContext _jsonSerializerContext;
 
-    public JsonLogger(string categoryName, LogLevel logLevel, IExternalScopeProvider scopeProvider, JsonSerializerContext jsonSerializerContext)
+    public JsonLogger(string categoryName, LogLevel minimumLogLevel, IExternalScopeProvider scopeProvider, JsonSerializerContext jsonSerializerContext)
     {
         _categoryName = categoryName;
-        _logLevel = logLevel;
+        _minimumLogLevel = minimumLogLevel;
         _scopeProvider = scopeProvider;
         _jsonSerializerContext = jsonSerializerContext;
     }
@@ -73,7 +73,7 @@ internal sealed class JsonLogger : ILogger
         Console.WriteLine(JsonSerializer.Serialize(data, SerializedType, _jsonSerializerContext));
     }
 
-    public bool IsEnabled(LogLevel logLevel) => _logLevel >= logLevel;
+    public bool IsEnabled(LogLevel logLevel) => _minimumLogLevel <= logLevel;
 
     public IDisposable? BeginScope<TState>(TState state) where TState : notnull
     {

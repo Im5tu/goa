@@ -53,6 +53,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = ".sln", ".sln", "{64F3A82A-C
 		.gitignore = .gitignore
 		LICENSE = LICENSE
 		README.md = README.md
+		.docker\TestLambda.Dockerfile = .docker\TestLambda.Dockerfile
 	EndProjectSection
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Goa.Core", "src\Goa.Core\Goa.Core.csproj", "{34003827-D480-4E8F-AD46-E2FCB9B0DB9D}"

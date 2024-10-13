@@ -1,0 +1,47 @@
+# Ignore .NET build directories
+**/bin
+**/obj
+**/out
+
+# Ignore user-specific files
+*.csproj.user
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# Ignore local config files
+appsettings.Development.json
+appsettings.Local.json
+
+# Ignore Rider and VSCode files
+.idea/
+.vscode/
+.vscode/*
+.vscodeignore
+.rider/
+*.sln.iml
+
+# Ignore test result files
+TestResults/
+*.trx
+*.coverage
+*.testlog
+
+# Ignore NuGet package directories
+**/packages
+*.nupkg
+
+# Ignore logs
+logs/
+*.log
+
+# Ignore Dockerfile (if you don't want to copy it into the image)
+Dockerfile
+
+# Ignore .git files and folders
+.git
+.gitignore
+
+# Ignore dependencies cache
+.nuget/

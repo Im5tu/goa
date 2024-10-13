@@ -1,4 +1,5 @@
 ﻿using System.Diagnostics;
+using System.Text.Json.Serialization;
 using Goa.Functions.Core.Logging;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -47,27 +48,28 @@ public abstract class FunctionBase<TRequest, TResponse>
         logging
             .SetMinimumLevel(logLevel)
             .ClearProviders()
-            .AddProvider(new JsonLoggingProvider(logLevel));
+            .AddProvider(new JsonLoggingProvider(logLevel, ConfigureLoggingJsonSerializerContext()));
     }
+    protected virtual JsonSerializerContext ConfigureLoggingJsonSerializerContext() => LoggingSerializationContext.Default;
     private void ConfigureFunctionLogging(IServiceCollection services, IConfiguration configuration)
     {
-        // TODO :: document variable for logging
-        var level = Enum.TryParse<LogLevel>(configuration["Log:Level"], out var logLevel) ? logLevel : LogLevel.Information;
+        var level = Enum.TryParse<LogLevel>(Environment.GetEnvironmentVariable("GOA__LOG__LEVEL"), out var logLevel) ? logLevel : LogLevel.Information;
 
         services.AddLogging(logging => ConfigureFunctionLogging(logging, level, configuration));
     }
 
-    public async Task<TResponse> HandleAsync(TRequest request)
+    public async Task<TResponse> HandleAsync(TRequest request, CancellationToken cancellationToken)
     {
-        using var cancellationTokenSource = new CancellationTokenSource(_timeout);
+        cancellationToken.ThrowIfCancellationRequested();
+
         using var scope = _services.CreateScope();
         var stopwatch = Stopwatch.StartNew();
 
         try
         {
-            await OnRequestAsync(request, cancellationTokenSource.Token);
-            var response = await HandleRequestAsync(scope.ServiceProvider, request, cancellationTokenSource.Token);
-            await OnResponseAsync(request, response, cancellationTokenSource.Token);
+            await OnRequestAsync(request, cancellationToken);
+            var response = await HandleRequestAsync(scope.ServiceProvider, request, cancellationToken);
+            await OnResponseAsync(request, response, cancellationToken);
 
             return response;
         }

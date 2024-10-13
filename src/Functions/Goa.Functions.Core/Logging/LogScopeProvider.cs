@@ -4,7 +4,12 @@ namespace Goa.Functions.Core.Logging;
 
 internal sealed class LogScopeProvider : IExternalScopeProvider
 {
+    internal static LogScopeProvider Instance { get; } = new LogScopeProvider();
     private readonly AsyncLocal<Scope?> _currentScope = new();
+
+    private LogScopeProvider()
+    {
+    }
 
     public IDisposable Push(object? state)
     {
