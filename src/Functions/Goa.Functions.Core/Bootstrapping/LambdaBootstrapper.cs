@@ -40,10 +40,27 @@ public sealed class LambdaBootstrapper<TFunction, TRequest, TResponse>
                 continue;
             }
 
-            var targetTime = DateTimeOffset.FromUnixTimeMilliseconds(long.Parse(invocationResult.Data.DeadlineMs ?? "6000"));
-            TimeSpan delay = targetTime - DateTimeOffset.UtcNow;
-            using var cts = new CancellationTokenSource(delay.Add(TimeSpan.FromMilliseconds(-100)));
+            // Parsing the deadline with a safer fallback in case the DeadlineMs is null or not present
+            var targetTime = DateTimeOffset.FromUnixTimeMilliseconds(long.TryParse(invocationResult.Data.DeadlineMs, out var deadlineMsValue)
+                ? deadlineMsValue
+                : DateTimeOffset.UtcNow.AddMinutes(1).ToUnixTimeMilliseconds());
+
+            // Calculate the delay to the deadline
+            TimeSpan delay = targetTime > DateTimeOffset.UtcNow
+                ? targetTime - DateTimeOffset.UtcNow
+                : TimeSpan.Zero;
+
+            // Adjust the delay to trigger the cancellation slightly before the deadline, with a guard against negative values
+            var adjustedDelay = (delay.TotalMilliseconds > 100)
+                ? delay.Add(TimeSpan.FromMilliseconds(-100))
+                : TimeSpan.Zero;
+
+            // Create the CancellationTokenSource with the adjusted delay
+            using var cts = new CancellationTokenSource(adjustedDelay);
+
+            // Combine the external cancellation token with the deadline-based token
             using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, cts.Token);
+
 
             var invocation = invocationResult.Data;
 

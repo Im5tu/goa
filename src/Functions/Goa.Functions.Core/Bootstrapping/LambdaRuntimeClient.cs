@@ -32,8 +32,8 @@ internal sealed class LambdaRuntimeClient : ILambdaRuntimeClient
         {
             _logger.GetNextInvocationStart();
 
-            var request = new HttpRequestMessage(HttpMethod.Get, _nextInvocationUrl);
-            var response = await _httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
+            using var request = new HttpRequestMessage(HttpMethod.Get, _nextInvocationUrl);
+            using var response = await _httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
             if (!response.IsSuccessStatusCode)
             {
                 return Result<InvocationRequest>.Failure($"Failed to get next invocation. Status Code: {response.StatusCode}");
@@ -94,7 +94,7 @@ internal sealed class LambdaRuntimeClient : ILambdaRuntimeClient
             var content = new StringContent(JsonSerializer.Serialize(errorPayload, RuntimeClientSerializationContext.Default.InvocationErrorPayload), Encoding.UTF8, "application/json");
 
             _logger.ReportInvocationErrorStart();
-            var response = await _httpClient.PostAsync(url, content, cancellationToken);
+            using var response = await _httpClient.PostAsync(url, content, cancellationToken);
             _logger.ReportInvocationErrorComplete((int)response.StatusCode);
             if (!response.IsSuccessStatusCode)
             {
@@ -117,7 +117,7 @@ internal sealed class LambdaRuntimeClient : ILambdaRuntimeClient
             var content = new StringContent(JsonSerializer.Serialize(errorPayload, RuntimeClientSerializationContext.Default.InitializationErrorPayload), Encoding.UTF8, "application/json");
 
             _logger.ReportInitializationErrorStart();
-            var response = await _httpClient.PostAsync(_initializationErrorUrl, content, cancellationToken);
+            using var response = await _httpClient.PostAsync(_initializationErrorUrl, content, cancellationToken);
             _logger.ReportInitializationErrorComplete((int)response.StatusCode);
             if (!response.IsSuccessStatusCode)
             {
@@ -140,7 +140,11 @@ internal sealed class LambdaRuntimeClient : ILambdaRuntimeClient
             var url = string.Format(_invocationResponseUrlTemplate, awsRequestId);
 
             _logger.SendResponseStart();
-            var response = await _httpClient.PostAsync(url, content, cancellationToken);
+            using var request = new HttpRequestMessage(HttpMethod.Post, url)
+            {
+                Content = content
+            };
+            using var response = await _httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
             _logger.SendResponseComplete((int)response.StatusCode);
             if (!response.IsSuccessStatusCode)
             {
@@ -160,8 +164,13 @@ internal sealed class LambdaRuntimeClient : ILambdaRuntimeClient
     {
         UseCookies = false,
         UseProxy = false,
-        PooledConnectionLifetime = TimeSpan.FromMinutes(5),
         // HttpClient by default supports only ASCII characters in headers. Changing it to allow UTF8 characters.
-        RequestHeaderEncodingSelector = delegate { return Encoding.UTF8; }
-    });
+        RequestHeaderEncodingSelector = delegate { return Encoding.UTF8; },
+        ResponseHeaderEncodingSelector = delegate { return Encoding.UTF8; }
+    })
+    {
+        Timeout = string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("AWS_LAMBDA_RUNTIME_API")) ? TimeSpan.FromSeconds(2) : TimeSpan.FromSeconds(100),
+        DefaultRequestVersion = new Version(1, 1),
+        DefaultVersionPolicy = HttpVersionPolicy.RequestVersionExact
+    };
 }

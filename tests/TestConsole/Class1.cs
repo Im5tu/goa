@@ -26,13 +26,3 @@ public class Data
 {
     public string Payload { get; set; }
 }
-
-
-// Source Generated
-public class Entrypoint
-{
-    public static async Task Main(string[] args)
-    {
-        await new LambdaBootstrapper<Function, Data, Data>(CustomSerializationContext.Default).RunAsync();
-    }
-}
