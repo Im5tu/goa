@@ -24,5 +24,5 @@ public class Function : FunctionBase<Data, Data>
 
 public class Data
 {
-    public string Payload { get; set; }
+    public string? Payload { get; set; }
 }

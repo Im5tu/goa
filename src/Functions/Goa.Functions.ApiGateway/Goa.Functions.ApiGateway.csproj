@@ -1,6 +1,5 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
-
     <Target Name="ModifyNuspecToAddDependency" AfterTargets="GenerateNuspec">
         <!-- Step 1: Add <dependencies> if it does not exist -->
         <XmlPoke

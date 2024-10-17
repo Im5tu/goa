@@ -2,8 +2,8 @@
     <Import Project="$([MSBuild]::GetPathOfFileAbove('Directory.Build.props', '$(MSBuildThisFileDirectory)../'))" Condition="Exists($([MSBuild]::GetPathOfFileAbove('Directory.Build.props', '$(MSBuildThisFileDirectory)../')))" />
 
     <ItemGroup>
-        <!-- Ensure that we always include a reference to the core project for things like extensions -->
-        <ProjectReference Include="..\..\Goa.Core\Goa.Core.csproj" Condition="'$(IsGeneratorProject)' != 'true'" />
+        <!-- Ensure that we always include a reference core functions project -->
+        <ProjectReference Include="..\Goa.Functions.Core\Goa.Functions.Core.csproj" Condition="'$(IsGeneratorProject)' != 'true' AND !$(MSBuildProjectName.EndsWith('.Core'))" />
         <!-- Make the internals always visible to the test project -->
         <InternalsVisibleTo Include="$(MSBuildProjectName).Tests" />
     </ItemGroup>
