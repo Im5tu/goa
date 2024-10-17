@@ -1,5 +1,8 @@
 namespace Goa.Core;
 
+/// <summary>
+///     Handy string extensions for internal use
+/// </summary>
 public static class StringExtensions
 {
     /// <summary>

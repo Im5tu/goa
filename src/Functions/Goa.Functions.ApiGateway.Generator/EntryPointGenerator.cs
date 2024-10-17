@@ -26,14 +26,6 @@ public class EntryPointGenerator : IIncrementalGenerator
         DiagnosticSeverity.Error,
         isEnabledByDefault: true
     );
-    public static readonly DiagnosticDescriptor Message = new DiagnosticDescriptor(
-        id: "GOA000",
-        title: "Messsage",
-        messageFormat: "{0}",
-        category: "Usage",
-        DiagnosticSeverity.Warning,
-        isEnabledByDefault: true
-    );
 
     public void Initialize(IncrementalGeneratorInitializationContext context)
     {

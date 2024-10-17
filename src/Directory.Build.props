@@ -17,6 +17,7 @@
         <EnablePackageValidation>true</EnablePackageValidation>
         <DebugSymbols>true</DebugSymbols>
         <DebugType>embedded</DebugType>
+        <GenerateDocumentationFile>true</GenerateDocumentationFile>
     </PropertyGroup>
 
     <!-- For generator projects we need to modify the settings in a different way -->

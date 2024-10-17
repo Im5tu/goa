@@ -2,6 +2,9 @@
 
 namespace Goa.Core;
 
+/// <summary>
+///     Extends all ILogger instances with commonly used extension methods
+/// </summary>
 public static class LoggerExtensions
 {
     /// <summary>

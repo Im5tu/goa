@@ -7,6 +7,12 @@ using Microsoft.Extensions.Logging;
 
 namespace Goa.Functions.Core.Bootstrapping;
 
+/// <summary>
+///     Bootstraps a lambda function and handles the lifecycle with the AWS Lambda Runtime
+/// </summary>
+/// <typeparam name="TFunction">The function class that we want to instantiate</typeparam>
+/// <typeparam name="TRequest">The type of request that the function handles</typeparam>
+/// <typeparam name="TResponse">The type of response that the function returns</typeparam>
 public sealed class LambdaBootstrapper<TFunction, TRequest, TResponse>
     where TFunction : FunctionBase<TRequest, TResponse>, new()
 {
@@ -15,6 +21,12 @@ public sealed class LambdaBootstrapper<TFunction, TRequest, TResponse>
     private readonly ILambdaRuntimeClient _lambdaRuntimeClient;
     private readonly JsonTypeInfo<TRequest> _requestTypeInfo;
 
+    /// <summary>
+    ///     Constructs a new LambdaBootstrapper
+    /// </summary>
+    /// <param name="jsonSerializerContext">The JsonSerializerContext that knows about the request/response types</param>
+    /// <param name="responseSerializer">The response serializer that sends the responses back to the lambda runtime</param>
+    /// <param name="lambdaRuntimeClient">The implementation of the lambda runtime client</param>
     public LambdaBootstrapper(JsonSerializerContext jsonSerializerContext, IResponseSerializer<TResponse>? responseSerializer = null, ILambdaRuntimeClient? lambdaRuntimeClient = null)
     {
         var logLevel = Enum.TryParse<LogLevel>(Environment.GetEnvironmentVariable("GOA__LOG__LEVEL"), out var level) ? level : LogLevel.Information;
@@ -25,6 +37,10 @@ public sealed class LambdaBootstrapper<TFunction, TRequest, TResponse>
         _requestTypeInfo = jsonSerializerContext.GetTypeInfo(typeof(TRequest)) as JsonTypeInfo<TRequest> ?? throw new Exception("Cannot find serialization information for the type: " + typeof(TRequest).FullName);
     }
 
+    /// <summary>
+    ///     Runs the Lambda request loop
+    /// </summary>
+    /// <param name="cancellationToken">The cancellation token that stops the processing of a given Lambda invocation</param>
     public async Task RunAsync(CancellationToken cancellationToken = default)
     {
         _logger.BootstrapStarted();
