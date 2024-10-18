@@ -1,28 +1,14 @@
 ﻿using System.Text.Json.Serialization;
+using Goa.Functions.ApiGateway;
 using Goa.Functions.Core;
 using Goa.Functions.Core.Bootstrapping;
 
 namespace TestConsole;
 
-[JsonSourceGenerationOptions(WriteIndented = false,
-    UseStringEnumConverter = true,
-    DictionaryKeyPolicy = JsonKnownNamingPolicy.CamelCase,
-    PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase,
-    DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull)]
-[JsonSerializable(typeof(Data))]
-public partial class CustomSerializationContext : JsonSerializerContext
+public class Test : ProxyPayloadV2Function
 {
-}
-
-public class Function : FunctionBase<Data, Data>
-{
-    protected override Task<Data> HandleRequestAsync(IServiceProvider services, Data request, CancellationToken cancellationToken)
+    protected override Task<ProxyPayloadV2Response> HandleRequestAsync(IServiceProvider services, ProxyPayloadV2Request request, CancellationToken cancellationToken)
     {
-        return Task.FromResult(request);
+        throw new NotImplementedException();
     }
-}
-
-public class Data
-{
-    public string? Payload { get; set; }
 }

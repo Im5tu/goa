@@ -2,6 +2,9 @@
 
 namespace Goa.Functions.ApiGateway;
 
+/// <summary>
+///     System.Text.Json.Serialization.JsonSerializationContext for ProxyPayloadV2
+/// </summary>
 [JsonSourceGenerationOptions(WriteIndented = false,
     UseStringEnumConverter = true,
     DictionaryKeyPolicy = JsonKnownNamingPolicy.CamelCase,
@@ -9,4 +12,4 @@ namespace Goa.Functions.ApiGateway;
     DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull)]
 [JsonSerializable(typeof(ProxyPayloadV2Request))]
 [JsonSerializable(typeof(ProxyPayloadV2Response))]
-internal partial class ProxyPayloadV2SerializationContext : JsonSerializerContext;
+public partial class ProxyPayloadV2SerializationContext : JsonSerializerContext;

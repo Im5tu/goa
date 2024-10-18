@@ -34,7 +34,7 @@ public class EntryPointGenerator : IIncrementalGenerator
                 predicate: static (s, _) => s is ClassDeclarationSyntax,
                 transform: static (ctx, _) => ctx
             )
-            .WithTrackingName("EntryPointsDebug");
+            .WithTrackingName("EntryPoints");
 
         context.RegisterSourceOutput(entrypoints.Collect(), static (spc, source) => Execute(spc, source));
     }
@@ -48,13 +48,16 @@ public class EntryPointGenerator : IIncrementalGenerator
             if (semanticModel is null || semanticModel.BaseType is null)
                 continue;
 
-            if (!string.Equals("Goa.Functions.Core", semanticModel.BaseType.ContainingNamespace.ToDisplayString(), StringComparison.Ordinal))
-                continue;
-
-            if (!string.Equals("FunctionBase", semanticModel.BaseType.Name, StringComparison.OrdinalIgnoreCase))
-                continue;
-
-            viableSources.Add(source);
+            var sym = semanticModel;
+            do
+            {
+                if (!(string.Equals("Goa.Functions.Core", sym.ContainingNamespace?.ToDisplayString(), StringComparison.Ordinal) && string.Equals("FunctionBase", sym.Name, StringComparison.OrdinalIgnoreCase)))
+                {
+                    viableSources.Add(source);
+                    break;
+                }
+                sym = sym.BaseType;
+            } while (sym is not null);
         }
 
         if (viableSources.Count == 0)
@@ -81,25 +84,23 @@ public class EntryPointGenerator : IIncrementalGenerator
             if (current is null)
                 break;
 
-            if (!string.Equals("Goa.Functions.Core", current.ContainingNamespace.ToDisplayString(), StringComparison.Ordinal))
+            if (string.Equals("Goa.Functions.Core", current.ContainingNamespace.ToDisplayString(), StringComparison.Ordinal) && string.Equals("FunctionBase", current.Name, StringComparison.OrdinalIgnoreCase))
             {
-                current = current.BaseType;
-                continue;
+                genericArguments = current.TypeArguments;
+                break;
             }
 
-            if (!string.Equals("FunctionBase", current.Name, StringComparison.OrdinalIgnoreCase))
-            {
-                current = current.BaseType;
-                continue;
-            }
-
-            genericArguments = current.TypeArguments;
-            break;
+            current = current.BaseType;
         } while (current is not null);
 
         var builder = new StringBuilder();
         var requestModel = genericArguments[0];
         var responseModel = genericArguments[1];
+        var serializationType = "Goa.Functions.ApiGateway.ProxyPayloadV2SerializationContext";
+        if (requestModel.Name.StartsWith("ProxyPayloadV1"))
+        {
+            serializationType = "Goa.Functions.ApiGateway.ProxyPayloadV1SerializationContext";
+        }
 
         builder.AppendLine("using System;");
         builder.AppendLine("using Goa.Functions.Core;");
@@ -111,7 +112,7 @@ public class EntryPointGenerator : IIncrementalGenerator
         builder.AppendLine("{");
         builder.AppendLine("    public static async Task Main()");
         builder.AppendLine("    {");
-        builder.AppendLine($"         await new LambdaBootstrapper<{model.ContainingNamespace.ToDisplayString()}.{model.Name}, {requestModel.ContainingNamespace.ToDisplayString()}.{requestModel.Name}, {responseModel.ContainingNamespace.ToDisplayString()}.{responseModel.Name}>(CustomSerializationContext.Default).RunAsync();");
+        builder.AppendLine($"         await new LambdaBootstrapper<{model.ContainingNamespace.ToDisplayString()}.{model.Name}, {requestModel.ContainingNamespace.ToDisplayString()}.{requestModel.Name}, {responseModel.ContainingNamespace.ToDisplayString()}.{responseModel.Name}>({serializationType}.Default).RunAsync();");
         builder.AppendLine("    }");
         builder.AppendLine("}");
         builder.AppendLine();
