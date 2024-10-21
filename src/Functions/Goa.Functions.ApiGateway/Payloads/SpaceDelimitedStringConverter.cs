@@ -1,7 +1,7 @@
 ﻿using System.Text.Json;
 using System.Text.Json.Serialization;
 
-namespace Goa.Functions.ApiGateway;
+namespace Goa.Functions.ApiGateway.Payloads;
 
 /// <summary>
 ///     Custom JSON converter to handle the deserialization and serialization of a space-delimited string into a list of strings.

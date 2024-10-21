@@ -1,4 +1,4 @@
-﻿namespace Goa.Functions.ApiGateway;
+﻿namespace Goa.Functions.ApiGateway.Payloads;
 
 /// <summary>
 ///     Represents the validity period of a client certificate, specifying the time frame during which the certificate is valid.

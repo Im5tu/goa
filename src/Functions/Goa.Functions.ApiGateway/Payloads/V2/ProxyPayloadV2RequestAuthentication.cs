@@ -1,4 +1,4 @@
-﻿namespace Goa.Functions.ApiGateway;
+﻿namespace Goa.Functions.ApiGateway.Payloads.V2;
 
 /// <summary>
 /// Represents the authentication details in an AWS API Gateway Proxy (V2) request, including the client certificate used for the request.

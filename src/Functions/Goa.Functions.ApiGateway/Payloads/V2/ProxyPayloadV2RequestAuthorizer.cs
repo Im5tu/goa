@@ -1,4 +1,4 @@
-﻿namespace Goa.Functions.ApiGateway;
+﻿namespace Goa.Functions.ApiGateway.Payloads.V2;
 
 /// <summary>
 ///     Represents the authorizer information for an AWS API Gateway Proxy (V2) request, including JWT, Lambda, and IAM details used for authorization.

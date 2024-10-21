@@ -1,4 +1,4 @@
-﻿namespace Goa.Functions.ApiGateway;
+﻿namespace Goa.Functions.ApiGateway.Payloads.V2;
 
 /// <summary>
 ///     Represents the HTTP request details for an AWS API Gateway Proxy (V2) request, including the method, path, protocol, source IP, and user agent.

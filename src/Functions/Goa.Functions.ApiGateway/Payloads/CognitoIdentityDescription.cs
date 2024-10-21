@@ -1,4 +1,4 @@
-﻿namespace Goa.Functions.ApiGateway;
+﻿namespace Goa.Functions.ApiGateway.Payloads;
 
 /// <summary>
 ///     Represents the Cognito identity details associated with a request, including authentication methods and identity information.

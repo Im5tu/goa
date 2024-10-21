@@ -1,6 +1,6 @@
 ﻿using System.Text.Json.Serialization;
 
-namespace Goa.Functions.ApiGateway;
+namespace Goa.Functions.ApiGateway.Payloads;
 
 /// <summary>
 /// Represents the custom authorizer context, including claims and scopes provided by the Lambda authorizer.
