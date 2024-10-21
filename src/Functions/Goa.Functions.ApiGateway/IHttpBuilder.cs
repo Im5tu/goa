@@ -1,0 +1,24 @@
+﻿namespace Goa.Functions.ApiGateway;
+
+#pragma warning disable CS1591, CS3021
+public interface IHttpBuilder
+{
+    IEnumerable<Func<HttpRequestContext, Task, CancellationToken, Task>> CreatePipeline();
+
+    IHttpBuilder MapGet(string path, Action<IPipelineBuilder> builder);
+    IHttpBuilder MapGet(string path, Func<HttpRequestContext, Task, CancellationToken, Task> builder) => MapGet(path, pipeline => pipeline.Use(builder));
+    IHttpBuilder MapPost(string path, Action<IPipelineBuilder> builder);
+    IHttpBuilder MapPost(string path, Func<HttpRequestContext, Task, CancellationToken, Task> builder) => MapPost(path, pipeline => pipeline.Use(builder));
+    IHttpBuilder MapPut(string path, Action<IPipelineBuilder> builder);
+    IHttpBuilder MapPut(string path, Func<HttpRequestContext, Task, CancellationToken, Task> builder) => MapPut(path, pipeline => pipeline.Use(builder));
+    IHttpBuilder MapPatch(string path, Action<IPipelineBuilder> builder);
+    IHttpBuilder MapPatch(string path, Func<HttpRequestContext, Task, CancellationToken, Task> builder) => MapPatch(path, pipeline => pipeline.Use(builder));
+    IHttpBuilder MapDelete(string path, Action<IPipelineBuilder> builder);
+    IHttpBuilder MapDelete(string path, Func<HttpRequestContext, Task, CancellationToken, Task> builder) => MapDelete(path, pipeline => pipeline.Use(builder));
+    IHttpBuilder MapOptions(string path, Action<IPipelineBuilder> builder);
+    IHttpBuilder MapOptions(string path, Func<HttpRequestContext, Task, CancellationToken, Task> builder) => MapOptions(path, pipeline => pipeline.Use(builder));
+    IHttpBuilder MapHead(string path, Action<IPipelineBuilder> builder);
+    IHttpBuilder MapHead(string path, Func<HttpRequestContext, Task, CancellationToken, Task> builder) => MapHead(path, pipeline => pipeline.Use(builder));
+
+    IHttpBuilder UseMiddleware(Action<IPipelineBuilder> builder);
+}

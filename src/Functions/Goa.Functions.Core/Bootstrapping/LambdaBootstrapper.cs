@@ -14,8 +14,9 @@ namespace Goa.Functions.Core.Bootstrapping;
 /// <typeparam name="TRequest">The type of request that the function handles</typeparam>
 /// <typeparam name="TResponse">The type of response that the function returns</typeparam>
 public sealed class LambdaBootstrapper<TFunction, TRequest, TResponse>
-    where TFunction : FunctionBase<TRequest, TResponse>, new()
+    where TFunction : ILambdaFunction<TRequest, TResponse>
 {
+    private readonly Func<TFunction> _functionFactory;
     private readonly IResponseSerializer<TResponse> _responseSerializer;
     private readonly ILogger _logger;
     private readonly ILambdaRuntimeClient _lambdaRuntimeClient;
@@ -25,9 +26,10 @@ public sealed class LambdaBootstrapper<TFunction, TRequest, TResponse>
     ///     Constructs a new LambdaBootstrapper
     /// </summary>
     /// <param name="jsonSerializerContext">The JsonSerializerContext that knows about the request/response types</param>
+    /// <param name="functionFactory">The factory that creates the function</param>
     /// <param name="responseSerializer">The response serializer that sends the responses back to the lambda runtime</param>
     /// <param name="lambdaRuntimeClient">The implementation of the lambda runtime client</param>
-    public LambdaBootstrapper(JsonSerializerContext jsonSerializerContext, IResponseSerializer<TResponse>? responseSerializer = null, ILambdaRuntimeClient? lambdaRuntimeClient = null)
+    public LambdaBootstrapper(JsonSerializerContext jsonSerializerContext, Func<TFunction> functionFactory, IResponseSerializer<TResponse>? responseSerializer = null, ILambdaRuntimeClient? lambdaRuntimeClient = null)
     {
         var logLevel = Enum.TryParse<LogLevel>(Environment.GetEnvironmentVariable("GOA__LOG__LEVEL"), out var level) ? level : LogLevel.Information;
 
@@ -35,6 +37,7 @@ public sealed class LambdaBootstrapper<TFunction, TRequest, TResponse>
         _lambdaRuntimeClient = lambdaRuntimeClient ?? new LambdaRuntimeClient(logLevel);
         _responseSerializer = responseSerializer ?? new JsonResponseSerializer<TResponse>(jsonSerializerContext);
         _requestTypeInfo = jsonSerializerContext.GetTypeInfo(typeof(TRequest)) as JsonTypeInfo<TRequest> ?? throw new Exception("Cannot find serialization information for the type: " + typeof(TRequest).FullName);
+        _functionFactory = functionFactory;
     }
 
     /// <summary>
@@ -97,7 +100,7 @@ public sealed class LambdaBootstrapper<TFunction, TRequest, TResponse>
                 }
 
                 // Process the event and get the response
-                var response = await func.HandleAsync(request, linkedCts.Token);
+                var response = await func.InvokeAsync(request, linkedCts.Token);
 
                 // Serialize and send the response back to the runtime
                 var responsePayload = _responseSerializer.Serialize(response);
@@ -116,7 +119,7 @@ public sealed class LambdaBootstrapper<TFunction, TRequest, TResponse>
     {
         try
         {
-            return new TFunction();
+            return _functionFactory();
         }
         catch (Exception e)
         {

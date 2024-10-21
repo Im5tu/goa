@@ -1,4 +1,10 @@
 <Project>
     <!-- Import the shared Goa settings for function apps -->
-    <Import Project="$(MSBuildThisFileDirectory)Goa.props" />
+    <Import Project="$(MSBuildThisFileDirectory)Goa.props" Condition="Exists('$(MSBuildThisFileDirectory)Goa.props')" />
+
+    <ItemGroup>
+        <Using Include="Goa" />
+        <Using Include="Goa.Functions.ApiGateway" />
+        <Using Include="Goa.Generated" />
+    </ItemGroup>
 </Project>

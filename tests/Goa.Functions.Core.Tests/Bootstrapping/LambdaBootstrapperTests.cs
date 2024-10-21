@@ -23,7 +23,7 @@ public class LambdaBootstrapperTests
         lambdaRuntime.Setup(x => x.ReportInitializationErrorAsync(It.IsAny<InitializationErrorPayload>(), It.IsAny<CancellationToken>()))
             .Callback((InitializationErrorPayload _, CancellationToken _) => { hasHandledInitializationError = true; })
             .ReturnsAsync(Result.Success());
-        var sut = new LambdaBootstrapper<InitializationErrorFunction, Data, Data>(DataSerializationContext.Default, lambdaRuntimeClient: lambdaRuntime.Object);
+        var sut = new LambdaBootstrapper<InitializationErrorFunction, Data, Data>(DataSerializationContext.Default, () => new(), lambdaRuntimeClient: lambdaRuntime.Object);
 
         await Assert.ThrowsAsync(() => sut.RunAsync(cts.Token));
 
@@ -42,7 +42,7 @@ public class LambdaBootstrapperTests
                 cts.Cancel();
             })
             .ReturnsAsync(Result<InvocationRequest>.Failure("Test"));
-        var sut = new LambdaBootstrapper<SafeFunction, Data, Data>(DataSerializationContext.Default, lambdaRuntimeClient: lambdaRuntime.Object);
+        var sut = new LambdaBootstrapper<SafeFunction, Data, Data>(DataSerializationContext.Default, () => new(), lambdaRuntimeClient: lambdaRuntime.Object);
 
         await sut.RunAsync(cts.Token);
 
@@ -63,7 +63,7 @@ public class LambdaBootstrapperTests
                 cts.Cancel();
             })
             .Returns(Task.FromResult(Result.Success()));
-        var sut = new LambdaBootstrapper<SafeFunction, Data, Data>(DataSerializationContext.Default, lambdaRuntimeClient: lambdaRuntime.Object);
+        var sut = new LambdaBootstrapper<SafeFunction, Data, Data>(DataSerializationContext.Default, () => new(), lambdaRuntimeClient: lambdaRuntime.Object);
 
         await sut.RunAsync(cts.Token);
 
@@ -85,7 +85,7 @@ public class LambdaBootstrapperTests
                 cts.Cancel();
             })
             .Returns(Task.FromResult(Result.Success()));
-        var sut = new LambdaBootstrapper<InvocationErrorFunction, Data, Data>(DataSerializationContext.Default, lambdaRuntimeClient: lambdaRuntime.Object);
+        var sut = new LambdaBootstrapper<InvocationErrorFunction, Data, Data>(DataSerializationContext.Default, () => new(), lambdaRuntimeClient: lambdaRuntime.Object);
 
         await sut.RunAsync(cts.Token);
 
@@ -120,7 +120,7 @@ public class LambdaBootstrapperTests
             });
         lambdaRuntime.Setup(x => x.SendResponseAsync(It.IsAny<string>(), It.IsAny<HttpContent>(), It.IsAny<CancellationToken>()))
             .Returns(Task.FromResult(Result.Success()));
-        var sut = new LambdaBootstrapper<LoopInvocationFunction, Data, Data>(DataSerializationContext.Default, lambdaRuntimeClient: lambdaRuntime.Object);
+        var sut = new LambdaBootstrapper<LoopInvocationFunction, Data, Data>(DataSerializationContext.Default, () => new(), lambdaRuntimeClient: lambdaRuntime.Object);
 
         await sut.RunAsync(cts.Token);
 
@@ -129,38 +129,38 @@ public class LambdaBootstrapperTests
     }
 
     // Test Functions
-    public class SafeFunction : FunctionBase<Data, Data>
+    public class SafeFunction : ILambdaFunction<Data, Data>
     {
-        protected override Task<Data> HandleRequestAsync(IServiceProvider services, Data request, CancellationToken cancellationToken)
+        public Task<Data> InvokeAsync(Data request, CancellationToken cancellationToken)
         {
             return Task.FromResult(request);
         }
     }
 
-    public class InitializationErrorFunction : FunctionBase<Data, Data>
+    public class InitializationErrorFunction : ILambdaFunction<Data, Data>
     {
         public InitializationErrorFunction()
         {
             throw new Exception("Test Initialization Error");
         }
 
-        protected override Task<Data> HandleRequestAsync(IServiceProvider services, Data request, CancellationToken cancellationToken)
+        public Task<Data> InvokeAsync(Data request, CancellationToken cancellationToken)
         {
             return Task.FromResult(request);
         }
     }
 
-    public class InvocationErrorFunction : FunctionBase<Data, Data>
+    public class InvocationErrorFunction : ILambdaFunction<Data, Data>
     {
-        protected override Task<Data> HandleRequestAsync(IServiceProvider services, Data request, CancellationToken cancellationToken)
+        public Task<Data> InvokeAsync(Data request, CancellationToken cancellationToken)
         {
             throw new Exception("Test Initialization Error");
         }
     }
 
-    public class LoopInvocationFunction : FunctionBase<Data, Data>
+    public class LoopInvocationFunction : ILambdaFunction<Data, Data>
     {
-        protected override Task<Data> HandleRequestAsync(IServiceProvider services, Data request, CancellationToken cancellationToken)
+        public Task<Data> InvokeAsync(Data request, CancellationToken cancellationToken)
         {
             if (request.name.Equals("test"))
                 return Task.FromResult(request);

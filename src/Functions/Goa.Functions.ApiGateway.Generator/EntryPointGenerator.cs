@@ -3,25 +3,43 @@ using System.Text;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
-using Microsoft.CodeAnalysis.Text;
 
 namespace Goa.Functions.ApiGateway.Generator;
 
 [Generator]
 public class EntryPointGenerator : IIncrementalGenerator
 {
-    public static readonly DiagnosticDescriptor NoEntrypointFound = new DiagnosticDescriptor(
-        id: "GOA001",
-        title: "No Entrypoint Found",
-        messageFormat: "You need to have a function class inheriting from FunctionBase to use this generator",
+    private static readonly DiagnosticDescriptor NoHttpActionInTopLevelStatements = new DiagnosticDescriptor(
+        id: "HTTP001",
+        title: "No Http Action Found in Top-Level Statements",
+        messageFormat: "No usage of 'Http.UseRestApi', 'Http.UseHttpV1', or 'Http.UseHttpV2' was found in top-level statements",
         category: "Usage",
         DiagnosticSeverity.Error,
         isEnabledByDefault: true
     );
-    public static readonly DiagnosticDescriptor TooManyEntrypoints = new DiagnosticDescriptor(
-        id: "GOA002",
-        title: "Too Many Entrypoints",
-        messageFormat: "You have too classes inheriting from FunctionBase. Limit to 1 per project. Discovered: {0}.",
+
+    private static readonly DiagnosticDescriptor MultipleHttpActionsInTopLevelStatements = new DiagnosticDescriptor(
+        id: "HTTP002",
+        title: "Multiple Http Actions Found in Top-Level Statements",
+        messageFormat: "Multiple usages of 'Http.UseRestApi', 'Http.UseHttpV1', or 'Http.UseHttpV2' were found in top-level statements. Only one is allowed.",
+        category: "Usage",
+        DiagnosticSeverity.Error,
+        isEnabledByDefault: true
+    );
+
+    private static readonly DiagnosticDescriptor UnrecognisedHttpAction = new DiagnosticDescriptor(
+        id: "HTTP003",
+        title: "HttpActionNotFound",
+        messageFormat: "Expected one of: 'Http.UseRestApi', 'Http.UseHttpV1', or 'Http.UseHttpV2'. Found: '{0}'.",
+        category: "Usage",
+        DiagnosticSeverity.Error,
+        isEnabledByDefault: true
+    );
+
+    private static readonly DiagnosticDescriptor LambdaRunAsyncNotFound = new DiagnosticDescriptor(
+        id: "HTTP004",
+        title: "No Lambda.RunAsync Invocation Found",
+        messageFormat: "No valid 'Lambda.RunAsync' invocation was found with a valid 'IHttpBuilder' instance",
         category: "Usage",
         DiagnosticSeverity.Error,
         isEnabledByDefault: true
@@ -29,94 +47,196 @@ public class EntryPointGenerator : IIncrementalGenerator
 
     public void Initialize(IncrementalGeneratorInitializationContext context)
     {
-        var entrypoints = context.SyntaxProvider
+        var httpActions = context.SyntaxProvider
             .CreateSyntaxProvider(
-                predicate: static (s, _) => s is ClassDeclarationSyntax,
-                transform: static (ctx, _) => ctx
-            )
-            .WithTrackingName("EntryPoints");
+                predicate: static (s, _) => s is GlobalStatementSyntax,
+                transform: static (ctx, _) => ProcessHttpStatements(ctx, ctx.SemanticModel))
+            .Where(result => result.action != null)
+            .WithTrackingName("HttpActions")
+            .Collect();
+        context.RegisterSourceOutput(httpActions, GenerateCode);
 
-        context.RegisterSourceOutput(entrypoints.Collect(), static (spc, source) => Execute(spc, source));
+        var lambdaActions = context.SyntaxProvider
+            .CreateSyntaxProvider(
+                predicate: static (s, _) => s is InvocationExpressionSyntax,
+                transform: static (ctx, _) => ProcessLambdaStatements(ctx, ctx.SemanticModel))
+            .Where(result => result.HasValue)
+            .WithTrackingName("LambdaStatements")
+            .Collect();
+        context.RegisterSourceOutput(lambdaActions, GenerateLambdaDiagnostics);
     }
 
-    private static void Execute(SourceProductionContext spc, ImmutableArray<GeneratorSyntaxContext> sources)
+    private static (string? action, Location location) ProcessHttpStatements(GeneratorSyntaxContext context, SemanticModel semanticModel)
     {
-        var viableSources = new List<GeneratorSyntaxContext>();
-        foreach (var source in sources)
-        {
-            var semanticModel = source.SemanticModel.GetDeclaredSymbol(source.Node) as INamedTypeSymbol;
-            if (semanticModel is null || semanticModel.BaseType is null)
-                continue;
+        return FindHttpActionInVariableOrExpression(context, semanticModel);
+    }
 
-            var sym = semanticModel;
-            do
+    private static bool? ProcessLambdaStatements(GeneratorSyntaxContext context, SemanticModel semanticModel)
+    {
+        var invocation = (InvocationExpressionSyntax)context.Node;
+        return IsLambdaRunWithHttpBuilder(invocation, semanticModel);
+    }
+
+    private static (string? action, Location location) FindHttpActionInVariableOrExpression(GeneratorSyntaxContext context, SemanticModel semanticModel)
+    {
+        // Find all variable declarations and method invocation expressions
+        var allInvocations = context.Node.DescendantNodes().OfType<InvocationExpressionSyntax>();
+
+        foreach (var invocation in allInvocations)
+        {
+            // Traverse the method chain for each invocation to find the Http action
+            var httpAction = TraverseMethodChainForHttp(invocation, semanticModel);
+            if (httpAction != null)
             {
-                if (!(string.Equals("Goa.Functions.Core", sym.ContainingNamespace?.ToDisplayString(), StringComparison.Ordinal) && string.Equals("FunctionBase", sym.Name, StringComparison.OrdinalIgnoreCase)))
-                {
-                    viableSources.Add(source);
-                    break;
-                }
-                sym = sym.BaseType;
-            } while (sym is not null);
+                return (httpAction, invocation.GetLocation());
+            }
         }
 
-        if (viableSources.Count == 0)
+        return (null, Location.None);
+    }
+
+    // Traverse the method chain and return the first Http action (e.g., UseRestApi, UseHttpV1, UseHttpV2)
+    private static string? TraverseMethodChainForHttp(InvocationExpressionSyntax invocation, SemanticModel semanticModel)
+    {
+        var currentInvocation = invocation;
+
+        while (currentInvocation != null)
         {
-            // report diagnostic that no entrypoint is found
-            spc.ReportDiagnostic(Diagnostic.Create(NoEntrypointFound, Location.None));
-            return;
-        }
-
-        if (viableSources.Count > 1)
-        {
-            spc.ReportDiagnostic(Diagnostic.Create(TooManyEntrypoints, Location.None, string.Join(",", sources)));
-            return;
-        }
-
-        var src = viableSources[0]!;
-        var model = (INamedTypeSymbol)src.SemanticModel.GetDeclaredSymbol(src.Node)!;
-        var current = model.BaseType;
-        ImmutableArray<ITypeSymbol> genericArguments = ImmutableArray<ITypeSymbol>.Empty;
-
-        // Find the function base
-        do
-        {
-            if (current is null)
-                break;
-
-            if (string.Equals("Goa.Functions.Core", current.ContainingNamespace.ToDisplayString(), StringComparison.Ordinal) && string.Equals("FunctionBase", current.Name, StringComparison.OrdinalIgnoreCase))
+            if (currentInvocation.Expression is MemberAccessExpressionSyntax memberAccess &&
+                memberAccess.Expression.ToString() == "Http")
             {
-                genericArguments = current.TypeArguments;
-                break;
+                // Ensure the method is called on Http (e.g., Http.UseRestApi)
+                return memberAccess.Name.Identifier.Text;
             }
 
-            current = current.BaseType;
-        } while (current is not null);
-
-        var builder = new StringBuilder();
-        var requestModel = genericArguments[0];
-        var responseModel = genericArguments[1];
-        var serializationType = "Goa.Functions.ApiGateway.ProxyPayloadV2SerializationContext";
-        if (requestModel.Name.StartsWith("ProxyPayloadV1"))
-        {
-            serializationType = "Goa.Functions.ApiGateway.ProxyPayloadV1SerializationContext";
+            // Traverse the chain to the next method invocation
+            if (currentInvocation.Expression is InvocationExpressionSyntax nextInvocation)
+            {
+                currentInvocation = nextInvocation;
+            }
+            else
+            {
+                break;
+            }
         }
 
+        return null;
+    }
+
+    private static bool? IsLambdaRunWithHttpBuilder(InvocationExpressionSyntax invocation, SemanticModel semanticModel)
+    {
+        if (!IsLambdaRun(invocation))
+            return null;
+
+        // Check the first argument passed to Lambda.RunAsync
+        var firstArgument = invocation.ArgumentList.Arguments.FirstOrDefault()?.Expression;
+        if (firstArgument != null)
+        {
+            // If the first argument is a variable or an invocation expression, analyze it
+            var typeInfo = semanticModel.GetTypeInfo(firstArgument);
+            if (typeInfo.Type != null && ImplementsIHttpBuilder(typeInfo.Type))
+            {
+                var info = typeInfo.Type ?? throw new Exception("No type found");
+
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static bool IsLambdaRun(InvocationExpressionSyntax invocation)
+    {
+        return invocation.Expression is MemberAccessExpressionSyntax memberAccess &&
+               memberAccess.Name.Identifier.Text == "RunAsync" &&
+               memberAccess.Expression.ToString() == "Lambda";
+    }
+
+    private static bool ImplementsIHttpBuilder(ITypeSymbol typeSymbol)
+    {
+        var expected = "Goa.Functions.ApiGateway.IHttpBuilder";
+        return typeSymbol.ToDisplayString() == expected || typeSymbol.AllInterfaces.Any(i => i.ToDisplayString() == expected);
+    }
+
+    private static void GenerateCode(SourceProductionContext context, ImmutableArray<(string? action, Location location)> httpActions)
+    {
+        var httpActionList = httpActions.Where(x => x.action != null).ToList();
+
+        // Ensure that the user has implemented in the way that we want them to implement
+        if (httpActionList.Count == 0)
+        {
+            context.ReportDiagnostic(Diagnostic.Create(NoHttpActionInTopLevelStatements, Location.None));
+            return;
+        }
+
+        if (httpActionList.Count > 1)
+        {
+            context.ReportDiagnostic(Diagnostic.Create(MultipleHttpActionsInTopLevelStatements, Location.None));
+            return;
+        }
+
+        // Use the correct request/response/serializationContext depending on the action
+        var httpAction = httpActionList.First();
+        var requestModel = "Goa.Functions.ApiGateway.Payloads.V2.ProxyPayloadV2Request";
+        var responseModel = "Goa.Functions.ApiGateway.Payloads.V2.ProxyPayloadV2Response";
+        var serializationContext = "Goa.Functions.ApiGateway.Payloads.V2.ProxyPayloadV2SerializationContext";
+
+        switch (httpAction.action)
+        {
+            case "UseRestApi":
+            case "UseHttpV1":
+                requestModel = "Goa.Functions.ApiGateway.Payloads.V1.ProxyPayloadV1Request";
+                responseModel = "Goa.Functions.ApiGateway.Payloads.V1.ProxyPayloadV1Response";
+                serializationContext = "Goa.Functions.ApiGateway.Payloads.V1.ProxyPayloadV1SerializationContext";
+                break;
+            case "UseHttpV2":
+                break; // This should be the default, so okay to no-op this
+            default:
+                context.ReportDiagnostic(Diagnostic.Create(UnrecognisedHttpAction, httpAction.location, httpAction.action ?? ""));
+                return;
+        }
+
+        var builder = new StringBuilder();
         builder.AppendLine("using System;");
+        builder.AppendLine("using System.Linq;");
+        builder.AppendLine("using System.Threading.Tasks;");
         builder.AppendLine("using Goa.Functions.Core;");
         builder.AppendLine("using Goa.Functions.Core.Bootstrapping;");
         builder.AppendLine();
-        builder.AppendLine($"namespace {model.ContainingNamespace.ToDisplayString()};");
+        builder.AppendLine($"namespace Goa.Generated;");
         builder.AppendLine();
-        builder.AppendLine("public class __Entrypoint");
+        builder.AppendLine("// Function handler");
+        builder.AppendLine($"internal sealed class Function : ILambdaFunction<{requestModel},{responseModel}>");
         builder.AppendLine("{");
-        builder.AppendLine("    public static async Task Main()");
+        builder.AppendLine($"    private readonly List<Func<HttpRequestContext, Task, CancellationToken, Task>> _middleware;");
+        builder.AppendLine($"    internal Function(List<Func<HttpRequestContext, Task, CancellationToken, Task>> middleware)");
         builder.AppendLine("    {");
-        builder.AppendLine($"         await new LambdaBootstrapper<{model.ContainingNamespace.ToDisplayString()}.{model.Name}, {requestModel.ContainingNamespace.ToDisplayString()}.{requestModel.Name}, {responseModel.ContainingNamespace.ToDisplayString()}.{responseModel.Name}>({serializationType}.Default).RunAsync();");
+        builder.AppendLine("        _middleware = middleware;");
+        builder.AppendLine("    }");
+        builder.AppendLine($"    public async Task<{responseModel}> InvokeAsync({requestModel} request, CancellationToken cancellationToken)");
+        builder.AppendLine("    {");
+        builder.AppendLine("        await Task.Delay(1);");
+        builder.AppendLine("        return default;");
         builder.AppendLine("    }");
         builder.AppendLine("}");
-        builder.AppendLine();
 
-        spc.AddSource($"__Entrypoint.g.cs", SourceText.From(builder.ToString(), Encoding.UTF8));
+        builder.AppendLine();
+        builder.AppendLine("// Lambda entrypoint");
+        builder.AppendLine("public static class Lambda");
+        builder.AppendLine("{");
+        builder.AppendLine($"    public static Task RunAsync(IHttpBuilder httpBuilder, CancellationToken cancellationToken = default) => new Goa.Functions.Core.Bootstrapping.LambdaBootstrapper<Goa.Generated.Function, {requestModel}, {responseModel}>({serializationContext}.Default, () => new Goa.Generated.Function(httpBuilder.CreatePipeline().ToList())).RunAsync(cancellationToken);");
+        builder.AppendLine("}");
+
+        context.AddSource("Function.g.cs", builder.ToString());
+    }
+
+    private static void GenerateLambdaDiagnostics(SourceProductionContext context, ImmutableArray<bool?> lambdaResults)
+    {
+        // Emit diagnostics if Lambda.RunAsync wasn't found with IHttpBuilder
+        if (!lambdaResults.Any(r => r == true))
+        {
+            context.ReportDiagnostic(Diagnostic.Create(LambdaRunAsyncNotFound, Location.None));
+        }
     }
 }
+

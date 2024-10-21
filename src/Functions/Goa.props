@@ -10,7 +10,7 @@
         <!-- Bring the .NET runtime with us, trimming out and optimising anything we don't need -->
         <SelfContained>true</SelfContained>
         <PublishTrimmed>true</PublishTrimmed>
-        <PublishAot Condition="'$(OS)' == 'Linux'">true</PublishAot>
+        <PublishAot>true</PublishAot>
         <!-- Ensure publishing is always in Release mode by default -->
         <PublishRelease>true</PublishRelease>
         <!-- Invarient Globalization by default -->

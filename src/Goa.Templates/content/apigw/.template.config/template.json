@@ -1,0 +1,36 @@
+﻿{
+    "$schema": "http://json.schemastore.org/template",
+    "author": "Goa",
+    "classifications": [ "AWS", "Lambda", "Serverless", "Goa" ],
+    "identity": "Goa.Templates.ApiGateway.Http.V1",
+    "name": "Lambda - API Gateway Function",
+    "shortName": "goa.apigw",
+    "sourceName": "AwsApiGw",
+    "tags": {
+        "language": "C#",
+        "type": "project"
+    },
+    "symbols": {
+        "functionType": {
+            "type": "parameter",
+            "description": "The type of API Gateway Function to create.",
+            "datatype": "choice",
+            "choices": [
+                {
+                    "choice": "restapi",
+                    "description": "REST API Function"
+                },
+                {
+                    "choice": "httpv1",
+                    "description": "HTTP API Function (V1 Payload)"
+                },
+                {
+                    "choice": "httpv2",
+                    "description": "HTTP API Function (V2 Payload - Default)"
+                }
+            ],
+            "replaces": "functionType",
+            "defaultValue": "httpv2"
+        }
+    }
+}

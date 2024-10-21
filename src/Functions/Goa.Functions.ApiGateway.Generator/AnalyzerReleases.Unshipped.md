@@ -2,5 +2,7 @@
 
 Rule ID | Category | Severity | Notes
 --------|----------|----------|--------------------
-GOA001  | Usage    | Error    | NoEntrypointFound
-GOA002  | Usage    | Error    | TooManyEntrypoints
+HTTP001  | Usage    | Error    | NoHttpActionInTopLevelStatements
+HTTP002  | Usage    | Error    | MultipleHttpActionsInTopLevelStatements
+HTTP003  | Usage    | Error    | UnrecognisedHttpAction
+HTTP004  | Usage    | Error    | LambdaRunAsyncNotFound
