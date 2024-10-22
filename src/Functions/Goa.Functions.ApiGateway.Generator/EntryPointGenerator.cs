@@ -208,8 +208,8 @@ public class EntryPointGenerator : IIncrementalGenerator
         builder.AppendLine("// Function handler");
         builder.AppendLine($"internal sealed class Function : ILambdaFunction<{requestModel},{responseModel}>");
         builder.AppendLine("{");
-        builder.AppendLine($"    private readonly List<Func<HttpRequestContext, Task, CancellationToken, Task>> _middleware;");
-        builder.AppendLine($"    internal Function(List<Func<HttpRequestContext, Task, CancellationToken, Task>> middleware)");
+        builder.AppendLine($"    private readonly List<Func<InvocationContext, Func<Task>, CancellationToken, Task>> _middleware;");
+        builder.AppendLine($"    internal Function(List<Func<InvocationContext, Func<Task>, CancellationToken, Task>> middleware)");
         builder.AppendLine("    {");
         builder.AppendLine("        _middleware = middleware;");
         builder.AppendLine("    }");

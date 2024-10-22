@@ -2,7 +2,7 @@
 
 internal sealed class PipelineBuilder : IPipelineBuilder
 {
-    private readonly List<Func<HttpRequestContext, Task, CancellationToken, Task>> _middleware = new();
+    private readonly List<Func<InvocationContext, Func<Task>, CancellationToken, Task>> _middleware = new();
 
     public IPipelineBuilder Use<T>() where T : IMiddleware, new() => Use<T>(() => new T());
     public IPipelineBuilder Use<T>(Func<T> factory) where T : IMiddleware
@@ -23,11 +23,11 @@ internal sealed class PipelineBuilder : IPipelineBuilder
         });
         return this;
     }
-    public IPipelineBuilder Use(Func<HttpRequestContext, Task, CancellationToken, Task> handler)
+    public IPipelineBuilder Use(Func<InvocationContext, Func<Task>, CancellationToken, Task> handler)
     {
         _middleware.Add(handler);
         return this;
     }
 
-    internal IEnumerable<Func<HttpRequestContext, Task, CancellationToken, Task>> Create() => _middleware;
+    internal IEnumerable<Func<InvocationContext, Func<Task>, CancellationToken, Task>> Create() => _middleware;
 }

@@ -1,13 +1,26 @@
-﻿namespace Goa.Functions.ApiGateway;
+﻿using System.Collections;
+
+namespace Goa.Functions.ApiGateway;
 
 internal sealed class HttpBuilder : IHttpBuilder
 {
-    private readonly List<Func<HttpRequestContext, Task, CancellationToken, Task>> _middleware = new();
-    private readonly Dictionary<string, Dictionary<string, List<Func<HttpRequestContext, Task, CancellationToken, Task>>>> _paths = new(StringComparer.OrdinalIgnoreCase);
+    private readonly List<Func<InvocationContext, Func<Task>, CancellationToken, Task>> _middleware = new();
+    private readonly Dictionary<string, Dictionary<string, List<Func<InvocationContext, Func<Task>, CancellationToken, Task>>>> _paths = new(StringComparer.OrdinalIgnoreCase);
 
-    public IEnumerable<Func<HttpRequestContext, Task, CancellationToken, Task>> CreatePipeline()
+    public IEnumerable<Func<InvocationContext, Func<Task>, CancellationToken, Task>> CreatePipeline()
     {
-        return new List<Func<HttpRequestContext, Task, CancellationToken, Task>>();
+        // Execute the middleware in the order defined
+        foreach (var middleware in _middleware)
+            yield return middleware;
+
+        // todo :: handle paths
+
+        // The last middleware that should execute is the fallback which just 404's
+        yield return static (context, _, _) =>
+        {
+            context.Response = HttpResult.NotFound();
+            return Task.CompletedTask;
+        };;
     }
 
     public IHttpBuilder MapGet(string path, Action<IPipelineBuilder> builder)
@@ -64,18 +77,18 @@ internal sealed class HttpBuilder : IHttpBuilder
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(path, nameof(path));
 
-        if (!_paths.TryGetValue(method, out var pathDictionary))
+        if (!_paths.TryGetValue(path, out var methods))
         {
-            pathDictionary = new Dictionary<string, List<Func<HttpRequestContext, Task, CancellationToken, Task>>>(StringComparer.OrdinalIgnoreCase);
+            _paths[path] = methods = new (StringComparer.OrdinalIgnoreCase);
         }
 
-        if (!pathDictionary.TryGetValue(path, out var list))
+        if (methods.TryGetValue(method, out _))
         {
-            throw new ArgumentException($"The specified route has already been added. Method: {method} Path: {path}");
+            throw new ArgumentException($"The specified route has already been added. Method: {method} {path}");
         }
 
         var pipeline = new PipelineBuilder();
         builder(pipeline);
-        list.AddRange(pipeline.Create());
+        methods[method] = pipeline.Create().ToList();
     }
 }

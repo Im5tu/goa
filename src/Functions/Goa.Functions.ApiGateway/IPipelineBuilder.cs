@@ -17,5 +17,5 @@ public interface IPipelineBuilder
     /// <summary>
     ///     Adds a middleware to the pipeline execution
     /// </summary>
-    IPipelineBuilder Use(Func<HttpRequestContext, Task, CancellationToken, Task> handler);
+    IPipelineBuilder Use(Func<InvocationContext, Func<Task>, CancellationToken, Task> handler);
 }

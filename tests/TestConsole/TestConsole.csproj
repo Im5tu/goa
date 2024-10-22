@@ -1,11 +1,11 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
-    <Import Project="../../src/Functions/Goa.props" />
+    <Import Project="../../src/Functions/Goa.props" Condition="$(Configuration) == 'Release'" />
     <Import Project="../../src/Functions/Goa.Functions.ApiGateway/Goa.Functions.ApiGateway.props" />
 
     <PropertyGroup>
+        <TargetFramework>net8.0</TargetFramework>
         <OutputType>Exe</OutputType>
-        <RuntimeIdentifier>linux-x64</RuntimeIdentifier>
     </PropertyGroup>
 
     <ItemGroup>

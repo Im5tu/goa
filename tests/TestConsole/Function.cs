@@ -1,8 +1,8 @@
 ﻿var http = Http.UseHttpV2()
-    .MapGet("/ping", (context, next, ct) =>
+    .MapGet("/ping", (context, _) =>
     {
-        context.Response.Set(HttpResult.Ok());
-        return next;
+        context.Response = HttpResult.Ok();
+        return Task.CompletedTask;
     });
 
 await Lambda.RunAsync(http);
