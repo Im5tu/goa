@@ -1,4 +1,4 @@
-﻿namespace Goa.Functions.Dynamo;
+namespace Goa.Functions.Dynamo;
 
 /// <summary>
 /// </summary>

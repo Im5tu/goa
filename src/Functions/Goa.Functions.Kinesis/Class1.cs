@@ -1,4 +1,4 @@
-﻿namespace Goa.Functions.Kinesis;
+namespace Goa.Functions.Kinesis;
 
 /// <summary>
 /// </summary>

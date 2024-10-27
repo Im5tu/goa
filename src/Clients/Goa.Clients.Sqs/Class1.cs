@@ -1,4 +1,4 @@
-﻿namespace Goa.Clients.Sqs;
+namespace Goa.Clients.Sqs;
 
 /// <summary>
 /// </summary>

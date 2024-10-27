@@ -1,4 +1,4 @@
-﻿namespace Goa.Functions.ApiGateway;
+namespace Goa.Functions.ApiGateway;
 
 /// <summary>
 ///     Builder for using ApiGateway Functions

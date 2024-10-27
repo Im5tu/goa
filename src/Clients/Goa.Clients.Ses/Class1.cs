@@ -1,4 +1,4 @@
-﻿namespace Goa.Clients.Ses;
+namespace Goa.Clients.Ses;
 
 /// <summary>
 /// </summary>

@@ -1,4 +1,4 @@
-﻿namespace Goa.Clients.EventBridge;
+namespace Goa.Clients.EventBridge;
 
 /// <summary>
 /// </summary>

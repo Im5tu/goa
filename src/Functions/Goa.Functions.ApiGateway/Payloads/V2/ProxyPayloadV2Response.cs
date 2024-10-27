@@ -1,4 +1,4 @@
-﻿namespace Goa.Functions.ApiGateway.Payloads.V2;
+namespace Goa.Functions.ApiGateway.Payloads.V2;
 
 /// <summary>
 ///     Represents the response payload for AWS API Gateway Proxy V2 Payload

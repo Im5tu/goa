@@ -1,4 +1,4 @@
-﻿namespace Goa.Clients.ParameterStore;
+namespace Goa.Clients.ParameterStore;
 
 /// <summary>
 /// </summary>

@@ -1,4 +1,4 @@
-﻿namespace Goa.Clients.S3;
+namespace Goa.Clients.S3;
 
 /// <summary>
 /// </summary>

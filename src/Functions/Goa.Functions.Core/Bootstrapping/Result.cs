@@ -1,4 +1,4 @@
-﻿namespace Goa.Functions.Core.Bootstrapping;
+namespace Goa.Functions.Core.Bootstrapping;
 
 /// <summary>
 /// Represents the result of an operation, indicating success or failure.

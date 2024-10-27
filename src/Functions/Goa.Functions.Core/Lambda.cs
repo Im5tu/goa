@@ -1,4 +1,4 @@
-﻿namespace Goa.Functions.Core;
+namespace Goa.Functions.Core;
 
 /// <summary>
 ///     Represents all lambda invocations

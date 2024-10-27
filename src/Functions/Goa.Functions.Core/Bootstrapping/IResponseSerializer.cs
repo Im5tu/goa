@@ -1,4 +1,4 @@
-﻿namespace Goa.Functions.Core.Bootstrapping;
+namespace Goa.Functions.Core.Bootstrapping;
 
 /// <summary>
 ///     Interface for serializing a response object into an HTTP content format for sending to the AWS Lambda Runtime API.

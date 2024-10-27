@@ -1,4 +1,4 @@
-﻿namespace Goa.Clients.Sns;
+namespace Goa.Clients.Sns;
 
 /// <summary>
 /// </summary>

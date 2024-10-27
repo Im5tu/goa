@@ -1,4 +1,4 @@
-﻿namespace Goa.Clients.Lambda;
+namespace Goa.Clients.Lambda;
 
 /// <summary>
 /// </summary>

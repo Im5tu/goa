@@ -1,4 +1,4 @@
-﻿namespace Goa.Functions.Sns;
+namespace Goa.Functions.Sns;
 
 /// <summary>
 /// </summary>

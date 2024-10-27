@@ -1,4 +1,3 @@
-﻿using TUnit;
 using Goa.Functions.Core.Bootstrapping;
 using Moq;
 using System;
@@ -9,6 +8,7 @@ using System.Text.Json.Serialization;
 using System.Text.Json.Serialization.Metadata;
 using System.Threading;
 using System.Threading.Tasks;
+using TUnit;
 
 namespace Goa.Functions.Core.Tests.Bootstrapping;
 

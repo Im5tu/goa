@@ -1,4 +1,4 @@
-﻿namespace Goa.Functions.ApiGateway;
+namespace Goa.Functions.ApiGateway;
 
 internal sealed class PipelineBuilder : IPipelineBuilder
 {

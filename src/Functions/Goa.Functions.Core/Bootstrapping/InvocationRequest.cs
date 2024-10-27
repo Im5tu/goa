@@ -1,4 +1,4 @@
-﻿namespace Goa.Functions.Core.Bootstrapping;
+namespace Goa.Functions.Core.Bootstrapping;
 
 /// <summary>
 ///     Represents a Lambda invocation request containing the request details such as ID, payload, deadline, and function ARN.

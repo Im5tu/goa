@@ -1,7 +1,7 @@
-﻿using System.Text;
-using System.Text.Json;
 using Goa.Functions.Core.Logging;
 using Microsoft.Extensions.Logging;
+using System.Text;
+using System.Text.Json;
 
 namespace Goa.Functions.Core.Bootstrapping;
 

@@ -1,4 +1,4 @@
-﻿namespace Goa.Functions.ApiGateway;
+namespace Goa.Functions.ApiGateway;
 
 /// <summary>
 ///     Creates a pipeline of middleware for execution

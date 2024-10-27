@@ -1,4 +1,4 @@
-﻿namespace Goa.Clients.SecretsManager;
+namespace Goa.Clients.SecretsManager;
 
 /// <summary>
 /// </summary>

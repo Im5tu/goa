@@ -1,12 +1,15 @@
+using Goa.Core;
+using Microsoft.Extensions.Logging;
 using System.Runtime.InteropServices;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using Goa.Core;
-using Microsoft.Extensions.Logging;
 
 namespace Goa.Functions.Core.Logging;
 
-internal sealed class JsonLogger : ILogger
+/// <summary>
+///     Goa standard json logger
+/// </summary>
+public sealed class JsonLogger : ILogger
 {
     private static readonly Type SerializedType = typeof(IDictionary<string, object>);
 
@@ -31,6 +34,15 @@ internal sealed class JsonLogger : ILogger
     private readonly IExternalScopeProvider _scopeProvider;
     private readonly JsonSerializerContext _jsonSerializerContext;
 
+    /// <summary>
+    ///     ctor
+    /// </summary>
+    public JsonLogger(string categoryName, LogLevel minimumLogLevel) : this(categoryName, minimumLogLevel, LogScopeProvider.Instance, LoggingSerializationContext.Default)
+    {}
+
+    /// <summary>
+    ///     ctor
+    /// </summary>
     public JsonLogger(string categoryName, LogLevel minimumLogLevel, IExternalScopeProvider scopeProvider, JsonSerializerContext jsonSerializerContext)
     {
         _categoryName = categoryName;
@@ -39,6 +51,7 @@ internal sealed class JsonLogger : ILogger
         _jsonSerializerContext = jsonSerializerContext;
     }
 
+    /// <inheritDoc />
     public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter)
     {
         var data = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase)
@@ -73,8 +86,10 @@ internal sealed class JsonLogger : ILogger
         Console.WriteLine(JsonSerializer.Serialize(data, SerializedType, _jsonSerializerContext));
     }
 
+    /// <inheritDoc />
     public bool IsEnabled(LogLevel logLevel) => _minimumLogLevel <= logLevel;
 
+    /// <inheritDoc />
     public IDisposable? BeginScope<TState>(TState state) where TState : notnull
     {
         return _scopeProvider.Push(state);

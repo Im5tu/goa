@@ -1,4 +1,4 @@
-﻿namespace Goa.Functions.ApiGateway.Authorizer;
+namespace Goa.Functions.ApiGateway.Authorizer;
 
 /// <summary>
 /// </summary>

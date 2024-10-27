@@ -1,4 +1,4 @@
-﻿namespace Goa.Clients.Kinesis;
+namespace Goa.Clients.Kinesis;
 
 /// <summary>
 /// </summary>

@@ -1,9 +1,9 @@
-﻿using System.Text.Json;
-using System.Text.Json.Serialization;
-using System.Text.Json.Serialization.Metadata;
 using Goa.Core;
 using Goa.Functions.Core.Logging;
 using Microsoft.Extensions.Logging;
+using System.Text.Json;
+using System.Text.Json.Serialization;
+using System.Text.Json.Serialization.Metadata;
 
 namespace Goa.Functions.Core.Bootstrapping;
 
@@ -48,7 +48,7 @@ public sealed class LambdaBootstrapper<TFunction, TRequest, TResponse>
     {
         _logger.BootstrapStarted();
 
-        TFunction func = await GetFunctionAsync(cancellationToken);
+        var func = await GetFunctionAsync(cancellationToken);
         while (!cancellationToken.IsCancellationRequested)
         {
             // Get the next event
@@ -65,7 +65,7 @@ public sealed class LambdaBootstrapper<TFunction, TRequest, TResponse>
                 : DateTimeOffset.UtcNow.AddMinutes(1).ToUnixTimeMilliseconds());
 
             // Calculate the delay to the deadline
-            TimeSpan delay = targetTime > DateTimeOffset.UtcNow
+            var delay = targetTime > DateTimeOffset.UtcNow
                 ? targetTime - DateTimeOffset.UtcNow
                 : TimeSpan.Zero;
 

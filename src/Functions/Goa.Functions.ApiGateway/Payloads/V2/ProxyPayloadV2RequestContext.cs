@@ -1,4 +1,4 @@
-﻿namespace Goa.Functions.ApiGateway.Payloads.V2;
+namespace Goa.Functions.ApiGateway.Payloads.V2;
 
 /// <summary>
 ///     Provides detailed information about the request, including authorization, domain, and routing data.

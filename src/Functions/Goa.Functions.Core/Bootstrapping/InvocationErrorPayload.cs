@@ -1,4 +1,4 @@
-﻿namespace Goa.Functions.Core.Bootstrapping;
+namespace Goa.Functions.Core.Bootstrapping;
 
 /// <summary>
 /// Represents the payload for reporting invocation errors to the AWS Lambda Runtime API.

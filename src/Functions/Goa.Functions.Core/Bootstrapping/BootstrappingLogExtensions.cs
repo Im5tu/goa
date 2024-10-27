@@ -1,8 +1,8 @@
 using Microsoft.Extensions.Logging;
 
-namespace Goa.Functions.Core;
+namespace Goa.Functions.Core.Bootstrapping;
 
-internal static partial class LogExtensions
+internal static partial class BootstrappingLogExtensions
 {
     // LambdaBootstrapper
     [LoggerMessage(EventId = 1, Level = LogLevel.Trace, Message = "Bootstrap started")]

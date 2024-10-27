@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging;
 using System.Text.Json.Serialization;
 
 namespace Goa.Functions.Core.Logging;

@@ -1,4 +1,4 @@
-﻿namespace Goa.Functions.ApiGateway;
+namespace Goa.Functions.ApiGateway;
 
 #pragma warning disable CS1591, CS3021
 public interface IMiddleware
@@ -17,7 +17,7 @@ public abstract class Middleware : IMiddleware
         if (response is null)
             await next();
         else
-            context.Response = response;
+            context.Response.Result = response;
     }
 
     protected abstract Task<HttpResult?> InvokeAsync(InvocationContext context, CancellationToken cancellationToken);

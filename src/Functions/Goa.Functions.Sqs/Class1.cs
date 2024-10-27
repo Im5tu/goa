@@ -1,4 +1,4 @@
-﻿namespace Goa.Functions.Sqs;
+namespace Goa.Functions.Sqs;
 
 /// <summary>
 /// </summary>

@@ -1,4 +1,4 @@
-﻿namespace Goa.Functions.S3;
+namespace Goa.Functions.S3;
 
 /// <summary>
 /// </summary>

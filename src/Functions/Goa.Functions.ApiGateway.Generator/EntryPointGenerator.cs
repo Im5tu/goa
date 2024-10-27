@@ -1,8 +1,8 @@
-﻿using System.Collections.Immutable;
-using System.Text;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
+using System.Collections.Immutable;
+using System.Text;
 
 namespace Goa.Functions.ApiGateway.Generator;
 
@@ -180,6 +180,7 @@ public class EntryPointGenerator : IIncrementalGenerator
         var requestModel = "Goa.Functions.ApiGateway.Payloads.V2.ProxyPayloadV2Request";
         var responseModel = "Goa.Functions.ApiGateway.Payloads.V2.ProxyPayloadV2Response";
         var serializationContext = "Goa.Functions.ApiGateway.Payloads.V2.ProxyPayloadV2SerializationContext";
+        Action<StringBuilder> responseSerializer = sb => { };
 
         switch (httpAction.action)
         {
@@ -197,26 +198,99 @@ public class EntryPointGenerator : IIncrementalGenerator
         }
 
         var builder = new StringBuilder();
-        builder.AppendLine("using System;");
-        builder.AppendLine("using System.Linq;");
-        builder.AppendLine("using System.Threading.Tasks;");
         builder.AppendLine("using Goa.Functions.Core;");
         builder.AppendLine("using Goa.Functions.Core.Bootstrapping;");
+        builder.AppendLine("using Microsoft.Extensions.Logging;");
+        builder.AppendLine("using System;");
+        builder.AppendLine("using System.Linq;");
+        builder.AppendLine("using System.Text.Json;");
+        builder.AppendLine("using System.Text.Json.Serialization;");
+        builder.AppendLine("using System.Threading.Tasks;");
         builder.AppendLine();
         builder.AppendLine($"namespace Goa.Generated;");
         builder.AppendLine();
         builder.AppendLine("// Function handler");
-        builder.AppendLine($"internal sealed class Function : ILambdaFunction<{requestModel},{responseModel}>");
+        builder.AppendLine($"public sealed class Function : ILambdaFunction<{requestModel},{responseModel}>");
         builder.AppendLine("{");
-        builder.AppendLine($"    private readonly List<Func<InvocationContext, Func<Task>, CancellationToken, Task>> _middleware;");
-        builder.AppendLine($"    internal Function(List<Func<InvocationContext, Func<Task>, CancellationToken, Task>> middleware)");
+        builder.AppendLine("    private readonly static Goa.Functions.Core.Logging.JsonLogger _logger = new(\"Function\", Microsoft.Extensions.Logging.LogLevel.Information);");
+        builder.AppendLine($"    private readonly List<Func<Goa.Functions.ApiGateway.InvocationContext, Func<Task>, CancellationToken, Task>> _middleware;");
+        builder.AppendLine("    private readonly JsonSerializerContext _jsonContext;");
+        builder.AppendLine();
+        builder.AppendLine($"    public Function(List<Func<Goa.Functions.ApiGateway.InvocationContext, Func<Task>, CancellationToken, Task>> middleware, JsonSerializerContext jsonContext)");
         builder.AppendLine("    {");
         builder.AppendLine("        _middleware = middleware;");
+        builder.AppendLine("        _jsonContext = jsonContext;");
         builder.AppendLine("    }");
         builder.AppendLine($"    public async Task<{responseModel}> InvokeAsync({requestModel} request, CancellationToken cancellationToken)");
         builder.AppendLine("    {");
-        builder.AppendLine("        await Task.Delay(1);");
-        builder.AppendLine("        return default;");
+        builder.AppendLine("        // Local function to execute the pipeline recursively");
+        builder.AppendLine("        static async Task InvokeNextAsync(List<Func<Goa.Functions.ApiGateway.InvocationContext, Func<Task>, CancellationToken, Task>> pipeline, int index, Goa.Functions.ApiGateway.InvocationContext ctx, CancellationToken token)");
+        builder.AppendLine("        {");
+        builder.AppendLine("            if (index >= pipeline.Count)");
+        builder.AppendLine("            {");
+        builder.AppendLine("                return; // End of the pipeline, return completed task");
+        builder.AppendLine("            }");
+        builder.AppendLine();
+        builder.AppendLine("            try");
+        builder.AppendLine("            {");
+        builder.AppendLine("                // Get the current pipeline step and pass in the next step as the Func<Task>");
+        builder.AppendLine("                Func<Task> next = () => InvokeNextAsync(pipeline, index + 1, ctx, token);");
+        builder.AppendLine("                await pipeline[index].Invoke(ctx, next, token);");
+        builder.AppendLine("            }");
+        builder.AppendLine("            catch (Exception ex)");
+        builder.AppendLine("            {");
+        builder.AppendLine("                _logger.LogFunctionError(ex);");
+        builder.AppendLine("                ctx.Response.Result = HttpResult.InternalServerError();");
+        builder.AppendLine("                ctx.Response.Exception = ex;");
+        builder.AppendLine("                ctx.Response.ExceptionHandled = true;");
+        builder.AppendLine("                return;");
+        builder.AppendLine("            }");
+        builder.AppendLine("        }");
+        builder.AppendLine();
+        builder.AppendLine("        var sw = System.Diagnostics.Stopwatch.StartNew();");
+        builder.AppendLine("        try");
+        builder.AppendLine("        {");
+        builder.AppendLine("            var context = new Goa.Functions.ApiGateway.InvocationContext { Request = Goa.Functions.ApiGateway.Request.MapFrom(request), Response = new() };");
+        builder.AppendLine("            await InvokeNextAsync(_middleware, 0, context, cancellationToken);");
+        builder.AppendLine("            if (context.Response is null)");
+        builder.AppendLine("            {");
+        builder.AppendLine("                context.Response.Result = HttpResult.NotFound();");
+        builder.AppendLine("            }");
+        // TODO :: Support content negotiation
+        builder.AppendLine("            context.Response.TryAddHeader(\"Content-Type\", \"application/json\");");
+        builder.AppendLine($"            var response = new {responseModel}();");
+        builder.AppendLine("            response.StatusCode = (int)context.Response.Result.StatusCode;");
+        builder.AppendLine("            if (context.Response.Result.ResponseBody is not null)");
+        builder.AppendLine("            {");
+        builder.AppendLine("                var typeInfo = _jsonContext.GetTypeInfo(context.Response.Result.ResponseBody.GetType());");
+        builder.AppendLine("                if (typeInfo is null)");
+        builder.AppendLine("                {");
+        builder.AppendLine("                    _logger.LogFunctionError($\"The response object type {context.Response.Result.ResponseBody.GetType().Name} cannot be found on the serializer context\");");
+        builder.AppendLine("                    response.StatusCode = 500;");
+        builder.AppendLine("                    response.Body = string.Empty;");
+        builder.AppendLine("                }");
+        builder.AppendLine("                else");
+        builder.AppendLine("                {");
+        builder.AppendLine("                    response.Body = JsonSerializer.Serialize(context.Response.Result.ResponseBody, typeInfo);");
+        builder.AppendLine("                }");
+        builder.AppendLine("            }");
+        builder.AppendLine("            else { response.Body = string.Empty; }");
+        switch (httpAction.action)
+        {
+            case "UseRestApi":
+            case "UseHttpV1":
+                builder.AppendLine("            response.MultiValueHeaders = context.Response.Headers.ToDictionary(x => x.Key, x => x.Value.ToList());");
+                break;
+            default:
+                builder.AppendLine("            response.Headers = context.Response.Headers.ToDictionary(x => x.Key, x => string.Join(',', x.Value));");
+                break;
+        }
+        builder.AppendLine("            return response;");
+        builder.AppendLine("        }");
+        builder.AppendLine("        finally");
+        builder.AppendLine("        {");
+        builder.AppendLine("            _logger.LogFunctionCompletion(sw.ElapsedMilliseconds);");
+        builder.AppendLine("        }");
         builder.AppendLine("    }");
         builder.AppendLine("}");
 
@@ -224,7 +298,7 @@ public class EntryPointGenerator : IIncrementalGenerator
         builder.AppendLine("// Lambda entrypoint");
         builder.AppendLine("public static class Lambda");
         builder.AppendLine("{");
-        builder.AppendLine($"    public static Task RunAsync(IHttpBuilder httpBuilder, CancellationToken cancellationToken = default) => new Goa.Functions.Core.Bootstrapping.LambdaBootstrapper<Goa.Generated.Function, {requestModel}, {responseModel}>({serializationContext}.Default, () => new Goa.Generated.Function(httpBuilder.CreatePipeline().ToList())).RunAsync(cancellationToken);");
+        builder.AppendLine($"    public static Task RunAsync(IHttpBuilder httpBuilder, JsonSerializerContext jsonContext, CancellationToken cancellationToken = default) => new Goa.Functions.Core.Bootstrapping.LambdaBootstrapper<Goa.Generated.Function, {requestModel}, {responseModel}>({serializationContext}.Default, () => new Goa.Generated.Function(httpBuilder.CreatePipeline().ToList(), jsonContext)).RunAsync(cancellationToken);");
         builder.AppendLine("}");
 
         context.AddSource("Function.g.cs", builder.ToString());

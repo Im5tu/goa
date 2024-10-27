@@ -1,4 +1,4 @@
-﻿namespace Goa.Clients.StepFunctions;
+namespace Goa.Clients.StepFunctions;
 
 /// <summary>
 /// </summary>

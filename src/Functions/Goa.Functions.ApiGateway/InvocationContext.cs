@@ -1,12 +1,16 @@
-﻿namespace Goa.Functions.ApiGateway;
+namespace Goa.Functions.ApiGateway;
 
-#pragma warning disable CS1591, CS3021
+/// <summary>
+///     Represents the context of the current Lambda Request
+/// </summary>
 public sealed class InvocationContext
 {
+    /// <summary>
+    ///     Represents the request received from the Lambda Runtime API
+    /// </summary>
     public required Request Request { get; init; }
-    public HttpResult? Response { get; set; }
-}
-
-public sealed class Request
-{
+    /// <summary>
+    ///     Represents the response that will be returned to the Lambda Runtime API
+    /// </summary>
+    public required Response Response { get; init; }
 }
