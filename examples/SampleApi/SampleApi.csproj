@@ -2,12 +2,6 @@
 
     <PropertyGroup>
         <TargetFramework>net8.0</TargetFramework>
-        <ImplicitUsings>enable</ImplicitUsings>
-        <Nullable>enable</Nullable>
-        <LangVersion>Latest</LangVersion>
-        <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
-        <EnableNETAnalyzers>true</EnableNETAnalyzers>
-        <AnalysisLevel>latest</AnalysisLevel>
     </PropertyGroup>
 
     <ItemGroup>
@@ -16,6 +10,16 @@
             <PrivateAssets>all</PrivateAssets>
             <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
         </PackageReference>
+    </ItemGroup>
+    
+    <!-- Stuff I needed to import -->
+    <PropertyGroup>
+        <InvariantGlobalization>true</InvariantGlobalization>
+    </PropertyGroup>
+    
+    <ItemGroup>
+        <Using Include="System.Collections.Generic" />
+        <Using Include="System.Threading" />
     </ItemGroup>
 
 </Project>

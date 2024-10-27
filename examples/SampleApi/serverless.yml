@@ -1,0 +1,23 @@
+service: goa-sample-api
+
+provider:
+  name: aws
+  region: eu-west-1
+  memorySize: 256
+  logRetentionInDays: 14
+  ecr:
+    images:
+      sample-api-image:
+        path: ../
+        file: Dockerfile
+        buildArgs:
+          PROJECT: SampleApi # These are case sensitive values
+
+functions:
+  sample-api:
+    image:
+      name: sample-api-image
+    events:
+      - httpApi:
+          path: /{proxy+}
+          method: any

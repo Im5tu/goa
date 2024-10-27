@@ -1,0 +1,16 @@
+{
+  "name": "goa-examples",
+  "version": "1.0.0",
+  "description": "Examples of how to use Goa",
+  "scripts": {
+    "deploy": "npx run serverless deploy"
+  },
+  "author": "Stuart Blackler (Im5tu)",
+  "license": "MIT",
+  "dependencies": {
+    "serverless": "^4.4.7"
+  },
+  "devDependencies": {
+    "@serverless/compose": "^1.3.0"
+  }
+}

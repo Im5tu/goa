@@ -45,3 +45,4 @@ Dockerfile
 
 # Ignore dependencies cache
 .nuget/
+.serverless/

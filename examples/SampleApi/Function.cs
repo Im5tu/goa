@@ -1,16 +1,15 @@
 ﻿using System.Text.Json.Serialization;
 
-//#if (functionType == 'httpv2')
 var http = Http.UseHttpV2()
-//#else if (functionType == 'httpv1')
-var http = Http.UseHttpV1()
-//#else
-var http = Http.UseRestApi()
-//#endif
-    .MapGet("/ping", (context, next, ct) =>
+    .MapGet("/hi", (context, next, ct) =>
     {
-        context.Response.Result = HttpResult.Ok(new Pong("pong"));
-        return next;
+        context.Response.Result = HttpResult.Ok(new Pong("hihi"));
+        return next();
+    })
+    .MapGet("/hello", (context, next, ct) =>
+    {
+        context.Response.Result = HttpResult.Ok(new Pong("hello"));
+        return next();
     });
 
 await Lambda.RunAsync(http, HttpSerializerContext.Default);

@@ -9,7 +9,6 @@
         <Authors>TODO: fill the author name or organization here</Authors>
         <Description>TODO: fill the package description here</Description>
         <PackageTags>TODO: fill the tags here</PackageTags>
-        <PackageProjectUrl>TODO: include a link to an associated project, repository, or company website</PackageProjectUrl>
 
         <!-- Keep package type as 'Template' to show the package as a template package on nuget.org and make your template available in dotnet new search.-->
         <PackageType>Template</PackageType>

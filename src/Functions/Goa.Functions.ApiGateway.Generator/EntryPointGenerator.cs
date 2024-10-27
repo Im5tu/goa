@@ -202,9 +202,11 @@ public class EntryPointGenerator : IIncrementalGenerator
         builder.AppendLine("using Goa.Functions.Core.Bootstrapping;");
         builder.AppendLine("using Microsoft.Extensions.Logging;");
         builder.AppendLine("using System;");
+        builder.AppendLine("using System.Collections.Generic;");
         builder.AppendLine("using System.Linq;");
         builder.AppendLine("using System.Text.Json;");
         builder.AppendLine("using System.Text.Json.Serialization;");
+        builder.AppendLine("using System.Threading;");
         builder.AppendLine("using System.Threading.Tasks;");
         builder.AppendLine();
         builder.AppendLine($"namespace Goa.Generated;");

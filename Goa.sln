@@ -83,6 +83,14 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Goa.Functions.Core.Tests", 
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Goa.Templates", "src\Goa.Templates\Goa.Templates.csproj", "{DD42E875-D055-45B4-9C89-3B093B05EE54}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "examples", "examples", "{0A62E70D-0CD7-444A-A43A-D5AA00B3E9B6}"
+	ProjectSection(SolutionItems) = preProject
+		examples\serverless-compose.yml = examples\serverless-compose.yml
+		examples\Directory.Build.props = examples\Directory.Build.props
+	EndProjectSection
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SampleApi", "examples\SampleApi\SampleApi.csproj", "{841F03A5-66FC-421E-87E1-749995640B08}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -120,6 +128,7 @@ Global
 		{5DA3474E-67C5-4253-8532-B608DA565AB7} = {B9BAC8A3-D4AA-4F7F-84CE-4746EC865CC2}
 		{AB79032E-63F3-47EA-81C6-8701C88DA820} = {5DA3474E-67C5-4253-8532-B608DA565AB7}
 		{DD42E875-D055-45B4-9C89-3B093B05EE54} = {62FDEFC8-CA35-452B-87AF-5399C1FDD232}
+		{841F03A5-66FC-421E-87E1-749995640B08} = {0A62E70D-0CD7-444A-A43A-D5AA00B3E9B6}
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
 		{0D4BB144-07C4-4F45-8EE0-8627E1F33DF4}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
@@ -222,5 +231,9 @@ Global
 		{DD42E875-D055-45B4-9C89-3B093B05EE54}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{DD42E875-D055-45B4-9C89-3B093B05EE54}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{DD42E875-D055-45B4-9C89-3B093B05EE54}.Release|Any CPU.Build.0 = Release|Any CPU
+		{841F03A5-66FC-421E-87E1-749995640B08}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{841F03A5-66FC-421E-87E1-749995640B08}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{841F03A5-66FC-421E-87E1-749995640B08}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{841F03A5-66FC-421E-87E1-749995640B08}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal
