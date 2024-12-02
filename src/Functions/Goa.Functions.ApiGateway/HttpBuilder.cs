@@ -12,17 +12,18 @@ internal sealed class HttpBuilder : IHttpBuilder
 
     public IEnumerable<Func<InvocationContext, Func<Task>, CancellationToken, Task>> CreatePipeline()
     {
-        yield return (context, next, cancellationToken) =>
-        {
-            IEnumerable<string>? contentTypes = null;
-            if (context.Request.Headers?.TryGetValue("Accept", out contentTypes) == false || contentTypes is null)
-            {
-                context.Response.Result = HttpResult.UnsupportedMediaType();
-                return Task.CompletedTask;
-            }
-
-            return next();
-        };
+        // TODO :: Reenable when content negotiation is done
+        // yield return (context, next, cancellationToken) =>
+        // {
+        //     IEnumerable<string>? contentTypes = null;
+        //     if (context.Request.Headers?.TryGetValue("Accept", out contentTypes) == false || contentTypes is null)
+        //     {
+        //         context.Response.Result = HttpResult.UnsupportedMediaType();
+        //         return Task.CompletedTask;
+        //     }
+        //
+        //     return next();
+        // };
 
         // Execute the middleware in the order defined
         foreach (var middleware in _middleware)
