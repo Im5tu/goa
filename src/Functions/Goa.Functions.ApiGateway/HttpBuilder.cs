@@ -1,5 +1,3 @@
-using Goa.Functions.ApiGateway.Payloads.V1;
-using Goa.Functions.ApiGateway.Payloads.V2;
 using Goa.Functions.Core;
 using Goa.Functions.Core.Logging;
 using Microsoft.Extensions.Logging;

@@ -1,4 +1,3 @@
-using Microsoft.Extensions.DependencyInjection;
 using System.Net;
 
 namespace Goa.Functions.ApiGateway;
