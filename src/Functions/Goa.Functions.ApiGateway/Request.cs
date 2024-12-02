@@ -29,6 +29,11 @@ public sealed class Request
     public required IReadOnlyDictionary<string, string>? PathParameters { get; init; }
 
     /// <summary>
+    /// The values that got matched when matching the request object, if any
+    /// </summary>
+    public IReadOnlyDictionary<string,string>? RouteValues { get; set; }
+
+    /// <summary>
     /// Gets or sets the body of the request.
     /// This is typically a JSON string, but can also be other content types like form data or plain text.
     /// </summary>

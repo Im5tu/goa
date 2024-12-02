@@ -8,7 +8,7 @@ internal sealed class HttpBuilder : IHttpBuilder
 {
     private static readonly JsonLogger _logger = new("Http", LogLevel.Information); // TODO :: Extract from environment variable
     private readonly List<Func<InvocationContext, Func<Task>, CancellationToken, Task>> _middleware = new();
-    private readonly Dictionary<string, Dictionary<string, List<Func<InvocationContext, Func<Task>, CancellationToken, Task>>>> _paths = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Routes _routes = new(); // Use the Routes class for efficient route handling
 
     public IEnumerable<Func<InvocationContext, Func<Task>, CancellationToken, Task>> CreatePipeline()
     {
@@ -20,6 +20,7 @@ internal sealed class HttpBuilder : IHttpBuilder
                 context.Response.Result = HttpResult.UnsupportedMediaType();
                 return Task.CompletedTask;
             }
+
             return next();
         };
 
@@ -38,17 +39,10 @@ internal sealed class HttpBuilder : IHttpBuilder
                 return;
             }
 
-            // Check for routes based on HTTP method and path
-            if (_paths.TryGetValue(request.Path, out var methods))
+            if (_routes.TryMatch(request.Path, request.HttpMethod.Method, out var routeValues, out var routePipeline))
             {
-                if (methods.TryGetValue(request.HttpMethod.Method, out var routeMiddleware))
-                {
-                    // Add the route-specific middleware to the pipeline
-                    await InvokeNextAsync(routeMiddleware, 0, ctx, cancellationToken);
-                    return;
-                }
-
-                ctx.Response.Result = HttpResult.MethodNotAllowed();
+                ctx.Request.RouteValues = routeValues; // Pass route parameters to the context
+                await InvokeNextAsync(routePipeline, 0, ctx, cancellationToken);
                 return;
             }
 
@@ -57,11 +51,13 @@ internal sealed class HttpBuilder : IHttpBuilder
         };
     }
 
-    private static async Task InvokeNextAsync(List<Func<InvocationContext, Func<Task>, CancellationToken, Task>> pipeline, int index, InvocationContext ctx, CancellationToken token)
+    private static async Task InvokeNextAsync(
+        List<Func<InvocationContext, Func<Task>, CancellationToken, Task>> pipeline, int index, InvocationContext ctx,
+        CancellationToken token)
     {
         if (index >= pipeline.Count)
         {
-            return; // End of the pipeline, return completed task
+            return; // End of the pipeline
         }
 
         try
@@ -132,19 +128,12 @@ internal sealed class HttpBuilder : IHttpBuilder
     private void MapRequest(string method, string path, Action<IPipelineBuilder> builder)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(path, nameof(path));
-
-        if (!_paths.TryGetValue(path, out var methods))
-        {
-            _paths[path] = methods = new(StringComparer.OrdinalIgnoreCase);
-        }
-
-        if (methods.TryGetValue(method, out _))
-        {
-            throw new ArgumentException($"The specified route has already been added. Method: {method} {path}");
-        }
+        ArgumentException.ThrowIfNullOrWhiteSpace(method, nameof(method));
 
         var pipeline = new PipelineBuilder();
         builder(pipeline);
-        methods[method] = pipeline.Create().ToList();
+
+        // Add route with HTTP method to the Routes object
+        _routes.Add(path, method, pipeline.Create().ToList());
     }
 }

@@ -19,9 +19,9 @@ var http = Http.UseHttpV2()
         context.Response.Result = HttpResult.Ok(new Pong("Hi hi"));
         return Task.CompletedTask;
     })
-    .MapGet("/ping2", (context, _) =>
+    .MapGet("/ping/{id}", (context, _) =>
     {
-        context.Response.Result = HttpResult.NoContent();
+        context.Response.Result = HttpResult.Ok(new Pong(context.Request.RouteValues!["id"]));
         return Task.CompletedTask;
     });
 
@@ -40,11 +40,17 @@ var result1 = await pipeline.InvokeAsync(new ProxyPayloadV2Request
 
 var result2 = await pipeline.InvokeAsync(new ProxyPayloadV2Request
 {
-    RawPath = "/ping2"
+    Headers = new Dictionary<string, string>
+    {
+        ["Accept"] = "application/json"
+    },
+    RawPath = "/ping/2"
 }, default);
 
 Console.WriteLine($"Elapsed time: {sw.ElapsedMilliseconds}ms");
 
+Console.WriteLine("Result1: " + result1.StatusCode + " " + result1?.Body);
+Console.WriteLine("Result2: " + result2.StatusCode + " " + result2?.Body);
 
 await Lambda.RunAsync(http, MySerializerContext.Default);
 
