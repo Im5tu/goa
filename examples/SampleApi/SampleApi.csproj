@@ -1,22 +1,22 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
-        <TargetFramework>net8.0</TargetFramework>
+        <TargetFramework>net9.0</TargetFramework>
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="Goa.Functions.ApiGateway" Version="0.0.0-alpha.0.20" />
+        <PackageReference Include="Goa.Functions.ApiGateway" Version="0.0.0-alpha.0.29" />
         <PackageReference Include="DotNet.ReproducibleBuilds" Version="1.2.25">
             <PrivateAssets>all</PrivateAssets>
             <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
         </PackageReference>
     </ItemGroup>
-    
+
     <!-- Stuff I needed to import -->
     <PropertyGroup>
         <InvariantGlobalization>true</InvariantGlobalization>
     </PropertyGroup>
-    
+
     <ItemGroup>
         <Using Include="System.Collections.Generic" />
         <Using Include="System.Threading" />

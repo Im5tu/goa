@@ -10,6 +10,11 @@ var http = Http.UseHttpV2()
     {
         context.Response.Result = HttpResult.Ok(new Pong("hello"));
         return next();
+    })
+    .MapGet("/hello/{id}", (context, next, ct) =>
+    {
+        context.Response.Result = HttpResult.Ok(new Pong($"hello {context.Request.RouteValues!["id"]}"));
+        return next();
     });
 
 await Lambda.RunAsync(http, HttpSerializerContext.Default);

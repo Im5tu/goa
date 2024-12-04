@@ -7,35 +7,42 @@
         <IsGeneratorProject Condition="'$(MSBuildProjectName.EndsWith(.Generator))'">true</IsGeneratorProject>
         <!-- Skip versioning on debug builds for performance -->
         <MinVerSkip Condition="'$(Configuration)' == 'Debug'">true</MinVerSkip>
-        <!-- https://learn.microsoft.com/en-us/dotnet/core/deploying/native-aot/?tabs=windows%2Cnet8#aot-compatibility-analyzers -->
-        <IsAotCompatible>true</IsAotCompatible>
+        <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
     </PropertyGroup>
 
     <!-- Ensure that our packages are built properly for none generator projects-->
     <PropertyGroup Condition="$(IsGeneratorProject) != 'true'">
         <IsPackable>true</IsPackable>
-        <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
         <UseArtifactsOutput>true</UseArtifactsOutput>
         <EnablePackageValidation>true</EnablePackageValidation>
         <DebugSymbols>true</DebugSymbols>
         <DebugType>embedded</DebugType>
         <GenerateDocumentationFile>true</GenerateDocumentationFile>
+        <!-- https://learn.microsoft.com/en-us/dotnet/core/deploying/native-aot/?tabs=windows%2Cnet8#aot-compatibility-analyzers -->
+        <IsAotCompatible>true</IsAotCompatible>
     </PropertyGroup>
 
     <!-- For generator projects we need to modify the settings in a different way -->
     <PropertyGroup Condition="$(IsGeneratorProject) == 'true'">
-        <IsPackable>false</IsPackable>
+        <DevelopmentDependency>true</DevelopmentDependency>
         <TargetFramework>netstandard2.0</TargetFramework>
+        <TargetFrameworks />
         <LangVersion>latest</LangVersion>
         <OutputType>Library</OutputType>
+        <PackageType>Analyzer</PackageType>
         <IsRoslynComponent>true</IsRoslynComponent>
         <EnforceExtendedAnalyzerRules>true</EnforceExtendedAnalyzerRules>
         <IncludeBuildOutput>false</IncludeBuildOutput>
+        <!-- if you don't have this, then warnings as errors kicks out the package generation. -->
+        <NoWarn>$(NoWarn);NU5128</NoWarn>
     </PropertyGroup>
-
+    <ItemGroup Condition="$(IsGeneratorProject) == 'true'">
+        <!-- force the package to go into the right place. Requires <IncludeBuildOutput>false</IncludeBuildOutput> -->
+        <None Include="$(OutputPath)\$(AssemblyName).dll" Pack="true" PackagePath="analyzers/dotnet/cs" />
+    </ItemGroup>
     <!-- If the package has a corresponding generator, ensure that's packaged properly as well -->
     <ItemGroup Condition="Exists('../$(ProjectName).Generator/$(ProjectName).Generator.csproj')">
-        <None Include="$(TargetDir)..\..\$(ProjectName).Generator\$(Configuration.ToLower())\$(ProjectName).Generator.dll" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" />
+        <ProjectReference Include="../$(ProjectName).Generator/$(ProjectName).Generator.csproj" IncludeAssets="Analyzers" />
     </ItemGroup>
 
     <!-- Ensure that we have versioning, reproducible builds and analyzers for all projects -->

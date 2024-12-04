@@ -87,6 +87,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "examples", "examples", "{0A
 	ProjectSection(SolutionItems) = preProject
 		examples\serverless-compose.yml = examples\serverless-compose.yml
 		examples\Directory.Build.props = examples\Directory.Build.props
+		examples\Dockerfile = examples\Dockerfile
 	EndProjectSection
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SampleApi", "examples\SampleApi\SampleApi.csproj", "{841F03A5-66FC-421E-87E1-749995640B08}"
