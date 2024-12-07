@@ -8,9 +8,12 @@
         <OutputType>Exe</OutputType>
         <RuntimeIdentifier>linux-x64</RuntimeIdentifier>
         <!-- Bring the .NET runtime with us, trimming out and optimising anything we don't need -->
-        <SelfContained>true</SelfContained>
-        <PublishTrimmed>true</PublishTrimmed>
         <PublishAot>true</PublishAot>
+        <!-- Let's look at performance -->
+        <OptimizationPreference>Speed</OptimizationPreference>
+        <ServerGarbageCollection>true</ServerGarbageCollection>
+        <!-- Trimming optimizations -->
+        <EnableTrimAnalyzer>true</EnableTrimAnalyzer>
         <!-- Ensure publishing is always in Release mode by default -->
         <PublishRelease>true</PublishRelease>
         <!-- Invarient Globalization by default -->
@@ -18,5 +21,16 @@
         <!-- Embed any symbols for a truely single file build -->
         <DebugSymbols>false</DebugSymbols>
         <DebugType>embedded</DebugType>
+    </PropertyGroup>
+
+    <PropertyGroup Condition="$(GoaAot) == 'true'">
+        <!-- https://learn.microsoft.com/en-us/dotnet/core/deploying/trimming/trimming-options -->
+        <AutoreleasePoolSupport>false</AutoreleasePoolSupport>
+        <TrimmerRemoveSymbols>true</TrimmerRemoveSymbols>
+        <EnableUnsafeBinaryFormatterSerialization>false</EnableUnsafeBinaryFormatterSerialization>
+        <DebuggerSupport>false</DebuggerSupport>
+        <EnableUnsafeUTF7Encoding>false</EnableUnsafeUTF7Encoding>
+        <EventSourceSupport>false</EventSourceSupport>
+        <MetadataUpdaterSupport>false</MetadataUpdaterSupport>
     </PropertyGroup>
 </Project>
