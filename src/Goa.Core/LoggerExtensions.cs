@@ -59,11 +59,12 @@ public static class LoggerExtensions
     /// <typeparam name="T">The type of the exception thrown</typeparam>
     public static void LogException<T>(this ILogger logger, T exception, bool critical = false) where T : Exception
     {
-        // ReSharper disable TemplateIsNotCompileTimeConstantProblem
+        using var scope = logger.WithContext(new [] { ("Exception:Type", exception.GetType().FullName ), ("Exception:StackTrace", exception.StackTrace ) });
+#pragma warning disable CA2254
         if (critical)
-            logger.LogCritical(exception, exception.Message);
+            logger.LogCritical(exception.Message);
         else
-            logger.LogError(exception, exception.Message);
-        // ReSharper restore TemplateIsNotCompileTimeConstantProblem
+            logger.LogError(exception.Message);
+#pragma warning restore CA2254
     }
 }

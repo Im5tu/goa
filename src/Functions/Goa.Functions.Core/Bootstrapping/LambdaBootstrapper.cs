@@ -10,26 +10,24 @@ namespace Goa.Functions.Core.Bootstrapping;
 /// <summary>
 ///     Bootstraps a lambda function and handles the lifecycle with the AWS Lambda Runtime
 /// </summary>
-/// <typeparam name="TFunction">The function class that we want to instantiate</typeparam>
 /// <typeparam name="TRequest">The type of request that the function handles</typeparam>
 /// <typeparam name="TResponse">The type of response that the function returns</typeparam>
-public sealed class LambdaBootstrapper<TFunction, TRequest, TResponse>
-    where TFunction : ILambdaFunction<TRequest, TResponse>
+public class LambdaBootstrapper<TRequest, TResponse>
 {
-    private readonly Func<TFunction> _functionFactory;
     private readonly IResponseSerializer<TResponse> _responseSerializer;
     private readonly ILogger _logger;
     private readonly ILambdaRuntimeClient _lambdaRuntimeClient;
     private readonly JsonTypeInfo<TRequest> _requestTypeInfo;
+    private Func<TRequest, InvocationRequest, CancellationToken, Task<TResponse>>? _onNext;
 
     /// <summary>
     ///     Constructs a new LambdaBootstrapper
     /// </summary>
     /// <param name="jsonSerializerContext">The JsonSerializerContext that knows about the request/response types</param>
-    /// <param name="functionFactory">The factory that creates the function</param>
+    /// <param name="onNext">The method that gets called when there is a new lambda invocation</param>
     /// <param name="responseSerializer">The response serializer that sends the responses back to the lambda runtime</param>
     /// <param name="lambdaRuntimeClient">The implementation of the lambda runtime client</param>
-    public LambdaBootstrapper(JsonSerializerContext jsonSerializerContext, Func<TFunction> functionFactory, IResponseSerializer<TResponse>? responseSerializer = null, ILambdaRuntimeClient? lambdaRuntimeClient = null)
+    public LambdaBootstrapper(JsonSerializerContext jsonSerializerContext, Func<TRequest, InvocationRequest, CancellationToken, Task<TResponse>>? onNext = null, IResponseSerializer<TResponse>? responseSerializer = null, ILambdaRuntimeClient? lambdaRuntimeClient = null)
     {
         var logLevel = Enum.TryParse<LogLevel>(Environment.GetEnvironmentVariable("GOA__LOG__LEVEL"), out var level) ? level : LogLevel.Information;
 
@@ -37,8 +35,14 @@ public sealed class LambdaBootstrapper<TFunction, TRequest, TResponse>
         _lambdaRuntimeClient = lambdaRuntimeClient ?? new LambdaRuntimeClient(logLevel);
         _responseSerializer = responseSerializer ?? new JsonResponseSerializer<TResponse>(jsonSerializerContext);
         _requestTypeInfo = jsonSerializerContext.GetTypeInfo(typeof(TRequest)) as JsonTypeInfo<TRequest> ?? throw new Exception("Cannot find serialization information for the type: " + typeof(TRequest).FullName);
-        _functionFactory = functionFactory;
+        _onNext = onNext;
     }
+
+    /// <summary>
+    ///     Sets the callback for onNext when available
+    /// </summary>
+    /// <param name="onNext">The callback to invoke when a new lambda request comes in</param>
+    public void OnNext(Func<TRequest, InvocationRequest, CancellationToken, Task<TResponse>>? onNext) => _onNext = onNext;
 
     /// <summary>
     ///     Runs the Lambda request loop
@@ -46,9 +50,14 @@ public sealed class LambdaBootstrapper<TFunction, TRequest, TResponse>
     /// <param name="cancellationToken">The cancellation token that stops the processing of a given Lambda invocation</param>
     public async Task RunAsync(CancellationToken cancellationToken = default)
     {
+        // Work around for AspNetCore
+        await Task.Yield();
+
         _logger.BootstrapStarted();
 
-        var func = await GetFunctionAsync(cancellationToken);
+        if (_onNext is null)
+            throw new Exception("No callback has been configured for the lambda, so we're unable to process the request.");
+
         while (!cancellationToken.IsCancellationRequested)
         {
             // Get the next event
@@ -80,7 +89,6 @@ public sealed class LambdaBootstrapper<TFunction, TRequest, TResponse>
             // Combine the external cancellation token with the deadline-based token
             using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, cts.Token);
 
-
             var invocation = invocationResult.Data;
 
             using var context = _logger.WithContext("AwsRequestId", invocation.RequestId);
@@ -100,7 +108,7 @@ public sealed class LambdaBootstrapper<TFunction, TRequest, TResponse>
                 }
 
                 // Process the event and get the response
-                var response = await func.InvokeAsync(request, linkedCts.Token);
+                var response = await _onNext(request, invocation, linkedCts.Token);
 
                 // Serialize and send the response back to the runtime
                 var responsePayload = _responseSerializer.Serialize(response);
@@ -114,18 +122,38 @@ public sealed class LambdaBootstrapper<TFunction, TRequest, TResponse>
             }
         }
     }
+}
 
-    private async Task<TFunction> GetFunctionAsync(CancellationToken cancellationToken)
+/// <summary>
+///     Bootstraps a lambda function and handles the lifecycle with the AWS Lambda Runtime
+/// </summary>
+/// <typeparam name="TFunction">The function class that we want to instantiate</typeparam>
+/// <typeparam name="TRequest">The type of request that the function handles</typeparam>
+/// <typeparam name="TResponse">The type of response that the function returns</typeparam>
+public sealed class LambdaBootstrapper<TFunction, TRequest, TResponse> : LambdaBootstrapper<TRequest, TResponse>
+    where TFunction : ILambdaFunction<TRequest, TResponse>
+{
+    /// <summary>
+    ///     Constructs a new LambdaBootstrapper
+    /// </summary>
+    /// <param name="jsonSerializerContext">The JsonSerializerContext that knows about the request/response types</param>
+    /// <param name="functionFactory">The factory that creates the function</param>
+    /// <param name="responseSerializer">The response serializer that sends the responses back to the lambda runtime</param>
+    /// <param name="lambdaRuntimeClient">The implementation of the lambda runtime client</param>
+    public LambdaBootstrapper(JsonSerializerContext jsonSerializerContext, Func<TFunction> functionFactory, IResponseSerializer<TResponse>? responseSerializer = null, ILambdaRuntimeClient? lambdaRuntimeClient = null)
+        : this(jsonSerializerContext, functionFactory(), responseSerializer, lambdaRuntimeClient)
     {
-        try
-        {
-            return _functionFactory();
-        }
-        catch (Exception e)
-        {
-            var errorPayload = new InitializationErrorPayload("InitializationError", "StartupException", e.ToString());
-            await _lambdaRuntimeClient.ReportInitializationErrorAsync(errorPayload, cancellationToken);
-            throw;
-        }
+    }
+
+    /// <summary>
+    ///     Constructs a new LambdaBootstrapper
+    /// </summary>
+    /// <param name="jsonSerializerContext">The JsonSerializerContext that knows about the request/response types</param>
+    /// <param name="lambdaFunction">The lambda function that will be invoked</param>
+    /// <param name="responseSerializer">The response serializer that sends the responses back to the lambda runtime</param>
+    /// <param name="lambdaRuntimeClient">The implementation of the lambda runtime client</param>
+    public LambdaBootstrapper(JsonSerializerContext jsonSerializerContext, TFunction lambdaFunction, IResponseSerializer<TResponse>? responseSerializer = null, ILambdaRuntimeClient? lambdaRuntimeClient = null)
+        : base(jsonSerializerContext, lambdaFunction.InvokeAsync, responseSerializer, lambdaRuntimeClient)
+    {
     }
 }

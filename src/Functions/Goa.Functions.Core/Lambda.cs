@@ -1,3 +1,5 @@
+using Goa.Functions.Core.Bootstrapping;
+
 namespace Goa.Functions.Core;
 
 /// <summary>
@@ -11,4 +13,8 @@ public interface ILambdaFunction<in TRequest, TResponse>
     ///     This method should not be called by anyone.
     /// </summary>
     Task<TResponse> InvokeAsync(TRequest request, CancellationToken cancellationToken);
+    /// <summary>
+    ///     This method should not be called by anyone.
+    /// </summary>
+    Task<TResponse> InvokeAsync(TRequest request, InvocationRequest invocationRequest, CancellationToken cancellationToken) => InvokeAsync(request, cancellationToken);
 }

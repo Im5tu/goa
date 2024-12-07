@@ -4,7 +4,7 @@ ARG PROJECT
 ENV PROJECT=$PROJECT
 WORKDIR /app
 COPY . .
-RUN cd ${PROJECT} && dotnet restore -r linux-x64 && dotnet publish --no-restore -c Release -o /app/publish
+RUN cd ${PROJECT} && dotnet restore -r linux-x64 && dotnet publish --no-restore -c Release -p:PublishAot=true -o /app/publish
 
 # Stage 2 : Copy to Amazon Linux 2023 for Lambda
 FROM public.ecr.aws/lambda/provided:al2023 AS runtime

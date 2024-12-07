@@ -37,18 +37,12 @@ public sealed class JsonLogger : ILogger
     /// <summary>
     ///     ctor
     /// </summary>
-    public JsonLogger(string categoryName, LogLevel minimumLogLevel) : this(categoryName, minimumLogLevel, LogScopeProvider.Instance, LoggingSerializationContext.Default)
-    {}
-
-    /// <summary>
-    ///     ctor
-    /// </summary>
-    public JsonLogger(string categoryName, LogLevel minimumLogLevel, IExternalScopeProvider scopeProvider, JsonSerializerContext jsonSerializerContext)
+    public JsonLogger(string categoryName, LogLevel minimumLogLevel, IExternalScopeProvider? scopeProvider = null, JsonSerializerContext? jsonSerializerContext = null)
     {
         _categoryName = categoryName;
         _minimumLogLevel = minimumLogLevel;
-        _scopeProvider = scopeProvider;
-        _jsonSerializerContext = jsonSerializerContext;
+        _scopeProvider = scopeProvider ?? LogScopeProvider.Instance;
+        _jsonSerializerContext = jsonSerializerContext ?? LoggingSerializationContext.Default;
     }
 
     /// <inheritDoc />
@@ -72,7 +66,8 @@ public sealed class JsonLogger : ILogger
         {
             foreach (var (key, value) in parameters)
             {
-                if ("{OriginalFormat}".EqualsIgnoreCase(key))
+                // ReSharper disable once ConditionIsAlwaysTrueOrFalseAccordingToNullableAPIContract
+                if ("{OriginalFormat}".EqualsIgnoreCase(key) || value is null)
                 {
                     continue;
                 }
@@ -117,6 +112,9 @@ public sealed class JsonLogger : ILogger
             {
                 foreach (var (key, value) in scopeItems)
                 {
+                    if (value is null)
+                        continue;
+
                     state[key] = value;
                 }
             }
