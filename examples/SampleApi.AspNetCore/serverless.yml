@@ -1,4 +1,4 @@
-service: goa-sample-api
+service: goa-sample-api-aspnetcore
 
 provider:
   name: aws
@@ -7,16 +7,16 @@ provider:
   logRetentionInDays: 14
   ecr:
     images:
-      sample-api-image:
+      sample-api-aspnetcore-image:
         path: .
         file: ../Dockerfile
         buildArgs:
-          PROJECT: SampleApi # These are case sensitive values
+          PROJECT: SampleApi.AspNetCore # These are case sensitive values
 
 functions:
-  sample-api:
+  sample-api-aspnetcore:
     image:
-      name: sample-api-image
+      name: sample-api-aspnetcore-image
     events:
       - httpApi:
           path: /{proxy+}

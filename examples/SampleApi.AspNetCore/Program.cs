@@ -1,6 +1,8 @@
-var builder = WebApplication.CreateBuilder(args);
-var app = builder.Build();
+using Goa.Functions.ApiGateway.AspNetCore;
+using Microsoft.AspNetCore.Builder;
 
+var builder = WebApplication.CreateBuilder(args).UseGoa();
+var app = builder.Build();
 app.MapGet("/", () => "Hello World!");
 
-app.Run();
+await app.RunAsync();

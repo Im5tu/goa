@@ -2,8 +2,15 @@
 
     <PropertyGroup>
         <TargetFramework>net9.0</TargetFramework>
-        <Nullable>enable</Nullable>
-        <ImplicitUsings>enable</ImplicitUsings>
+        <RuntimeIdentifier>linux-x64</RuntimeIdentifier>
+        <GoaAot>true</GoaAot>
+        <PublishAot>true</PublishAot>
+        <PublishTrimmed>true</PublishTrimmed>
+        <PublishSingleFile>true</PublishSingleFile>
     </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Goa.Functions.ApiGateway.AspNetCore" Version="0.0.0-alpha.0.32" />
+    </ItemGroup>
 
 </Project>

@@ -7,8 +7,6 @@
         <!-- Default to linux-x64 console apps -->
         <OutputType>Exe</OutputType>
         <RuntimeIdentifier>linux-x64</RuntimeIdentifier>
-        <!-- Bring the .NET runtime with us, trimming out and optimising anything we don't need -->
-        <PublishAot>true</PublishAot>
         <!-- Let's look at performance -->
         <OptimizationPreference>Speed</OptimizationPreference>
         <ServerGarbageCollection>true</ServerGarbageCollection>
