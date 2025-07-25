@@ -98,6 +98,14 @@ public class DynamoTestFixture : IAsyncInitializer, IAsyncDisposable
             Console.WriteLine($"Warning: Failed to delete test table: {ex.Message}");
         }
 
+        try
+        {
+            await _localStack.DisposeAsync();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Warning: Failed to dispose LocalStack: {ex.Message}");
+        }
         _serviceProvider?.Dispose();
         GC.SuppressFinalize(this);
     }
