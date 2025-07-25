@@ -255,4 +255,8 @@ public abstract class AwsServiceClient<T> where T : AwsServiceConfiguration
 
         return requestMessage;
     }
+
+    // TODO :: SendAsync -> SendJsonAsync
+    // TODO :: new SendXML
+    // TODO :: Refactor send methods so that they don't take jsontypeinfo
 }
