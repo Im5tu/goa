@@ -1,6 +1,5 @@
 using Goa.Clients.Dynamo;
 using Goa.Clients.Dynamo.Operations;
-using Goa.Clients.Dynamo.Operations.Query;
 using Goa.Clients.Dynamo.Serialization;
 using Goa.Functions.ApiGateway.AspNetCore;
 using Goa.Functions.ApiGateway.Payloads;
