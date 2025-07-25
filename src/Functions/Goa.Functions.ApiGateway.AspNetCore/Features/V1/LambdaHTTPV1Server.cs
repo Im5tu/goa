@@ -1,5 +1,4 @@
 ﻿using Goa.Functions.ApiGateway.Core.Payloads.V1;
-using Goa.Functions.ApiGateway.Payloads.V1;
 using Goa.Functions.Core.Bootstrapping;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Features;
@@ -8,8 +7,6 @@ using System.Text;
 using ProxyPayloadV1SerializationContext = Goa.Functions.ApiGateway.Core.Payloads.V1.ProxyPayloadV1SerializationContext;
 
 namespace Goa.Functions.ApiGateway.AspNetCore.Features.V1;
-
-#pragma warning disable CS1591 // Missing XML comment for publicly visible type or member
 
 internal sealed class LambdaHTTPV1Server : LambdaServer<ProxyPayloadV1Request, ProxyPayloadV1Response>
 {

@@ -23,9 +23,6 @@ public interface IDeserializeFromXml
     /// <exception cref="ArgumentNullException">
     /// Thrown when <paramref name="xml"/> is null.
     /// </exception>
-    /// <exception cref="xml">
-    /// Thrown when <paramref name="xml"/> is not valid XML or does not conform to the expected schema.
-    /// </exception>
     /// <exception cref="XmlException">
     /// Thrown when the XML structure cannot be mapped to the target type,
     /// such as when required elements are missing or have incompatible data types.

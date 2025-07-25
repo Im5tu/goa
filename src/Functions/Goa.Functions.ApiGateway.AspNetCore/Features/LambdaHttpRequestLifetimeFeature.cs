@@ -2,7 +2,6 @@
 
 namespace Goa.Functions.ApiGateway.AspNetCore.Features;
 
-#pragma warning disable CS1591
 internal sealed class LambdaHttpRequestLifetimeFeature : IHttpRequestLifetimeFeature, IDisposable
 {
     private readonly CancellationTokenSource _cts;

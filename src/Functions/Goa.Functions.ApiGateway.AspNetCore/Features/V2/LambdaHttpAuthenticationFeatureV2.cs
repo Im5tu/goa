@@ -1,13 +1,10 @@
 ﻿using Goa.Functions.ApiGateway.Core.Payloads.V2;
-using Goa.Functions.ApiGateway.Payloads;
-using Goa.Functions.ApiGateway.Payloads.V2;
 using Microsoft.AspNetCore.Http.Features.Authentication;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 
 namespace Goa.Functions.ApiGateway.AspNetCore.Features.V2;
 
-#pragma warning disable CS1591
 internal sealed class LambdaHttpAuthenticationFeatureV2 : IHttpAuthenticationFeature
 {
     public ClaimsPrincipal? User { get; set; }

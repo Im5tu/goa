@@ -2,8 +2,8 @@
 using Goa.Functions.ApiGateway.Core.Payloads.V2;
 using Goa.Functions.Core.Bootstrapping;
 using System.Text.Json;
-using ProxyPayloadV1SerializationContext = Goa.Functions.ApiGateway.Payloads.V1.ProxyPayloadV1SerializationContext;
-using ProxyPayloadV2SerializationContext = Goa.Functions.ApiGateway.Payloads.V2.ProxyPayloadV2SerializationContext;
+using ProxyPayloadV1SerializationContext = Goa.Functions.ApiGateway.Core.Payloads.V1.ProxyPayloadV1SerializationContext;
+using ProxyPayloadV2SerializationContext = Goa.Functions.ApiGateway.Core.Payloads.V2.ProxyPayloadV2SerializationContext;
 
 namespace TestConsole;
 
