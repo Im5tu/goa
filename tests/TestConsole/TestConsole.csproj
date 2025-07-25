@@ -1,17 +1,43 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk.Web">
 
-    <Import Project="../../src/Functions/Goa.props" Condition="$(Configuration) == 'Release'" />
-    <Import Project="../../src/Functions/Goa.Functions.ApiGateway/Goa.Functions.ApiGateway.props" />
+<!--    <Import Project="../../src/Functions/Goa.props" Condition="$(Configuration) == 'Release'" />-->
+<!--    <Import Project="../../src/Functions/Goa.Functions.ApiGateway/Goa.Functions.ApiGateway.props" />-->
 
     <PropertyGroup>
         <TargetFramework>net9.0</TargetFramework>
-        <OutputType>Exe</OutputType>
+        <SelfContained>true</SelfContained>
+        <PublishAot>true</PublishAot>
+        <PublishTrimmed>true</PublishTrimmed>
     </PropertyGroup>
 
     <ItemGroup>
-<!--      <ProjectReference Include="..\..\src\Functions\Goa.Functions.ApiGateway.Authorizer\Goa.Functions.ApiGateway.Authorizer.csproj" />-->
-      <ProjectReference Include="..\..\src\Functions\Goa.Functions.ApiGateway.Generator\Goa.Functions.ApiGateway.Generator.csproj" OutputItemType="Analyzer" ExcludeAssets="All" ReferenceOutputAssembly="false" />
-      <ProjectReference Include="..\..\src\Functions\Goa.Functions.ApiGateway\Goa.Functions.ApiGateway.csproj" />
+<!--        <ProjectReference Include="..\..\src\Functions\Goa.Functions.ApiGateway.Generator\Goa.Functions.ApiGateway.Generator.csproj" OutputItemType="Analyzer" ExcludeAssets="All" ReferenceOutputAssembly="false" />-->
+<!--        <ProjectReference Include="..\..\src\Functions\Goa.Functions.ApiGateway\Goa.Functions.ApiGateway.csproj" />-->
+
+        <ProjectReference Include="..\..\src\Clients\Goa.Clients.Dynamo\Goa.Clients.Dynamo.csproj" />
+
+        <ProjectReference Include="..\..\src\Clients\Goa.Clients.EventBridge\Goa.Clients.EventBridge.csproj" />
+
+        <ProjectReference Include="..\..\src\Clients\Goa.Clients.Kinesis\Goa.Clients.Kinesis.csproj" />
+
+        <ProjectReference Include="..\..\src\Clients\Goa.Clients.Lambda\Goa.Clients.Lambda.csproj" />
+
+        <ProjectReference Include="..\..\src\Clients\Goa.Clients.ParameterStore\Goa.Clients.ParameterStore.csproj" />
+
+        <ProjectReference Include="..\..\src\Clients\Goa.Clients.S3\Goa.Clients.S3.csproj" />
+
+        <ProjectReference Include="..\..\src\Clients\Goa.Clients.SecretsManager\Goa.Clients.SecretsManager.csproj" />
+
+        <ProjectReference Include="..\..\src\Clients\Goa.Clients.Ses\Goa.Clients.Ses.csproj" />
+
+        <ProjectReference Include="..\..\src\Clients\Goa.Clients.Sns\Goa.Clients.Sns.csproj" />
+
+        <ProjectReference Include="..\..\src\Clients\Goa.Clients.Sqs\Goa.Clients.Sqs.csproj" />
+
+        <ProjectReference Include="..\..\src\Functions\Goa.Functions.ApiGateway.AspNetCore\Goa.Functions.ApiGateway.AspNetCore.csproj" />
+
+
+        <!--      <ProjectReference Include="..\..\src\Functions\Goa.Functions.ApiGateway.Authorizer\Goa.Functions.ApiGateway.Authorizer.csproj" />-->
 <!--      <ProjectReference Include="..\..\src\Functions\Goa.Functions.Core\Goa.Functions.Core.csproj" />-->
 <!--      <ProjectReference Include="..\..\src\Functions\Goa.Functions.Dynamo\Goa.Functions.Dynamo.csproj" />-->
 <!--      <ProjectReference Include="..\..\src\Functions\Goa.Functions.EventBridge\Goa.Functions.EventBridge.csproj" />-->

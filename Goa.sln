@@ -56,6 +56,13 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = ".sln", ".sln", "{64F3A82A-C
 		.editorconfig = .editorconfig
 	EndProjectSection
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "docs", "docs", "{F1E2D3C4-5B6A-7F8E-9D0C-1B2A3F4E5D6C}"
+	ProjectSection(SolutionItems) = preProject
+		docs\CredentialProviders.md = docs\CredentialProviders.md
+		docs\EnvironmentVairables.md = docs\EnvironmentVairables.md
+		docs\SerializationContexts.md = docs\SerializationContexts.md
+	EndProjectSection
+EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Goa.Core", "src\Goa.Core\Goa.Core.csproj", "{34003827-D480-4E8F-AD46-E2FCB9B0DB9D}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Goa.Functions.ApiGateway", "src\Functions\Goa.Functions.ApiGateway\Goa.Functions.ApiGateway.csproj", "{5D84768E-B450-4360-883B-BE1BF7C6743B}"
@@ -96,6 +103,20 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Goa.Functions.ApiGateway.Core", "src\Functions\Goa.Functions.ApiGateway.Core\Goa.Functions.ApiGateway.Core.csproj", "{785C1291-0697-4236-8A35-41E1251A56AD}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SampleApi.AspNetCore", "examples\SampleApi.AspNetCore\SampleApi.AspNetCore.csproj", "{15E409EA-17B8-484F-A4D1-9B97201A05F2}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Goa.Clients.Core", "src\Clients\Goa.Clients.Core\Goa.Clients.Core.csproj", "{5A66664C-55B3-4360-AA14-503E7B80BD0F}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Clients", "Clients", "{B5DC1548-387B-4ABB-B4E8-CED73AFD8863}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Goa.Clients.Dynamo.Tests", "tests\Clients\Goa.Clients.Dynamo.Tests\Goa.Clients.Dynamo.Tests.csproj", "{C8F1A2B3-4E5D-6F7A-8B9C-0D1E2F3A4B5C}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Goa.Clients.EventBridge.Tests", "tests\Clients\Goa.Clients.EventBridge.Tests\Goa.Clients.EventBridge.Tests.csproj", "{6BF6A08A-2200-4757-A2D6-98FB02DAA6A5}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Goa.Clients.Lambda.Tests", "tests\Clients\Goa.Clients.Lambda.Tests\Goa.Clients.Lambda.Tests.csproj", "{78BEF6C9-0074-44F5-8B1C-AA9B2C8A38AC}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Goa.Clients.Sns.Tests", "tests\Clients\Goa.Clients.Sns.Tests\Goa.Clients.Sns.Tests.csproj", "{A3AD36B1-8EC6-46FF-813C-5C6A4B174CEE}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Goa.Clients.Sqs.Tests", "tests\Clients\Goa.Clients.Sqs.Tests\Goa.Clients.Sqs.Tests.csproj", "{11CE79CF-715A-4890-9FDD-66144A44FB34}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -138,6 +159,13 @@ Global
 		{1265CEFF-0D39-4FC5-9467-7DF589B7BD3D} = {51395382-E73F-4070-A65A-C2D5ADF9D5A8}
 		{785C1291-0697-4236-8A35-41E1251A56AD} = {51395382-E73F-4070-A65A-C2D5ADF9D5A8}
 		{15E409EA-17B8-484F-A4D1-9B97201A05F2} = {0A62E70D-0CD7-444A-A43A-D5AA00B3E9B6}
+		{5A66664C-55B3-4360-AA14-503E7B80BD0F} = {14163F55-30AB-44EF-899E-19790A93BB37}
+		{B5DC1548-387B-4ABB-B4E8-CED73AFD8863} = {B9BAC8A3-D4AA-4F7F-84CE-4746EC865CC2}
+		{C8F1A2B3-4E5D-6F7A-8B9C-0D1E2F3A4B5C} = {B5DC1548-387B-4ABB-B4E8-CED73AFD8863}
+		{6BF6A08A-2200-4757-A2D6-98FB02DAA6A5} = {B5DC1548-387B-4ABB-B4E8-CED73AFD8863}
+		{78BEF6C9-0074-44F5-8B1C-AA9B2C8A38AC} = {B5DC1548-387B-4ABB-B4E8-CED73AFD8863}
+		{A3AD36B1-8EC6-46FF-813C-5C6A4B174CEE} = {B5DC1548-387B-4ABB-B4E8-CED73AFD8863}
+		{11CE79CF-715A-4890-9FDD-66144A44FB34} = {B5DC1548-387B-4ABB-B4E8-CED73AFD8863}
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
 		{0D4BB144-07C4-4F45-8EE0-8627E1F33DF4}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
@@ -256,5 +284,29 @@ Global
 		{15E409EA-17B8-484F-A4D1-9B97201A05F2}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{15E409EA-17B8-484F-A4D1-9B97201A05F2}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{15E409EA-17B8-484F-A4D1-9B97201A05F2}.Release|Any CPU.Build.0 = Release|Any CPU
+		{5A66664C-55B3-4360-AA14-503E7B80BD0F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5A66664C-55B3-4360-AA14-503E7B80BD0F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5A66664C-55B3-4360-AA14-503E7B80BD0F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5A66664C-55B3-4360-AA14-503E7B80BD0F}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C8F1A2B3-4E5D-6F7A-8B9C-0D1E2F3A4B5C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C8F1A2B3-4E5D-6F7A-8B9C-0D1E2F3A4B5C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C8F1A2B3-4E5D-6F7A-8B9C-0D1E2F3A4B5C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C8F1A2B3-4E5D-6F7A-8B9C-0D1E2F3A4B5C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{6BF6A08A-2200-4757-A2D6-98FB02DAA6A5}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6BF6A08A-2200-4757-A2D6-98FB02DAA6A5}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6BF6A08A-2200-4757-A2D6-98FB02DAA6A5}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6BF6A08A-2200-4757-A2D6-98FB02DAA6A5}.Release|Any CPU.Build.0 = Release|Any CPU
+		{78BEF6C9-0074-44F5-8B1C-AA9B2C8A38AC}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{78BEF6C9-0074-44F5-8B1C-AA9B2C8A38AC}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{78BEF6C9-0074-44F5-8B1C-AA9B2C8A38AC}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{78BEF6C9-0074-44F5-8B1C-AA9B2C8A38AC}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A3AD36B1-8EC6-46FF-813C-5C6A4B174CEE}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A3AD36B1-8EC6-46FF-813C-5C6A4B174CEE}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A3AD36B1-8EC6-46FF-813C-5C6A4B174CEE}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A3AD36B1-8EC6-46FF-813C-5C6A4B174CEE}.Release|Any CPU.Build.0 = Release|Any CPU
+		{11CE79CF-715A-4890-9FDD-66144A44FB34}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{11CE79CF-715A-4890-9FDD-66144A44FB34}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{11CE79CF-715A-4890-9FDD-66144A44FB34}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{11CE79CF-715A-4890-9FDD-66144A44FB34}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal
