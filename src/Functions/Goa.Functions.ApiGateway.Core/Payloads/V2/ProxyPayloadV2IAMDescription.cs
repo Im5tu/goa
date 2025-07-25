@@ -1,4 +1,4 @@
-namespace Goa.Functions.ApiGateway.Payloads.V2;
+namespace Goa.Functions.ApiGateway.Core.Payloads.V2;
 
 /// <summary>
 ///     Represents the IAM (Identity and Access Management) description in a V2 API Gateway request.

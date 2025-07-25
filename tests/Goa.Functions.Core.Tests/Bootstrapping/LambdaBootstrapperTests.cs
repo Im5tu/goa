@@ -1,7 +1,6 @@
 using Goa.Functions.Core.Bootstrapping;
 using Moq;
 using System.Text.Json;
-using System.Text.Json.Serialization;
 using TUnit.Assertions;
 using TUnit.Assertions.Extensions;
 using TUnit.Core;
@@ -164,12 +163,4 @@ public class LambdaBootstrapperTests
             throw new Exception("Test Loop Error");
         }
     }
-}
-
-public record Data(string name);
-
-[JsonSourceGenerationOptions(WriteIndented = false, UseStringEnumConverter = true, DictionaryKeyPolicy = JsonKnownNamingPolicy.CamelCase, PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase, DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull)]
-[JsonSerializable(typeof(Data))]
-public partial class DataSerializationContext : JsonSerializerContext
-{
 }

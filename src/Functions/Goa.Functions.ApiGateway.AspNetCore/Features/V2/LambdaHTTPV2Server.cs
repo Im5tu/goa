@@ -1,9 +1,11 @@
+using Goa.Functions.ApiGateway.Core.Payloads.V2;
 using Goa.Functions.ApiGateway.Payloads.V2;
 using Goa.Functions.Core.Bootstrapping;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Http.Features.Authentication;
 using System.Text;
+using ProxyPayloadV2SerializationContext = Goa.Functions.ApiGateway.Core.Payloads.V2.ProxyPayloadV2SerializationContext;
 
 namespace Goa.Functions.ApiGateway.AspNetCore.Features.V2;
 

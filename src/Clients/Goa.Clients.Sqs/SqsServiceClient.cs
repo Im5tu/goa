@@ -1,4 +1,5 @@
 using ErrorOr;
+using Goa.Clients.Core;
 using Goa.Clients.Core.Http;
 using Goa.Clients.Sqs.Operations.DeleteMessage;
 using Goa.Clients.Sqs.Operations.ReceiveMessage;

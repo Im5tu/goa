@@ -1,29 +1,8 @@
-using Goa.Clients.Dynamo;
-using Goa.Clients.Dynamo.Operations;
-using Goa.Clients.Dynamo.Serialization;
 using Goa.Functions.ApiGateway.AspNetCore;
-using Goa.Functions.ApiGateway.Payloads;
-using Goa.Functions.ApiGateway.Payloads.V1;
-using Goa.Functions.ApiGateway.Payloads.V2;
-using Goa.Functions.Core.Bootstrapping;
+using Goa.Functions.ApiGateway.Core.Payloads;
+using Goa.Functions.ApiGateway.Core.Payloads.V2;
 using System.Diagnostics;
-using System.Text.Json;
-
-
-var json =
-    "{\"Items\": [{\"sk\": {\"S\": \"item1\"}, \"data\": {\"S\": \"data1\"}, \"pk\": {\"S\": \"query-test-pk\"}}, {\"sk\": {\"S\": \"item2\"}, \"data\": {\"S\": \"data2\"}, \"pk\": {\"S\": \"query-test-pk\"}}], \"Count\": 2, \"ScannedCount\": 2}";
-var jr = JsonSerializer.Deserialize<QueryResponse>(json, DynamoJsonContext.Default.QueryResponse);
-
-;
-
-
-// IDynamoClient ddb = null!;
-//
-// ddb.PutItemAsync("temp", b =>
-// {
-//     b.WithAttribute("A2", "b");
-// });
-
+using TestConsole;
 
 
 // use a fake lambda runtime client for testing
@@ -218,46 +197,6 @@ Console.WriteLine($"Run: {sw.ElapsedMilliseconds:0.##}ms");
 await app.Services.GetRequiredService<IHostLifetime>().StopAsync(CancellationToken.None);
 
 
-
-
-
-
-
-public class FakeRuntimeClient : ILambdaRuntimeClient
-{
-    private readonly Queue<string> _queue = new();
-
-    public int PendingInvocations => _queue.Count;
-
-    public void Enqueue(ProxyPayloadV1Request request) => _queue.Enqueue(JsonSerializer.Serialize(request, ProxyPayloadV1SerializationContext.Default.ProxyPayloadV1Request));
-    public void Enqueue(ProxyPayloadV2Request request) => _queue.Enqueue(JsonSerializer.Serialize(request, ProxyPayloadV2SerializationContext.Default.ProxyPayloadV2Request));
-
-    public Task<Result<InvocationRequest>> GetNextInvocationAsync(CancellationToken cancellationToken = default)
-    {
-        var payload = _queue.Count > 0 ? _queue.Dequeue() : string.Empty;
-        var request = new InvocationRequest(Guid.NewGuid().ToString("N"), payload, DateTimeOffset.UtcNow.AddSeconds(30).ToUnixTimeMilliseconds().ToString(), "test");
-        return Task.FromResult(Result<InvocationRequest>.Success(request));
-    }
-
-    public Task<Result> ReportInitializationErrorAsync(InitializationErrorPayload errorPayload,
-        CancellationToken cancellationToken = default)
-    {
-        return Task.FromResult(Result.Success());
-    }
-
-    public Task<Result> ReportInvocationErrorAsync(string awsRequestId, InvocationErrorPayload errorPayload,
-        CancellationToken cancellationToken = default)
-    {
-        return Task.FromResult(Result.Success());
-    }
-
-    public Task<Result> SendResponseAsync(string awsRequestId, HttpContent content, CancellationToken cancellationToken = default)
-    {
-        return Task.FromResult(Result.Success());
-    }
-}
-
-
 // using Goa.Functions.ApiGateway.Payloads.V2;
 // using Goa.Functions.Core.Logging;
 // using Microsoft.Extensions.Logging;
@@ -330,7 +269,7 @@ public class FakeRuntimeClient : ILambdaRuntimeClient
 // public record Pong(string Message);
 
 
-namespace Goa.Generated
+namespace TestConsole
 {
 
 }

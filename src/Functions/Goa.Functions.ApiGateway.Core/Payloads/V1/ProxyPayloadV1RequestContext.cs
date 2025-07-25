@@ -1,4 +1,4 @@
-namespace Goa.Functions.ApiGateway.Payloads.V1;
+namespace Goa.Functions.ApiGateway.Core.Payloads.V1;
 
 /// <summary>
 ///     Provides detailed information about the request, such as path, account ID, identity, and request metadata.

@@ -1,6 +1,6 @@
 using System.Text.Json.Serialization;
 
-namespace Goa.Functions.ApiGateway.Payloads.V1;
+namespace Goa.Functions.ApiGateway.Core.Payloads.V1;
 
 /// <summary>
 ///     System.Text.Json.Serialization.JsonSerializationContext for ProxyPayloadV1

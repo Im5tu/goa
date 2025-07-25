@@ -1,4 +1,4 @@
-namespace Goa.Functions.ApiGateway.Payloads;
+namespace Goa.Functions.ApiGateway.Core.Payloads;
 
 /// <summary>
 ///     Represents the JWT (JSON Web Token) description, including claims and scopes.
