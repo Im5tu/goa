@@ -19,7 +19,7 @@ namespace Goa.Clients.Dynamo;
 /// High-performance DynamoDB service client that implements IDynamoClient using AWS service client infrastructure.
 /// Provides strongly-typed DynamoDB operations with built-in error handling, logging, and AWS authentication.
 /// </summary>
-public class DynamoServiceClient : AwsServiceClient<DynamoServiceClientConfiguration>, IDynamoClient
+public class DynamoServiceClient : JsonAwsServiceClient<DynamoServiceClientConfiguration>, IDynamoClient
 {
     /// <summary>
     /// Initializes a new instance of the DynamoServiceClient class.
@@ -28,7 +28,7 @@ public class DynamoServiceClient : AwsServiceClient<DynamoServiceClientConfigura
     /// <param name="logger">Logger instance for logging operations.</param>
     /// <param name="configuration">Configuration for the DynamoDB service.</param>
     public DynamoServiceClient(IHttpClientFactory httpClientFactory, ILogger<DynamoServiceClient> logger, DynamoServiceClientConfiguration configuration)
-        : base(httpClientFactory, logger, configuration)
+        : base(httpClientFactory, logger, configuration, DynamoJsonContext.Default)
     {
     }
 
@@ -40,12 +40,10 @@ public class DynamoServiceClient : AwsServiceClient<DynamoServiceClientConfigura
     /// <returns>The get item response, or an error if the operation failed.</returns>
     public async Task<ErrorOr<GetItemResponse>> GetItemAsync(GetItemRequest request, CancellationToken cancellationToken = default)
     {
-        var response = await SendAsync(
+        var response = await SendAsync<GetItemRequest, GetItemResponse>(
             HttpMethod.Post,
             "/",
             request,
-            DynamoJsonContext.Default.GetItemRequest,
-            DynamoJsonContext.Default.GetItemResponse,
             "DynamoDB_20120810.GetItem",
             cancellationToken);
 
@@ -60,12 +58,10 @@ public class DynamoServiceClient : AwsServiceClient<DynamoServiceClientConfigura
     /// <returns>The put item response, or an error if the operation failed.</returns>
     public async Task<ErrorOr<PutItemResponse>> PutItemAsync(PutItemRequest request, CancellationToken cancellationToken = default)
     {
-        var response = await SendAsync(
+        var response = await SendAsync<PutItemRequest, PutItemResponse>(
             HttpMethod.Post,
             "/",
             request,
-            DynamoJsonContext.Default.PutItemRequest,
-            DynamoJsonContext.Default.PutItemResponse,
             "DynamoDB_20120810.PutItem",
             cancellationToken);
 
@@ -80,12 +76,10 @@ public class DynamoServiceClient : AwsServiceClient<DynamoServiceClientConfigura
     /// <returns>The update item response, or an error if the operation failed.</returns>
     public async Task<ErrorOr<UpdateItemResponse>> UpdateItemAsync(UpdateItemRequest request, CancellationToken cancellationToken = default)
     {
-        var response = await SendAsync(
+        var response = await SendAsync<UpdateItemRequest, UpdateItemResponse>(
             HttpMethod.Post,
             "/",
             request,
-            DynamoJsonContext.Default.UpdateItemRequest,
-            DynamoJsonContext.Default.UpdateItemResponse,
             "DynamoDB_20120810.UpdateItem",
             cancellationToken);
 
@@ -100,12 +94,10 @@ public class DynamoServiceClient : AwsServiceClient<DynamoServiceClientConfigura
     /// <returns>The delete item response, or an error if the operation failed.</returns>
     public async Task<ErrorOr<DeleteItemResponse>> DeleteItemAsync(DeleteItemRequest request, CancellationToken cancellationToken = default)
     {
-        var response = await SendAsync(
+        var response = await SendAsync<DeleteItemRequest, DeleteItemResponse>(
             HttpMethod.Post,
             "/",
             request,
-            DynamoJsonContext.Default.DeleteItemRequest,
-            DynamoJsonContext.Default.DeleteItemResponse,
             "DynamoDB_20120810.DeleteItem",
             cancellationToken);
 
@@ -120,12 +112,10 @@ public class DynamoServiceClient : AwsServiceClient<DynamoServiceClientConfigura
     /// <returns>The query response containing items and pagination information, or an error if the operation failed.</returns>
     public async Task<ErrorOr<QueryResponse>> QueryAsync(QueryRequest request, CancellationToken cancellationToken = default)
     {
-        var response = await SendAsync(
+        var response = await SendAsync<QueryRequest, QueryResponse>(
             HttpMethod.Post,
             "/",
             request,
-            DynamoJsonContext.Default.QueryRequest,
-            DynamoJsonContext.Default.QueryResponse,
             "DynamoDB_20120810.Query",
             cancellationToken);
 
@@ -140,12 +130,10 @@ public class DynamoServiceClient : AwsServiceClient<DynamoServiceClientConfigura
     /// <returns>The scan response containing items and pagination information, or an error if the operation failed.</returns>
     public async Task<ErrorOr<ScanResponse>> ScanAsync(ScanRequest request, CancellationToken cancellationToken = default)
     {
-        var response = await SendAsync(
+        var response = await SendAsync<ScanRequest, ScanResponse>(
             HttpMethod.Post,
             "/",
             request,
-            DynamoJsonContext.Default.ScanRequest,
-            DynamoJsonContext.Default.ScanResponse,
             "DynamoDB_20120810.Scan",
             cancellationToken);
 
@@ -160,12 +148,10 @@ public class DynamoServiceClient : AwsServiceClient<DynamoServiceClientConfigura
     /// <returns>The batch get response containing items and unprocessed keys, or an error if the operation failed.</returns>
     public async Task<ErrorOr<BatchGetItemResponse>> BatchGetItemAsync(BatchGetItemRequest request, CancellationToken cancellationToken = default)
     {
-        var response = await SendAsync(
+        var response = await SendAsync<BatchGetItemRequest, BatchGetItemResponse>(
             HttpMethod.Post,
             "/",
             request,
-            DynamoJsonContext.Default.BatchGetItemRequest,
-            DynamoJsonContext.Default.BatchGetItemResponse,
             "DynamoDB_20120810.BatchGetItem",
             cancellationToken);
 
@@ -180,12 +166,10 @@ public class DynamoServiceClient : AwsServiceClient<DynamoServiceClientConfigura
     /// <returns>The batch write response indicating success and any unprocessed items, or an error if the operation failed.</returns>
     public async Task<ErrorOr<BatchWriteItemResponse>> BatchWriteItemAsync(BatchWriteItemRequest request, CancellationToken cancellationToken = default)
     {
-        var response = await SendAsync(
+        var response = await SendAsync<BatchWriteItemRequest, BatchWriteItemResponse>(
             HttpMethod.Post,
             "/",
             request,
-            DynamoJsonContext.Default.BatchWriteItemRequest,
-            DynamoJsonContext.Default.BatchWriteItemResponse,
             "DynamoDB_20120810.BatchWriteItem",
             cancellationToken);
 
@@ -200,12 +184,10 @@ public class DynamoServiceClient : AwsServiceClient<DynamoServiceClientConfigura
     /// <returns>The transact write response, or an error if the transaction failed.</returns>
     public async Task<ErrorOr<TransactWriteItemResponse>> TransactWriteItemsAsync(TransactWriteRequest request, CancellationToken cancellationToken = default)
     {
-        var response = await SendAsync(
+        var response = await SendAsync<TransactWriteRequest, TransactWriteItemResponse>(
             HttpMethod.Post,
             "/",
             request,
-            DynamoJsonContext.Default.TransactWriteRequest,
-            DynamoJsonContext.Default.TransactWriteItemResponse,
             "DynamoDB_20120810.TransactWriteItems",
             cancellationToken);
 
@@ -220,12 +202,10 @@ public class DynamoServiceClient : AwsServiceClient<DynamoServiceClientConfigura
     /// <returns>The transact get response with items in the same order as the requests, or an error if the operation failed.</returns>
     public async Task<ErrorOr<TransactGetItemResponse>> TransactGetItemsAsync(TransactGetRequest request, CancellationToken cancellationToken = default)
     {
-        var response = await SendAsync(
+        var response = await SendAsync<TransactGetRequest, TransactGetItemResponse>(
             HttpMethod.Post,
             "/",
             request,
-            DynamoJsonContext.Default.TransactGetRequest,
-            DynamoJsonContext.Default.TransactGetItemResponse,
             "DynamoDB_20120810.TransactGetItems",
             cancellationToken);
 

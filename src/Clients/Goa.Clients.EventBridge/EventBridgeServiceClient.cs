@@ -8,13 +8,13 @@ using Microsoft.Extensions.Logging;
 
 namespace Goa.Clients.EventBridge;
 
-internal sealed class EventBridgeServiceClient : AwsServiceClient<EventBridgeServiceClientConfiguration>, IEventBridgeClient
+internal sealed class EventBridgeServiceClient : JsonAwsServiceClient<EventBridgeServiceClientConfiguration>, IEventBridgeClient
 {
     public EventBridgeServiceClient(
         IHttpClientFactory httpClientFactory,
         EventBridgeServiceClientConfiguration configuration,
         ILogger<EventBridgeServiceClient> logger)
-        : base(httpClientFactory, logger, configuration)
+        : base(httpClientFactory, logger, configuration, EventBridgeJsonContext.Default)
     {
     }
 
@@ -34,8 +34,6 @@ internal sealed class EventBridgeServiceClient : AwsServiceClient<EventBridgeSer
                 HttpMethod.Post,
             "/",
                 request,
-                EventBridgeJsonContext.Default.PutEventsRequest,
-                EventBridgeJsonContext.Default.PutEventsResponse,
                 "PutEvents",
                 cancellationToken);
 

@@ -11,13 +11,13 @@ using System.Net;
 
 namespace Goa.Clients.Lambda;
 
-internal sealed class LambdaServiceClient : AwsServiceClient<LambdaServiceClientConfiguration>, ILambdaClient
+internal sealed class LambdaServiceClient : JsonAwsServiceClient<LambdaServiceClientConfiguration>, ILambdaClient
 {
     public LambdaServiceClient(
         IHttpClientFactory httpClientFactory,
         LambdaServiceClientConfiguration configuration,
         ILogger<LambdaServiceClient> logger)
-        : base(httpClientFactory, logger, configuration)
+        : base(httpClientFactory, logger, configuration, LambdaJsonContext.Default)
     {
     }
 
@@ -51,8 +51,6 @@ internal sealed class LambdaServiceClient : AwsServiceClient<LambdaServiceClient
                 HttpMethod.Post,
                 requestUri,
                 request,
-                LambdaJsonContext.Default.InvokeRequest,
-                LambdaJsonContext.Default.String,
                 "Invoke",
                 cancellationToken,
                 headers);
@@ -103,8 +101,6 @@ internal sealed class LambdaServiceClient : AwsServiceClient<LambdaServiceClient
                 HttpMethod.Post,
                 requestUri,
                 request,
-                LambdaJsonContext.Default.InvokeAsyncRequest,
-                LambdaJsonContext.Default.String,
                 "Invoke",
                 cancellationToken,
                 headers);
@@ -153,8 +149,6 @@ internal sealed class LambdaServiceClient : AwsServiceClient<LambdaServiceClient
                 HttpMethod.Post,
                 requestUri,
                 request.Payload ?? "{}",
-                LambdaJsonContext.Default.String,
-                LambdaJsonContext.Default.String,
                 "Invoke",
                 cancellationToken,
                 headers);

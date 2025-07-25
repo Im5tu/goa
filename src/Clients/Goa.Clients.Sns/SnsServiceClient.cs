@@ -7,7 +7,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Goa.Clients.Sns;
 
-internal sealed class SnsServiceClient : AwsServiceClient<SnsServiceClientConfiguration>, ISnsClient
+internal sealed class SnsServiceClient : XmlAwsServiceClient<SnsServiceClientConfiguration>, ISnsClient
 {
     public SnsServiceClient(
         IHttpClientFactory httpClientFactory,
@@ -38,8 +38,6 @@ internal sealed class SnsServiceClient : AwsServiceClient<SnsServiceClientConfig
                 HttpMethod.Post,
                 "/",
                 request,
-                SnsJsonContext.Default.PublishRequest,
-                SnsJsonContext.Default.PublishResponse,
                 "AmazonSNS.Publish",
                 cancellationToken);
 

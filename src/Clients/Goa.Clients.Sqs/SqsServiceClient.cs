@@ -1,5 +1,4 @@
 using ErrorOr;
-using Goa.Clients.Core;
 using Goa.Clients.Core.Http;
 using Goa.Clients.Sqs.Operations.DeleteMessage;
 using Goa.Clients.Sqs.Operations.ReceiveMessage;
@@ -9,13 +8,13 @@ using Microsoft.Extensions.Logging;
 
 namespace Goa.Clients.Sqs;
 
-internal sealed class SqsServiceClient : AwsServiceClient<SqsServiceClientConfiguration>, ISqsClient
+internal sealed class SqsServiceClient : JsonAwsServiceClient<SqsServiceClientConfiguration>, ISqsClient
 {
     public SqsServiceClient(
         IHttpClientFactory httpClientFactory,
         SqsServiceClientConfiguration configuration,
         ILogger<SqsServiceClient> logger)
-        : base(httpClientFactory, logger, configuration)
+        : base(httpClientFactory, logger, configuration, SqsJsonContext.Default)
     {
     }
 
@@ -35,8 +34,6 @@ internal sealed class SqsServiceClient : AwsServiceClient<SqsServiceClientConfig
                 HttpMethod.Post,
                 "/",
                 request,
-                SqsJsonContext.Default.SendMessageRequest,
-                SqsJsonContext.Default.SendMessageResponse,
                 "AmazonSQS.SendMessage",
                 cancellationToken);
 
@@ -65,8 +62,6 @@ internal sealed class SqsServiceClient : AwsServiceClient<SqsServiceClientConfig
                 HttpMethod.Post,
                 "/",
                 request,
-                SqsJsonContext.Default.ReceiveMessageRequest,
-                SqsJsonContext.Default.ReceiveMessageResponse,
                 "AmazonSQS.ReceiveMessage",
                 cancellationToken);
 
@@ -95,8 +90,6 @@ internal sealed class SqsServiceClient : AwsServiceClient<SqsServiceClientConfig
                 HttpMethod.Post,
                 "/",
                 request,
-                SqsJsonContext.Default.DeleteMessageRequest,
-                SqsJsonContext.Default.DeleteMessageResponse,
                 "AmazonSQS.DeleteMessage",
                 cancellationToken);
 
