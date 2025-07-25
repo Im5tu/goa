@@ -1,4 +1,6 @@
-﻿using System.IdentityModel.Tokens.Jwt;
+﻿using Goa.Functions.ApiGateway.Core.Payloads.V1;
+using Goa.Functions.ApiGateway.Core.Payloads.V2;
+using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 
 namespace Goa.Functions.ApiGateway;
@@ -63,7 +65,7 @@ public sealed class Request
     /// <summary>
     ///     Maps the request payload to a request object
     /// </summary>
-    public static Request MapFrom(Payloads.V1.ProxyPayloadV1Request payload)
+    public static Request MapFrom(ProxyPayloadV1Request payload)
     {
         var headers = payload.MultiValueHeaders?.ToDictionary(kvp => kvp.Key, kvp => kvp.Value.AsEnumerable()) ?? payload.Headers?.ToDictionary(kvp => kvp.Key, kvp => (IEnumerable<string>)new[] { kvp.Value }) ?? new Dictionary<string, IEnumerable<string>>(StringComparer.OrdinalIgnoreCase);
         return new Request
@@ -83,7 +85,7 @@ public sealed class Request
     /// <summary>
     ///     Maps the request payload to a request object
     /// </summary>
-    public static Request MapFrom(Payloads.V2.ProxyPayloadV2Request payload)
+    public static Request MapFrom(ProxyPayloadV2Request payload)
     {
         var headers = payload.Headers?.ToDictionary(kvp => kvp.Key, kvp => (IEnumerable<string>)new[] { kvp.Value }, StringComparer.OrdinalIgnoreCase) ?? new Dictionary<string, IEnumerable<string>>(StringComparer.OrdinalIgnoreCase);
         return new Request

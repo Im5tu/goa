@@ -1,4 +1,5 @@
-﻿using Goa.Functions.ApiGateway.Payloads;
+﻿using Goa.Functions.ApiGateway.Core.Payloads.V2;
+using Goa.Functions.ApiGateway.Payloads;
 using Goa.Functions.ApiGateway.Payloads.V2;
 using Microsoft.AspNetCore.Http.Features.Authentication;
 using System.IdentityModel.Tokens.Jwt;

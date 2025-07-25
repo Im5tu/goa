@@ -1,4 +1,4 @@
-﻿using System.Text.Json.Serialization;
+﻿using SampleApi;
 
 var http = Http.UseHttpV2()
     .MapGet("/hi", (context, next, ct) =>
@@ -17,12 +17,4 @@ var http = Http.UseHttpV2()
         return next();
     });
 
-await Lambda.RunAsync(http, HttpSerializerContext.Default);
-
-[JsonSourceGenerationOptions(WriteIndented = false, PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase, DictionaryKeyPolicy = JsonKnownNamingPolicy.CamelCase, UseStringEnumConverter = true)]
-[JsonSerializable(typeof(Pong))]
-public partial class HttpSerializerContext : JsonSerializerContext
-{
-}
-
-public record Pong(string Message);
+await Lambda.RunAsync(http, SampleApi.HttpSerializerContext.Default);

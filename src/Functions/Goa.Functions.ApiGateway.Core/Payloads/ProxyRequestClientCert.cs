@@ -1,4 +1,4 @@
-namespace Goa.Functions.ApiGateway.Payloads;
+namespace Goa.Functions.ApiGateway.Core.Payloads;
 
 /// <summary>
 ///     Represents the client certificate details for a request, including the certificate itself and its validity period.
