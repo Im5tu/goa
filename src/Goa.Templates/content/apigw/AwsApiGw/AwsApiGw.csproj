@@ -1,13 +1,29 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
-        <TargetFramework>net8.0</TargetFramework>
+        <OutputType>Exe</OutputType>
+        <TargetFramework>net9.0</TargetFramework>
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
         <LangVersion>Latest</LangVersion>
         <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
         <EnableNETAnalyzers>true</EnableNETAnalyzers>
         <AnalysisLevel>latest</AnalysisLevel>
+    </PropertyGroup>
+
+    <!-- Publish Settings -->
+    <PropertyGroup>
+        <PublishAot>true</PublishAot>
+        <PublishRelease>true</PublishRelease>
+        <EnableSdkContainerSupport>true</EnableSdkContainerSupport>
+    </PropertyGroup>
+
+    <!-- Container Settings: https://learn.microsoft.com/en-us/dotnet/core/containers/publish-configuration -->
+    <PropertyGroup>
+        <InvariantGlobalization>true</InvariantGlobalization>
+        <ContainerImageFormat>OCI</ContainerImageFormat>
+        <ContainerRuntimeIdentifiers>linux-x64;linux-arm64</ContainerRuntimeIdentifiers>
+        <ContainerWorkingDirectory>/app</ContainerWorkingDirectory>
     </PropertyGroup>
 
     <ItemGroup>

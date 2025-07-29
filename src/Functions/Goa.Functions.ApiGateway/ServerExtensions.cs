@@ -47,7 +47,7 @@ public static class ServerExtensions
     /// <param name="apiGatewayType">The API Gateway version to target (HttpV1 or HttpV2).</param>
     /// <param name="lambdaRuntimeClient">Optional Lambda runtime client override.</param>
     /// <returns>The configured <see cref="ConfigureWebHostBuilder"/> instance.</returns>
-    public static ConfigureWebHostBuilder UseGoaServer(this ConfigureWebHostBuilder builder, ApiGatewayType apiGatewayType = default, ILambdaRuntimeClient? lambdaRuntimeClient = null)
+    public static IWebHostBuilder UseGoaServer(this IWebHostBuilder builder, ApiGatewayType apiGatewayType = default, ILambdaRuntimeClient? lambdaRuntimeClient = null)
     {
         if (apiGatewayType == ApiGatewayType.HttpV2)
             builder.UseServer(new LambdaHTTPV2Server(lambdaRuntimeClient));

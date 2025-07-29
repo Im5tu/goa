@@ -1,0 +1,70 @@
+﻿using Goa.Functions.Core.Bootstrapping;
+using Goa.Functions.Core.Logging;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
+using System.Text.Json.Serialization;
+
+namespace Goa.Functions.Core;
+
+internal sealed class LambdaBuilder : ILambdaBuilder
+{
+    private readonly IHostBuilder _builder;
+    private JsonSerializerContext? _loggingSerializationContext;
+
+    public IHostBuilder Host => _builder;
+    public ILambdaRuntimeClient LambdaRuntime { get; }
+
+    public LambdaBuilder(IHostBuilder builder, ILambdaRuntimeClient? lambdaRuntimeClient)
+    {
+        _builder = builder;
+        var logLevel = Enum.TryParse<LogLevel>(Environment.GetEnvironmentVariable("GOA__LOG__LEVEL"), out var level) ? level : LogLevel.Information;
+        LambdaRuntime = lambdaRuntimeClient ?? new LambdaRuntimeClient(logLevel);
+    }
+
+    public ILambdaBuilder WithConfiguration(Action<HostBuilderContext, IConfigurationBuilder> configureDelegate)
+    {
+        _builder.ConfigureAppConfiguration(configureDelegate);
+        return this;
+    }
+
+    public ILambdaBuilder WithServices(Action<HostBuilderContext, IServiceCollection> servicesDelegate)
+    {
+        _builder.ConfigureServices(servicesDelegate);
+        return this;
+    }
+
+    public ILambdaBuilder WithLoggingSerializationContext(JsonSerializerContext jsonSerializerContext)
+    {
+        _loggingSerializationContext = jsonSerializerContext;
+        return this;
+    }
+
+    public async Task RunAsync(InitializationMode mode = InitializationMode.Parallel)
+    {
+        _builder.ConfigureServices((_, services) =>
+        {
+            services.AddLogging(b => b.AddGoaJsonLogging(_loggingSerializationContext ?? LoggingSerializationContext.Default));
+        });
+
+        var host = _builder.Build();
+
+        // initialization tasks
+        var tasks = host.Services.GetServices<ILambdaInitializationTask>().ToList();
+        if (tasks.Count > 0)
+        {
+            if (mode == InitializationMode.Parallel)
+            {
+                await Task.WhenAll(tasks.Select(x => x.InitializeAsync()));
+            }
+            else
+            {
+                foreach (var task in tasks)
+                    await task.InitializeAsync();
+            }
+        }
+
+        await host.RunAsync();
+    }
+}
