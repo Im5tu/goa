@@ -1,19 +1,45 @@
-﻿using System.Text.Json.Serialization;
+﻿using Goa.Functions.ApiGateway;
+using Goa.Functions.Core;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 
-//#if (functionType == 'httpv2')
-var http = Http.UseHttpV2()
-//#else if (functionType == 'httpv1')
-var http = Http.UseHttpV1()
-//#else
-var http = Http.UseRestApi()
-//#endif
-    .MapGet("/ping", (context, next, ct) =>
+await Host.CreateDefaultBuilder()
+    .UseLambdaLifecycle()
+    .ForAspNetCore(app =>
     {
-        context.Response.Result = HttpResult.Ok(new Pong("pong"));
-        return next;
-    });
+        // TODO :: Add any custom middleware you want here
 
-await Lambda.RunAsync(http, HttpSerializerContext.Default);
+        app.UseRouting();
+        app.UseEndpoints(endpoints =>
+        {
+            // TODO :: Map your endpoints here
+            endpoints.MapGet("/ping", static async context =>
+            {
+                var pong = new Pong("PONG!");
+                context.Response.ContentType = "application/json";
+                await JsonSerializer.SerializeAsync(context.Response.Body, pong, HttpSerializerContext.Default.Pong);
+            });
+        });
+//#if (functionType == 'httpv2')
+    }, apiGatewayType: ApiGatewayType.HttpV2)
+//#else
+    }, apiGatewayType: ApiGatewayType.HttpV1)
+//#endif
+    .WithServices(services =>
+    {
+        // TODO :: Configure your services here
+
+        // For performance, we've pre-registered a custom JsonSerializationContext
+        services.ConfigureHttpJsonOptions(options =>
+        {
+            options.SerializerOptions.TypeInfoResolver = HttpSerializerContext.Default;
+        });
+    })
+    .RunAsync();
+
 
 [JsonSourceGenerationOptions(WriteIndented = false, PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase, DictionaryKeyPolicy = JsonKnownNamingPolicy.CamelCase, UseStringEnumConverter = true)]
 [JsonSerializable(typeof(Pong))]

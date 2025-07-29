@@ -1,12 +1,16 @@
-using Goa.Functions.ApiGateway.AspNetCore;
-using Goa.Functions.ApiGateway.Core.Payloads;
-using Goa.Functions.ApiGateway.Core.Payloads.V2;
+using Goa.Functions.ApiGateway;
+using Goa.Functions.ApiGateway.Payloads;
+using Goa.Functions.ApiGateway.Payloads.V2;
+using Goa.Functions.Core;
 using System.Diagnostics;
+using System.Text.Json.Serialization;
 using TestConsole;
 
 
-// use a fake lambda runtime client for testing
+
 var runtime = new FakeRuntimeClient();
+
+// use a fake lambda runtime client for testing
 // var request = new ProxyPayloadV1Request
 // {
 //     Resource = "/api/resource",
@@ -179,97 +183,39 @@ runtime.Enqueue(request);
 
 var sw = Stopwatch.StartNew();
 
-var builder = WebApplication.CreateSlimBuilder();
-builder.Host.UseConsoleLifetime();
-var app = builder.UseGoa(lambdaRuntimeClient: runtime).Build();
+var app = Host.CreateDefaultBuilder()
+    .UseLambdaLifecycle(runtime)
+    .ForAspNetCore(app =>
+    {
+        app.UseRouting();
+        app.UseEndpoints(endpoints =>
+        {
+            endpoints.MapGet("/ping", () => new Pong("PONG!"));
+            endpoints.MapPost("/api/resource", () => new Pong("Hello Resource!"));
+        });
+    }, apiGatewayType: ApiGatewayType.HttpV2)
+    .WithServices(services =>
+    {
+        services.ConfigureHttpJsonOptions(options =>
+        {
+            options.SerializerOptions.TypeInfoResolver = HttpSerializerContext.Default;
+        });
+    });
 
-Console.WriteLine($"Built: {sw.ElapsedMilliseconds:0.##}ms");
-
-app.MapGet("/", () => "Hello World!");
-app.MapGet("/api/resource", () => "Hello Resource!");
 await Task.WhenAny(app.RunAsync(), Task.Run(async () =>
 {
     while (runtime.PendingInvocations > 0)
-        await Task.Delay(50);
+        await Task.Delay(10);
 }));
 Console.WriteLine($"Run: {sw.ElapsedMilliseconds:0.##}ms");
 
-await app.Services.GetRequiredService<IHostLifetime>().StopAsync(CancellationToken.None);
-
-
-// using Goa.Functions.ApiGateway.Payloads.V2;
-// using Goa.Functions.Core.Logging;
-// using Microsoft.Extensions.Logging;
-// using System.Diagnostics;
-// using System.Text.Json.Serialization;
-//
-// var logger = new JsonLogger("Test", LogLevel.Information);
-// var http = Http.UseHttpV2()
-//     .UseMiddleware(pipeline =>
-//     {
-//         pipeline.Use((_, next, _) =>
-//         {
-//             logger.LogInvocation();
-//             return next();
-//         });
-//     })
-//     .MapGet("/ping", (context, _) =>
-//     {
-//         context.Response.Result = HttpResult.Ok(new Pong("Hi hi"));
-//         return Task.CompletedTask;
-//     })
-//     .MapGet("/ping/{id}", (context, _) =>
-//     {
-//         context.Response.Result = HttpResult.Ok(new Pong(context.Request.RouteValues!["id"]));
-//         return Task.CompletedTask;
-//     });
-//
-// var p = http.CreatePipeline().ToList();
-// var pipeline = new Function(p, MySerializerContext.Default);
-//
-// var sw = Stopwatch.StartNew();
-// var result1 = await pipeline.InvokeAsync(new ProxyPayloadV2Request
-// {
-//     Headers = new Dictionary<string, string>
-//     {
-//         ["Accept"] = "application/json"
-//     },
-//     RawPath = "/ping"
-// }, default);
-//
-// var result2 = await pipeline.InvokeAsync(new ProxyPayloadV2Request
-// {
-//     Headers = new Dictionary<string, string>
-//     {
-//         ["Accept"] = "application/json"
-//     },
-//     RawPath = "/ping/2"
-// }, default);
-//
-// Console.WriteLine($"Elapsed time: {sw.ElapsedMilliseconds}ms");
-//
-// Console.WriteLine("Result1: " + result1.StatusCode + " " + result1?.Body);
-// Console.WriteLine("Result2: " + result2.StatusCode + " " + result2?.Body);
-//
-// await Lambda.RunAsync(http, MySerializerContext.Default);
-//
-// [JsonSourceGenerationOptions(WriteIndented = false, PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase, DictionaryKeyPolicy = JsonKnownNamingPolicy.CamelCase, UseStringEnumConverter = true)]
-// [JsonSerializable(typeof(string))]
-// [JsonSerializable(typeof(Pong))]
-// public partial class MySerializerContext : JsonSerializerContext
-// {
-// }
-//
-// public static partial class FunctionLogs
-// {
-//     [LoggerMessage(EventId = 1, Level = LogLevel.Information, Message = "Middleware Invoked")]
-//     public static partial void LogInvocation(this ILogger logger);
-// }
-//
-// public record Pong(string Message);
-
-
 namespace TestConsole
 {
+    [JsonSourceGenerationOptions(WriteIndented = false, PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase, DictionaryKeyPolicy = JsonKnownNamingPolicy.CamelCase, UseStringEnumConverter = true)]
+    [JsonSerializable(typeof(Pong))]
+    public partial class HttpSerializerContext : JsonSerializerContext
+    {
+    }
 
+    public record Pong(string Message);
 }
