@@ -1,6 +1,7 @@
 ﻿using Goa.Functions.ApiGateway.Payloads.V1;
 using Goa.Functions.ApiGateway.Payloads.V2;
 using Goa.Functions.Core.Bootstrapping;
+using Goa.Functions.Dynamo;
 using System.Text.Json;
 using ProxyPayloadV1SerializationContext = Goa.Functions.ApiGateway.Payloads.V1.ProxyPayloadV1SerializationContext;
 using ProxyPayloadV2SerializationContext = Goa.Functions.ApiGateway.Payloads.V2.ProxyPayloadV2SerializationContext;
@@ -13,6 +14,7 @@ public class FakeRuntimeClient : ILambdaRuntimeClient
 
     public int PendingInvocations => _queue.Count;
 
+    public void Enqueue(DynamoDbEvent request) => _queue.Enqueue(JsonSerializer.Serialize(request, DynamoDbEventSerializationContext.Default.DynamoDbEvent));
     public void Enqueue(ProxyPayloadV1Request request) => _queue.Enqueue(JsonSerializer.Serialize(request, ProxyPayloadV1SerializationContext.Default.ProxyPayloadV1Request));
     public void Enqueue(ProxyPayloadV2Request request) => _queue.Enqueue(JsonSerializer.Serialize(request, ProxyPayloadV2SerializationContext.Default.ProxyPayloadV2Request));
 

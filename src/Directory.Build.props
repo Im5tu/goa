@@ -45,12 +45,13 @@
         <ProjectReference Include="../$(ProjectName).Generator/$(ProjectName).Generator.csproj" IncludeAssets="Analyzers" />
     </ItemGroup>
 
+    <!-- Include the readme's so we can see them -->
+    <ItemGroup>
+        <None Include="README.md" Condition="EXISTS('README.md')" Pack="true" />
+    </ItemGroup>
+
     <!-- Ensure that we have versioning, reproducible builds and analyzers for all projects -->
     <ItemGroup>
-        <PackageReference Include="MinVer" Version="6.0.0">
-            <PrivateAssets>all</PrivateAssets>
-            <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-        </PackageReference>
         <PackageReference Include="DotNet.ReproducibleBuilds" Version="1.2.25">
             <PrivateAssets>all</PrivateAssets>
             <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>

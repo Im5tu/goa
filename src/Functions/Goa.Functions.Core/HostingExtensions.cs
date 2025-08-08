@@ -20,7 +20,11 @@ public static class HostingExtensions
     /// <returns>A configured <see cref="ILambdaBuilder"/> instance.</returns>
     public static ILambdaBuilder UseLambdaLifecycle(this IHostBuilder builder, ILambdaRuntimeClient? lambdaRuntimeClient = null)
     {
-        return new LambdaBuilder(builder, lambdaRuntimeClient);
+        var lambdaBuilder = new LambdaBuilder(builder, lambdaRuntimeClient);
+        if (lambdaRuntimeClient is not null)
+            lambdaBuilder.WithServices(services => services.TryAddSingleton(lambdaRuntimeClient));
+
+        return lambdaBuilder;
     }
 
     /// <summary>

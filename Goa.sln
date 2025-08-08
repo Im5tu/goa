@@ -112,6 +112,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Goa.Clients.Sns.Tests", "te
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Goa.Clients.Sqs.Tests", "tests\Clients\Goa.Clients.Sqs.Tests\Goa.Clients.Sqs.Tests.csproj", "{11CE79CF-715A-4890-9FDD-66144A44FB34}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Goa.Clients.Dynamo.Generator", "src\Clients\Goa.Clients.Dynamo.Generator\Goa.Clients.Dynamo.Generator.csproj", "{E9FA5333-0B38-46B1-86D1-96C5B2D2B406}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -157,6 +159,7 @@ Global
 		{78BEF6C9-0074-44F5-8B1C-AA9B2C8A38AC} = {B5DC1548-387B-4ABB-B4E8-CED73AFD8863}
 		{A3AD36B1-8EC6-46FF-813C-5C6A4B174CEE} = {B5DC1548-387B-4ABB-B4E8-CED73AFD8863}
 		{11CE79CF-715A-4890-9FDD-66144A44FB34} = {B5DC1548-387B-4ABB-B4E8-CED73AFD8863}
+		{E9FA5333-0B38-46B1-86D1-96C5B2D2B406} = {14163F55-30AB-44EF-899E-19790A93BB37}
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
 		{0D4BB144-07C4-4F45-8EE0-8627E1F33DF4}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
@@ -287,5 +290,9 @@ Global
 		{11CE79CF-715A-4890-9FDD-66144A44FB34}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{11CE79CF-715A-4890-9FDD-66144A44FB34}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{11CE79CF-715A-4890-9FDD-66144A44FB34}.Release|Any CPU.Build.0 = Release|Any CPU
+		{E9FA5333-0B38-46B1-86D1-96C5B2D2B406}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{E9FA5333-0B38-46B1-86D1-96C5B2D2B406}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{E9FA5333-0B38-46B1-86D1-96C5B2D2B406}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{E9FA5333-0B38-46B1-86D1-96C5B2D2B406}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal
