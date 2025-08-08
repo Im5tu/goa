@@ -1,3 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-
+  <PropertyGroup>
+    <PackageTitle>Goa - Kinesis Functions</PackageTitle>
+    <Description>Kinesis stream processing for high-performance AWS Lambda functions</Description>
+    <PackageTags>$(PackageBaseTags);function;kinesis;streaming</PackageTags>
+  </PropertyGroup>
 </Project>

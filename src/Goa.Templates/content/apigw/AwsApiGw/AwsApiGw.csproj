@@ -24,6 +24,10 @@
             <PrivateAssets>all</PrivateAssets>
             <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
         </PackageReference>
+//#if (includeOpenApi)
+        <PackageReference Include="Microsoft.OpenApi" Version="1.6.22" />
+        <PackageReference Include="Scalar.AspNetCore" Version="1.2.47" />
+//#endif
     </ItemGroup>
 
 </Project>

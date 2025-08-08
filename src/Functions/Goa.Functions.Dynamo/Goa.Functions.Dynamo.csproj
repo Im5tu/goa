@@ -1,4 +1,10 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <PackageTitle>Goa - DynamoDB Functions</PackageTitle>
+    <Description>DynamoDB stream processing for high-performance AWS Lambda functions</Description>
+    <PackageTags>$(PackageBaseTags);function;dynamodb;streams</PackageTags>
+  </PropertyGroup>
+  
   <ItemGroup>
     <ProjectReference Include="..\..\Clients\Goa.Clients.Dynamo\Goa.Clients.Dynamo.csproj" />
   </ItemGroup>

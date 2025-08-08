@@ -1,4 +1,10 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <PackageTitle>Goa - Lambda Client</PackageTitle>
+    <Description>Lambda client for function invocation in high-performance AWS Lambda functions</Description>
+    <PackageTags>$(PackageBaseTags);lambda;client;invoke</PackageTags>
+  </PropertyGroup>
+  
   <ItemGroup>
     <PackageReference Include="ErrorOr" Version="2.0.1" />
   </ItemGroup>

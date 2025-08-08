@@ -4,7 +4,7 @@
         <!-- Latest features -->
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
-        <LangVersion>Latest</LangVersion>
+        <LangVersion>latest</LangVersion>
         <!-- Turn on all the analysis -->
         <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
         <EnableNETAnalyzers>true</EnableNETAnalyzers>

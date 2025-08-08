@@ -1,3 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-
+  <PropertyGroup>
+    <PackageTitle>Goa - SQS Functions</PackageTitle>
+    <Description>SQS message processing for high-performance AWS Lambda functions</Description>
+    <PackageTags>$(PackageBaseTags);function;sqs;messaging</PackageTags>
+  </PropertyGroup>
 </Project>

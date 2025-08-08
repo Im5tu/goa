@@ -4,10 +4,21 @@
     <PropertyGroup>
         <!-- We need to determine whether or not this is a enerator project -->
         <IsGeneratorProject Condition="'$(MSBuildProjectName)' == ''">false</IsGeneratorProject>
-        <IsGeneratorProject Condition="'$(MSBuildProjectName.EndsWith(.Generator))'">true</IsGeneratorProject>
+        <IsGeneratorProject Condition="$(MSBuildProjectName.EndsWith('.Generator'))">true</IsGeneratorProject>
         <!-- Skip versioning on debug builds for performance -->
         <MinVerSkip Condition="'$(Configuration)' == 'Debug'">true</MinVerSkip>
         <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+        <!-- Package metadata -->
+        <Authors>Goa Project</Authors>
+        <Company>Goa Project</Company>
+        <Copyright>© Goa Project. All rights reserved.</Copyright>
+        <PackageLicenseExpression>MIT</PackageLicenseExpression>
+        <PackageProjectUrl>https://github.com/im5tu/goa</PackageProjectUrl>
+        <RepositoryUrl>https://github.com/im5tu/goa</RepositoryUrl>
+        <RepositoryType>git</RepositoryType>
+        <PackageBaseTags>goa;aws;lambda;dotnet;aot</PackageBaseTags>
+        <PublishRepositoryUrl>true</PublishRepositoryUrl>
+        <EmbedUntrackedSources>true</EmbedUntrackedSources>
     </PropertyGroup>
 
     <!-- Ensure that our packages are built properly for none generator projects-->
@@ -47,8 +58,11 @@
 
     <!-- Include the readme's so we can see them -->
     <ItemGroup>
-        <None Include="README.md" Condition="EXISTS('README.md')" Pack="true" />
+        <None Include="README.md" Condition="Exists('README.md')" Pack="true" PackagePath="\" />
     </ItemGroup>
+    <PropertyGroup>
+        <PackageReadmeFile Condition="Exists('README.md')">README.md</PackageReadmeFile>
+    </PropertyGroup>
 
     <!-- Ensure that we have versioning, reproducible builds and analyzers for all projects -->
     <ItemGroup>

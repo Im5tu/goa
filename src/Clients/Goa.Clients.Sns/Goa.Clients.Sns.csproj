@@ -1,4 +1,10 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <PackageTitle>Goa - SNS Client</PackageTitle>
+    <Description>SNS client for messaging in high-performance AWS Lambda functions</Description>
+    <PackageTags>$(PackageBaseTags);sns;client;messaging;notifications</PackageTags>
+  </PropertyGroup>
+  
   <ItemGroup>
     <PackageReference Include="ErrorOr" Version="2.0.1" />
   </ItemGroup>

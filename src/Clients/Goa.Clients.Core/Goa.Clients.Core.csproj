@@ -1,5 +1,11 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
+    <PropertyGroup>
+        <PackageTitle>Goa - Core</PackageTitle>
+        <Description>Base functionality and abstractions for all Goa AWS service clients</Description>
+        <PackageTags>$(PackageBaseTags);client;core;http</PackageTags>
+    </PropertyGroup>
+
     <ItemGroup>
         <PackageReference Include="Microsoft.Extensions.Http" Version="9.0.7" />
         <PackageReference Include="ErrorOr" Version="2.0.1" />
