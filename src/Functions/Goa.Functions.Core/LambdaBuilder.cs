@@ -8,14 +8,27 @@ using System.Text.Json.Serialization;
 
 namespace Goa.Functions.Core;
 
-internal sealed class LambdaBuilder : ILambdaBuilder
+#pragma warning disable CS8618, CS1591
+
+/// <summary>
+/// Default implementation of <see cref="ILambdaBuilder"/> for configuring Lambda function hosting and lifecycle management
+/// </summary>
+public class LambdaBuilder : ILambdaBuilder
 {
     private readonly IHostBuilder _builder;
     private JsonSerializerContext? _loggingSerializationContext;
 
+    /// <inheritdoc />
     public IHostBuilder Host => _builder;
+    
+    /// <inheritdoc />
     public ILambdaRuntimeClient LambdaRuntime { get; }
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="LambdaBuilder"/> class
+    /// </summary>
+    /// <param name="builder">The host builder to configure</param>
+    /// <param name="lambdaRuntimeClient">Optional Lambda runtime client override</param>
     public LambdaBuilder(IHostBuilder builder, ILambdaRuntimeClient? lambdaRuntimeClient)
     {
         _builder = builder;
@@ -23,24 +36,28 @@ internal sealed class LambdaBuilder : ILambdaBuilder
         LambdaRuntime = lambdaRuntimeClient ?? new LambdaRuntimeClient(logLevel);
     }
 
+    /// <inheritdoc />
     public ILambdaBuilder WithConfiguration(Action<HostBuilderContext, IConfigurationBuilder> configureDelegate)
     {
         _builder.ConfigureAppConfiguration(configureDelegate);
         return this;
     }
 
+    /// <inheritdoc />
     public ILambdaBuilder WithServices(Action<HostBuilderContext, IServiceCollection> servicesDelegate)
     {
         _builder.ConfigureServices(servicesDelegate);
         return this;
     }
 
+    /// <inheritdoc />
     public ILambdaBuilder WithLoggingSerializationContext(JsonSerializerContext jsonSerializerContext)
     {
         _loggingSerializationContext = jsonSerializerContext;
         return this;
     }
 
+    /// <inheritdoc />
     public async Task RunAsync(InitializationMode mode = InitializationMode.Parallel)
     {
         _builder.ConfigureServices((_, services) =>

@@ -1,0 +1,13 @@
+﻿{
+    "$schema": "http://json.schemastore.org/template",
+    "author": "Goa",
+    "classifications": [ "AWS", "Lambda", "Serverless", "Goa" ],
+    "identity": "Goa.Templates.DynamoDB",
+    "name": "Lambda - DynamoDB Function",
+    "shortName": "goa.dynamodb",
+    "sourceName": "AwsDynamoDB",
+    "tags": {
+        "language": "C#",
+        "type": "project"
+    }
+}

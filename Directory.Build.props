@@ -11,5 +11,7 @@
         <AnalysisLevel>latest</AnalysisLevel>
         <!-- Use the top level for the artifacts directory -->
         <ArtifactsPath>$(MSBuildThisFileDirectory)artifacts</ArtifactsPath>
+        <AssemblyVersion>0.0.2</AssemblyVersion>
+        <PackageVersion>$(AssemblyVersion)-preview.2</PackageVersion>
     </PropertyGroup>
 </Project>
