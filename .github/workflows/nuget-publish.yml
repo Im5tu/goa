@@ -10,7 +10,7 @@ on:
 jobs:
   build-and-publish:
     runs-on: ubuntu-latest
-    
+
     services:
       localstack:
         image: localstack/localstack:latest
@@ -24,26 +24,26 @@ jobs:
           --health-interval=10s
           --health-timeout=5s
           --health-retries=3
-    
+
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
       with:
         fetch-depth: 0  # Needed for versioning
-    
+
     - name: Setup .NET
       uses: actions/setup-dotnet@v4
       with:
         dotnet-version: |
           9.0.x
           10.0.x
-    
+
     - name: Restore dependencies
       run: dotnet restore
-    
+
     - name: Build solution
-      run: dotnet build -c Release --no-restore
-    
+      run: dotnet build -c Release --no-restore /p:ContinuousIntegrationBuild=true
+
     - name: Run tests
       run: dotnet test -c Release --no-build --verbosity normal
       env:
@@ -51,10 +51,10 @@ jobs:
         AWS_SECRET_ACCESS_KEY: test
         AWS_DEFAULT_REGION: us-east-1
         LOCALSTACK_ENDPOINT: http://localhost:4566
-    
+
     - name: List generated packages
       run: find artifacts/package/release -name "*.nupkg" -type f
-    
+
     - name: Publish to NuGet (on main branch only)
       if: github.ref == 'refs/heads/main' && github.event_name == 'push'
       run: |
