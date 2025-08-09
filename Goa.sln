@@ -114,6 +114,13 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Goa.Clients.Sqs.Tests", "te
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Goa.Clients.Dynamo.Generator", "src\Clients\Goa.Clients.Dynamo.Generator\Goa.Clients.Dynamo.Generator.csproj", "{E9FA5333-0B38-46B1-86D1-96C5B2D2B406}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = ".github", ".github", "{3590F731-9C9A-4685-A5EA-4623B6D8845E}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "workflows", "workflows", "{588B72ED-58DE-4B2B-A64A-7469E3D84A07}"
+	ProjectSection(SolutionItems) = preProject
+		.github\workflows\nuget-publish.yml = .github\workflows\nuget-publish.yml
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -160,6 +167,8 @@ Global
 		{A3AD36B1-8EC6-46FF-813C-5C6A4B174CEE} = {B5DC1548-387B-4ABB-B4E8-CED73AFD8863}
 		{11CE79CF-715A-4890-9FDD-66144A44FB34} = {B5DC1548-387B-4ABB-B4E8-CED73AFD8863}
 		{E9FA5333-0B38-46B1-86D1-96C5B2D2B406} = {14163F55-30AB-44EF-899E-19790A93BB37}
+		{3590F731-9C9A-4685-A5EA-4623B6D8845E} = {64F3A82A-C1E7-4654-B683-38D5918A55D5}
+		{588B72ED-58DE-4B2B-A64A-7469E3D84A07} = {3590F731-9C9A-4685-A5EA-4623B6D8845E}
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
 		{0D4BB144-07C4-4F45-8EE0-8627E1F33DF4}.Debug|Any CPU.ActiveCfg = Debug|Any CPU

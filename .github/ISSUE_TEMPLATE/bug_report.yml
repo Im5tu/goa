@@ -1,0 +1,110 @@
+name: Bug Report
+description: Report a bug in Goa
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting a bug! Please fill out the sections below to help us understand and reproduce the issue.
+
+  - type: input
+    id: version
+    attributes:
+      label: Goa Version
+      description: What version of Goa are you using?
+      placeholder: e.g., 0.0.2-preview.2
+    validations:
+      required: true
+
+  - type: dropdown
+    id: dotnet-version
+    attributes:
+      label: .NET Version
+      description: What version of .NET are you using?
+      options:
+        - .NET 9.0
+        - .NET 10.0
+        - Other (please specify in description)
+    validations:
+      required: true
+
+  - type: dropdown
+    id: component
+    attributes:
+      label: Affected Component
+      description: Which Goa component is affected?
+      options:
+        - Goa.Functions.Core
+        - Goa.Functions.ApiGateway
+        - Goa.Functions.Dynamo
+        - Goa.Clients.Core
+        - Goa.Clients.Dynamo
+        - Goa.Clients.EventBridge
+        - Goa.Clients.Lambda
+        - Goa.Clients.Sns
+        - Goa.Clients.Sqs
+        - Goa.Templates
+        - Other (please specify in description)
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Bug Description
+      description: A clear and concise description of what the bug is.
+      placeholder: Describe what happened...
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected Behavior
+      description: What did you expect to happen?
+      placeholder: Describe what should have happened...
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to Reproduce
+      description: Steps to reproduce the behavior
+      placeholder: |
+        1. Create a new project with `dotnet new goa.apigw -n TestProject`
+        2. Add code '...'
+        3. Run the function
+        4. See error
+    validations:
+      required: true
+
+  - type: textarea
+    id: code
+    attributes:
+      label: Code Sample
+      description: If applicable, add a minimal code sample that reproduces the issue
+      render: csharp
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Error Messages/Logs
+      description: If applicable, add any error messages or log output
+      render: text
+
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: Additional environment details
+      placeholder: |
+        OS: [e.g. Windows 11, Ubuntu 22.04, macOS 14]
+        AWS Region: [e.g. us-east-1]
+        Deployment method: [e.g. AWS SAM, CDK, manual]
+        Native AOT: [Yes/No]
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: Additional Context
+      description: Add any other context about the problem here

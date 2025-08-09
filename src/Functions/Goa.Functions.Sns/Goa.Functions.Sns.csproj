@@ -1,3 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-
+  <PropertyGroup>
+    <PackageTitle>Goa - SNS Functions</PackageTitle>
+    <Description>SNS message processing for high-performance AWS Lambda functions</Description>
+    <PackageTags>$(PackageBaseTags);function;sns;messaging</PackageTags>
+  </PropertyGroup>
 </Project>

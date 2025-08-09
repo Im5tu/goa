@@ -1,3 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-
+  <PropertyGroup>
+    <PackageTitle>Goa - Parameter Store Client</PackageTitle>
+    <Description>Parameter Store client for configuration management in high-performance AWS Lambda functions</Description>
+    <PackageTags>$(PackageBaseTags);parameterstore;client;configuration</PackageTags>
+  </PropertyGroup>
 </Project>

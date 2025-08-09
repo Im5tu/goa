@@ -1,3 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-
+  <PropertyGroup>
+    <PackageTitle>Goa - SES Client</PackageTitle>
+    <Description>SES client for email operations in high-performance AWS Lambda functions</Description>
+    <PackageTags>$(PackageBaseTags);ses;client;email;messaging</PackageTags>
+  </PropertyGroup>
 </Project>

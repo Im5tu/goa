@@ -16,9 +16,13 @@ public class LambdaBootstrapper<TRequest, TResponse>
 {
     private readonly IResponseSerializer<TResponse> _responseSerializer;
     private readonly ILogger _logger;
-    private readonly ILambdaRuntimeClient _lambdaRuntimeClient;
     private readonly JsonTypeInfo<TRequest> _requestTypeInfo;
     private Func<TRequest, InvocationRequest, CancellationToken, Task<TResponse>>? _onNext;
+
+    /// <summary>
+    ///     The current Lambda runtime client
+    /// </summary>
+    protected ILambdaRuntimeClient LambdaRuntimeClient { get; }
 
     /// <summary>
     ///     Constructs a new LambdaBootstrapper
@@ -32,7 +36,7 @@ public class LambdaBootstrapper<TRequest, TResponse>
         var logLevel = Enum.TryParse<LogLevel>(Environment.GetEnvironmentVariable("GOA__LOG__LEVEL"), out var level) ? level : LogLevel.Information;
 
         _logger = new JsonLogger("LambdaBootstrapper", logLevel, LogScopeProvider.Instance, LoggingSerializationContext.Default);
-        _lambdaRuntimeClient = lambdaRuntimeClient ?? new LambdaRuntimeClient(logLevel);
+        LambdaRuntimeClient = lambdaRuntimeClient ?? new LambdaRuntimeClient(logLevel);
         _responseSerializer = responseSerializer ?? new JsonResponseSerializer<TResponse>(jsonSerializerContext);
         _requestTypeInfo = jsonSerializerContext.GetTypeInfo(typeof(TRequest)) as JsonTypeInfo<TRequest> ?? throw new Exception("Cannot find serialization information for the type: " + typeof(TRequest).FullName);
         _onNext = onNext;
@@ -61,7 +65,7 @@ public class LambdaBootstrapper<TRequest, TResponse>
         while (!cancellationToken.IsCancellationRequested)
         {
             // Get the next event
-            var invocationResult = await _lambdaRuntimeClient.GetNextInvocationAsync(cancellationToken);
+            var invocationResult = await LambdaRuntimeClient.GetNextInvocationAsync(cancellationToken);
             if (!invocationResult.IsSuccess || invocationResult.Data is null)
             {
                 // Skip to the next invocation if fetching failed
@@ -103,7 +107,7 @@ public class LambdaBootstrapper<TRequest, TResponse>
                 {
                     _logger.BootstrapInvocationRequestDeserializationFailed();
                     var errorPayload = new InvocationErrorPayload("DeserializationError", "Failed to deserialize request payload. Null payload returned.", Array.Empty<string>());
-                    await _lambdaRuntimeClient.ReportInvocationErrorAsync(invocation.RequestId, errorPayload, cancellationToken);
+                    await LambdaRuntimeClient.ReportInvocationErrorAsync(invocation.RequestId, errorPayload, cancellationToken);
                     continue;
                 }
 
@@ -112,13 +116,13 @@ public class LambdaBootstrapper<TRequest, TResponse>
 
                 // Serialize and send the response back to the runtime
                 var responsePayload = _responseSerializer.Serialize(response);
-                await _lambdaRuntimeClient.SendResponseAsync(invocation.RequestId, responsePayload, cancellationToken);
+                await LambdaRuntimeClient.SendResponseAsync(invocation.RequestId, responsePayload, cancellationToken);
             }
             catch (Exception ex)
             {
                 // Capture the error and send it to the Runtime API
                 var errorPayload = new InvocationErrorPayload(ex.GetType().FullName ?? ex.GetType().Name, ex.Message, ex.StackTrace?.Split(Environment.NewLine) ?? Array.Empty<string>());
-                await _lambdaRuntimeClient.ReportInvocationErrorAsync(invocation.RequestId, errorPayload, cancellationToken);
+                await LambdaRuntimeClient.ReportInvocationErrorAsync(invocation.RequestId, errorPayload, cancellationToken);
             }
         }
     }
@@ -133,6 +137,8 @@ public class LambdaBootstrapper<TRequest, TResponse>
 public sealed class LambdaBootstrapper<TFunction, TRequest, TResponse> : LambdaBootstrapper<TRequest, TResponse>
     where TFunction : ILambdaFunction<TRequest, TResponse>
 {
+    private readonly Func<TFunction>? _functionFactory;
+
     /// <summary>
     ///     Constructs a new LambdaBootstrapper
     /// </summary>
@@ -141,8 +147,9 @@ public sealed class LambdaBootstrapper<TFunction, TRequest, TResponse> : LambdaB
     /// <param name="responseSerializer">The response serializer that sends the responses back to the lambda runtime</param>
     /// <param name="lambdaRuntimeClient">The implementation of the lambda runtime client</param>
     public LambdaBootstrapper(JsonSerializerContext jsonSerializerContext, Func<TFunction> functionFactory, IResponseSerializer<TResponse>? responseSerializer = null, ILambdaRuntimeClient? lambdaRuntimeClient = null)
-        : this(jsonSerializerContext, functionFactory(), responseSerializer, lambdaRuntimeClient)
+        : base(jsonSerializerContext, null, responseSerializer, lambdaRuntimeClient)
     {
+        _functionFactory = functionFactory;
     }
 
     /// <summary>
@@ -155,5 +162,30 @@ public sealed class LambdaBootstrapper<TFunction, TRequest, TResponse> : LambdaB
     public LambdaBootstrapper(JsonSerializerContext jsonSerializerContext, TFunction lambdaFunction, IResponseSerializer<TResponse>? responseSerializer = null, ILambdaRuntimeClient? lambdaRuntimeClient = null)
         : base(jsonSerializerContext, lambdaFunction.InvokeAsync, responseSerializer, lambdaRuntimeClient)
     {
+        _functionFactory = null;
+    }
+
+    /// <summary>
+    ///     Runs the Lambda request loop with initialization error handling
+    /// </summary>
+    /// <param name="cancellationToken">The cancellation token that stops the processing of a given Lambda invocation</param>
+    public new async Task RunAsync(CancellationToken cancellationToken = default)
+    {
+        if (_functionFactory is not null)
+        {
+            try
+            {
+                var function = _functionFactory();
+                OnNext(function.InvokeAsync);
+            }
+            catch (Exception ex)
+            {
+                var errorPayload = new InitializationErrorPayload(ex.GetType().FullName ?? ex.GetType().Name, "Function Factory Initialization Failure", ex.ToString());
+                await LambdaRuntimeClient.ReportInitializationErrorAsync(errorPayload, cancellationToken);
+                throw;
+            }
+        }
+
+        await base.RunAsync(cancellationToken);
     }
 }

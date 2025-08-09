@@ -1,4 +1,10 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <PackageTitle>Goa - SQS Client</PackageTitle>
+    <Description>SQS client for queue operations in high-performance AWS Lambda functions</Description>
+    <PackageTags>$(PackageBaseTags);sqs;client;queues;messaging</PackageTags>
+  </PropertyGroup>
+  
   <ItemGroup>
     <PackageReference Include="ErrorOr" Version="2.0.1" />
   </ItemGroup>

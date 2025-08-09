@@ -1,0 +1,111 @@
+name: Feature Request
+description: Suggest a new feature or enhancement for Goa
+title: "[Feature]: "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for suggesting a new feature! Please provide details about what you'd like to see added to Goa.
+
+  - type: dropdown
+    id: component
+    attributes:
+      label: Component
+      description: Which component would this feature affect?
+      options:
+        - Goa.Functions.Core
+        - Goa.Functions.ApiGateway
+        - Goa.Functions.Dynamo
+        - Goa.Functions.EventBridge
+        - Goa.Functions.Kinesis
+        - Goa.Functions.S3
+        - Goa.Functions.Sns
+        - Goa.Functions.Sqs
+        - Goa.Clients.Core
+        - Goa.Clients.Dynamo
+        - Goa.Clients.EventBridge
+        - Goa.Clients.Lambda
+        - Goa.Clients.Sns
+        - Goa.Clients.Sqs
+        - Goa.Clients.S3
+        - Goa.Clients.Kinesis
+        - Goa.Clients.ParameterStore
+        - Goa.Clients.SecretsManager
+        - Goa.Clients.Ses
+        - Goa.Clients.StepFunctions
+        - Goa.Templates
+        - New component
+        - Documentation
+        - Other
+
+  - type: dropdown
+    id: type
+    attributes:
+      label: Feature Type
+      description: What type of feature is this?
+      options:
+        - New AWS service client
+        - New Lambda function integration
+        - Performance improvement
+        - Developer experience enhancement
+        - New template
+        - Documentation improvement
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem Statement
+      description: What problem does this feature solve? What's the current limitation or pain point?
+      placeholder: Currently, when working with [scenario], developers have to [workaround]...
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed Solution
+      description: Describe the feature you'd like to see implemented
+      placeholder: I would like Goa to provide...
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives Considered
+      description: Have you considered any alternative solutions or workarounds?
+      placeholder: I considered using [alternative], but it has these limitations...
+
+  - type: textarea
+    id: examples
+    attributes:
+      label: Usage Examples
+      description: Show how you would like to use this feature
+      placeholder: |
+        // Example usage:
+        var client = new SomeNewClient();
+        await client.DoSomething();
+      render: csharp
+
+  - type: checkboxes
+    id: requirements
+    attributes:
+      label: Requirements
+      description: What requirements should this feature meet?
+      options:
+        - label: Native AOT compatible
+        - label: Minimal allocations/high performance
+        - label: Follows existing Goa patterns
+        - label: Includes appropriate tests
+        - label: Includes documentation
+        - label: Backwards compatible
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: Additional Context
+      description: Add any other context, screenshots, or examples about the feature request

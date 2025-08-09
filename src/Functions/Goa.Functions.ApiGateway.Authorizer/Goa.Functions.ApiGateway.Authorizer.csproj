@@ -1,3 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-
+  <PropertyGroup>
+    <PackageTitle>Goa - API Gateway Authorizer</PackageTitle>
+    <Description>API Gateway custom authorizer for high-performance AWS Lambda functions</Description>
+    <PackageTags>$(PackageBaseTags);function;apigateway;authorizer;security</PackageTags>
+  </PropertyGroup>
 </Project>

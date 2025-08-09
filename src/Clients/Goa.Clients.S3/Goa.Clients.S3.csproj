@@ -1,3 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-
+  <PropertyGroup>
+    <PackageTitle>Goa - S3 Client</PackageTitle>
+    <Description>S3 client for object storage operations in high-performance AWS Lambda functions</Description>
+    <PackageTags>$(PackageBaseTags);s3;client;storage;objects</PackageTags>
+  </PropertyGroup>
 </Project>

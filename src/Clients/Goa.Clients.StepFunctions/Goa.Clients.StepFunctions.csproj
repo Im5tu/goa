@@ -1,3 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-
+  <PropertyGroup>
+    <PackageTitle>Goa - Step Functions Client</PackageTitle>
+    <Description>Step Functions client for workflow orchestration in high-performance AWS Lambda functions</Description>
+    <PackageTags>$(PackageBaseTags);stepfunctions;client;workflows;orchestration</PackageTags>
+  </PropertyGroup>
 </Project>

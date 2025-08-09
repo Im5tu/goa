@@ -31,6 +31,12 @@
             ],
             "replaces": "functionType",
             "defaultValue": "httpv2"
+        },
+        "includeOpenApi": {
+            "type": "parameter",
+            "description": "Include OpenAPI documentation with Scalar UI.",
+            "datatype": "bool",
+            "defaultValue": "false"
         }
     }
 }

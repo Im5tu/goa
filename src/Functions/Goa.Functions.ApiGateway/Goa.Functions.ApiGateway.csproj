@@ -1,4 +1,9 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <PackageTitle>Goa - API Gateway Functions</PackageTitle>
+        <Description>API Gateway integration with V1/V2 payload support for high-performance AWS Lambda functions</Description>
+        <PackageTags>$(PackageBaseTags);function;apigateway;http;rest</PackageTags>
+    </PropertyGroup>
 
     <PropertyGroup>
         <OutputType>Library</OutputType>
@@ -6,7 +11,7 @@
 
     <ItemGroup>
         <FrameworkReference Include="Microsoft.AspNetCore.App" />
-        <PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="8.13.0" />
+        <PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="8.13.1" />
     </ItemGroup>
 
 </Project>

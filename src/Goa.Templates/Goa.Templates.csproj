@@ -1,14 +1,10 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
-        <!-- The package metadata. Fill in the properties marked as TODO below -->
-        <!-- Follow the instructions on https://learn.microsoft.com/en-us/nuget/create-packages/package-authoring-best-practices -->
         <PackageId>Goa.Templates</PackageId>
-        <PackageVersion>1.0</PackageVersion>
-        <Title>TODO: fill the package name here</Title>
-        <Authors>TODO: fill the author name or organization here</Authors>
-        <Description>TODO: fill the package description here</Description>
-        <PackageTags>TODO: fill the tags here</PackageTags>
+        <PackageTitle>Goa - Project Templates</PackageTitle>
+        <Description>Project templates for creating AWS Lambda functions using the Goa framework with support for API Gateway and DynamoDB triggers</Description>
+        <PackageTags>AWS Lambda Serverless Templates DotNet Goa ApiGateway DynamoDB</PackageTags>
 
         <!-- Keep package type as 'Template' to show the package as a template package on nuget.org and make your template available in dotnet new search.-->
         <PackageType>Template</PackageType>
@@ -33,7 +29,4 @@
         <Compile Remove="**\*" />
     </ItemGroup>
 
-    <ItemGroup>
-        <None Include="README.md" Pack="true" PackagePath="" />
-    </ItemGroup>
 </Project>

@@ -1,3 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-
+  <PropertyGroup>
+    <PackageTitle>Goa - EventBridge Functions</PackageTitle>
+    <Description>EventBridge function integration for high-performance AWS Lambda functions</Description>
+    <PackageTags>$(PackageBaseTags);function;eventbridge;events</PackageTags>
+  </PropertyGroup>
 </Project>
