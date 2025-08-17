@@ -25,4 +25,5 @@ namespace Goa.Functions.ApiGateway;
 [JsonSerializable(typeof(HostString))]
 [JsonSerializable(typeof(PathString))]
 [JsonSerializable(typeof(RouteEndpoint))]
+[JsonSerializable(typeof(Endpoint))]
 internal partial class LoggingSerializationContext : JsonSerializerContext;
