@@ -4,7 +4,6 @@ using Goa.Functions.Core.Bootstrapping;
 using Goa.Functions.Core.Logging;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
-using Microsoft.Extensions.Logging;
 using System.Text.Json.Serialization;
 
 namespace Goa.Functions.ApiGateway;
@@ -33,10 +32,6 @@ public static class ServerExtensions
     {
         builder.WebHost.UseGoaServer(apiGatewayType, lambdaRuntimeClient);
         builder.Logging.AddGoaJsonLogging(jsonSerializerContext ?? LoggingSerializationContext.Default);
-        builder.Logging.SetMinimumLevel(LogLevel.Information);
-        builder.Logging.AddFilter("Microsoft.Hosting.Lifetime", LogLevel.Warning);
-        builder.Logging.AddFilter("Microsoft.AspNetCore.Routing.EndpointMiddleware", LogLevel.Warning);
-
         return builder;
     }
 

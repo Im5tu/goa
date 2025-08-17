@@ -14,6 +14,19 @@ public static class JsonLoggingProviderExtensions
     /// <returns></returns>
     public static ILoggingBuilder AddGoaJsonLogging(this ILoggingBuilder builder, JsonSerializerContext? jsonSerializerContext = null)
     {
-        return builder.ClearProviders().AddProvider(new JsonLoggingProvider(LogLevel.Trace, jsonSerializerContext));
+        // Check for LOGGING__LOGLEVEL__DEFAULT environment variable
+        var logLevelEnv = Environment.GetEnvironmentVariable("LOGGING__LOGLEVEL__DEFAULT");
+        var minimumLogLevel = LogLevel.Information; // Default value
+
+        if (!string.IsNullOrEmpty(logLevelEnv) && Enum.TryParse<LogLevel>(logLevelEnv, ignoreCase: true, out var parsedLogLevel))
+        {
+            minimumLogLevel = parsedLogLevel;
+        }
+
+        builder.SetMinimumLevel(minimumLogLevel);
+        builder.AddFilter("Microsoft.Hosting.Lifetime", LogLevel.Warning);
+        builder.AddFilter("Microsoft.AspNetCore.Routing.EndpointMiddleware", LogLevel.Warning);
+
+        return builder.ClearProviders().AddProvider(new JsonLoggingProvider(minimumLogLevel, jsonSerializerContext));
     }
 }

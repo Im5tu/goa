@@ -6,7 +6,12 @@ namespace Goa.Functions.ApiGateway.Features.V1;
 internal sealed class LambdaHttpResponseBodyFeatureV1 : IHttpResponseBodyFeature
 {
     public Stream Stream { get; } = new MemoryStream();
-    public PipeWriter Writer { get; } = PipeWriter.Create(Stream.Null);
+    public PipeWriter Writer { get; }
+
+    public LambdaHttpResponseBodyFeatureV1()
+    {
+        Writer = PipeWriter.Create(Stream);
+    }
 
     public void DisableBuffering() { /* No buffering needed */ }
 
