@@ -12,6 +12,6 @@
         <!-- Use the top level for the artifacts directory -->
         <ArtifactsPath>$(MSBuildThisFileDirectory)artifacts</ArtifactsPath>
         <AssemblyVersion>0.0.2</AssemblyVersion>
-        <PackageVersion>$(AssemblyVersion)-preview.2.2</PackageVersion>
+        <PackageVersion>$(AssemblyVersion)-preview.2.3</PackageVersion>
     </PropertyGroup>
 </Project>

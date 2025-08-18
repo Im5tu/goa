@@ -494,7 +494,7 @@ public class DynamoMapperGenerator : ISourceGenerator
         foreach (Match match in matches)
         {
             var propertyName = match.Groups[1].Value;
-            var propertySymbol = model.GetMembers().OfType<IPropertySymbol>().FirstOrDefault(p => p.Name == propertyName);
+            var propertySymbol = GetPropertyIncludingInherited(model, propertyName);
             if (propertySymbol != null)
             {
                 string placeholder;
@@ -518,7 +518,7 @@ public class DynamoMapperGenerator : ISourceGenerator
 
     private string GetParameterTypeAndName(string propertyName, INamedTypeSymbol model)
     {
-        var propertySymbol = model.GetMembers().OfType<IPropertySymbol>().FirstOrDefault(p => p.Name == propertyName);
+        var propertySymbol = GetPropertyIncludingInherited(model, propertyName);
         if (propertySymbol != null)
         {
             if (propertySymbol.Type.Name == nameof(DateTime))
@@ -722,7 +722,7 @@ public class DynamoMapperGenerator : ISourceGenerator
         foreach (Match match in matches)
         {
             var propertyName = match.Groups[1].Value;
-            var propertySymbol = model.GetMembers().OfType<IPropertySymbol>().FirstOrDefault(p => p.Name == propertyName);
+            var propertySymbol = GetPropertyIncludingInherited(model, propertyName);
             if (propertySymbol != null)
             {
                 result.Add(propertyName);
@@ -1666,7 +1666,7 @@ public class DynamoMapperGenerator : ISourceGenerator
 
     private string GetRecordExtraction(string propertyName, INamedTypeSymbol model)
     {
-        var property = model.GetMembers().OfType<IPropertySymbol>().FirstOrDefault(p => p.Name == propertyName);
+        var property = GetPropertyIncludingInherited(model, propertyName);
         if (property == null)
             return $"\"<{propertyName}>\""; // Fallback
             
