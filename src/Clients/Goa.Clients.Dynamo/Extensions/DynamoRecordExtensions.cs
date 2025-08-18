@@ -1175,4 +1175,288 @@ public static class DynamoRecordExtensions
         }
         return true;
     }
+
+    /// <summary>
+    /// Attempts to get a DateTime value from a unix timestamp in seconds stored as numeric value in the DynamoRecord.
+    /// </summary>
+    /// <param name="record">The DynamoRecord to extract from.</param>
+    /// <param name="columnName">The column name to extract.</param>
+    /// <param name="value">The extracted DateTime value, or default(DateTime) if not found.</param>
+    /// <returns>True if the column exists and has a valid numeric unix timestamp, false otherwise.</returns>
+    public static bool TryGetUnixTimestampSeconds(this DynamoRecord record, string columnName, out DateTime value)
+    {
+        value = default;
+        if (!record.TryGetValue(columnName, out var attributeValue))
+            return false;
+
+        if (attributeValue == null || attributeValue.NULL == true)
+            return false;
+
+        if (string.IsNullOrEmpty(attributeValue.N))
+            return false;
+
+        if (long.TryParse(attributeValue.N, out var unixSeconds))
+        {
+            try
+            {
+                value = DateTimeOffset.FromUnixTimeSeconds(unixSeconds).DateTime;
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+        return false;
+    }
+
+    /// <summary>
+    /// Attempts to get a nullable DateTime value from a unix timestamp in seconds stored as numeric value in the DynamoRecord.
+    /// </summary>
+    /// <param name="record">The DynamoRecord to extract from.</param>
+    /// <param name="columnName">The column name to extract.</param>
+    /// <param name="value">The extracted DateTime value, or null if not found or NULL attribute.</param>
+    /// <returns>True if the column exists, false otherwise.</returns>
+    public static bool TryGetNullableUnixTimestampSeconds(this DynamoRecord record, string columnName, out DateTime? value)
+    {
+        value = null;
+        if (!record.TryGetValue(columnName, out var attributeValue))
+            return false;
+
+        if (attributeValue == null || attributeValue.NULL == true)
+        {
+            value = null;
+            return true;
+        }
+
+        if (string.IsNullOrEmpty(attributeValue.N))
+            return false;
+
+        if (long.TryParse(attributeValue.N, out var unixSeconds))
+        {
+            try
+            {
+                value = DateTimeOffset.FromUnixTimeSeconds(unixSeconds).DateTime;
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+        return false;
+    }
+
+    /// <summary>
+    /// Attempts to get a DateTime value from a unix timestamp in milliseconds stored as numeric value in the DynamoRecord.
+    /// </summary>
+    /// <param name="record">The DynamoRecord to extract from.</param>
+    /// <param name="columnName">The column name to extract.</param>
+    /// <param name="value">The extracted DateTime value, or default(DateTime) if not found.</param>
+    /// <returns>True if the column exists and has a valid numeric unix timestamp, false otherwise.</returns>
+    public static bool TryGetUnixTimestampMilliseconds(this DynamoRecord record, string columnName, out DateTime value)
+    {
+        value = default;
+        if (!record.TryGetValue(columnName, out var attributeValue))
+            return false;
+
+        if (attributeValue == null || attributeValue.NULL == true)
+            return false;
+
+        if (string.IsNullOrEmpty(attributeValue.N))
+            return false;
+
+        if (long.TryParse(attributeValue.N, out var unixMilliseconds))
+        {
+            try
+            {
+                value = DateTimeOffset.FromUnixTimeMilliseconds(unixMilliseconds).DateTime;
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+        return false;
+    }
+
+    /// <summary>
+    /// Attempts to get a nullable DateTime value from a unix timestamp in milliseconds stored as numeric value in the DynamoRecord.
+    /// </summary>
+    /// <param name="record">The DynamoRecord to extract from.</param>
+    /// <param name="columnName">The column name to extract.</param>
+    /// <param name="value">The extracted DateTime value, or null if not found or NULL attribute.</param>
+    /// <returns>True if the column exists, false otherwise.</returns>
+    public static bool TryGetNullableUnixTimestampMilliseconds(this DynamoRecord record, string columnName, out DateTime? value)
+    {
+        value = null;
+        if (!record.TryGetValue(columnName, out var attributeValue))
+            return false;
+
+        if (attributeValue == null || attributeValue.NULL == true)
+        {
+            value = null;
+            return true;
+        }
+
+        if (string.IsNullOrEmpty(attributeValue.N))
+            return false;
+
+        if (long.TryParse(attributeValue.N, out var unixMilliseconds))
+        {
+            try
+            {
+                value = DateTimeOffset.FromUnixTimeMilliseconds(unixMilliseconds).DateTime;
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+        return false;
+    }
+
+    /// <summary>
+    /// Attempts to get a DateTimeOffset value from a unix timestamp in seconds stored as numeric value in the DynamoRecord.
+    /// </summary>
+    /// <param name="record">The DynamoRecord to extract from.</param>
+    /// <param name="columnName">The column name to extract.</param>
+    /// <param name="value">The extracted DateTimeOffset value, or default(DateTimeOffset) if not found.</param>
+    /// <returns>True if the column exists and has a valid numeric unix timestamp, false otherwise.</returns>
+    public static bool TryGetUnixTimestampSecondsAsOffset(this DynamoRecord record, string columnName, out DateTimeOffset value)
+    {
+        value = default;
+        if (!record.TryGetValue(columnName, out var attributeValue))
+            return false;
+
+        if (attributeValue == null || attributeValue.NULL == true)
+            return false;
+
+        if (string.IsNullOrEmpty(attributeValue.N))
+            return false;
+
+        if (long.TryParse(attributeValue.N, out var unixSeconds))
+        {
+            try
+            {
+                value = DateTimeOffset.FromUnixTimeSeconds(unixSeconds);
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+        return false;
+    }
+
+    /// <summary>
+    /// Attempts to get a nullable DateTimeOffset value from a unix timestamp in seconds stored as numeric value in the DynamoRecord.
+    /// </summary>
+    /// <param name="record">The DynamoRecord to extract from.</param>
+    /// <param name="columnName">The column name to extract.</param>
+    /// <param name="value">The extracted DateTimeOffset value, or null if not found or NULL attribute.</param>
+    /// <returns>True if the column exists, false otherwise.</returns>
+    public static bool TryGetNullableUnixTimestampSecondsAsOffset(this DynamoRecord record, string columnName, out DateTimeOffset? value)
+    {
+        value = null;
+        if (!record.TryGetValue(columnName, out var attributeValue))
+            return false;
+
+        if (attributeValue == null || attributeValue.NULL == true)
+        {
+            value = null;
+            return true;
+        }
+
+        if (string.IsNullOrEmpty(attributeValue.N))
+            return false;
+
+        if (long.TryParse(attributeValue.N, out var unixSeconds))
+        {
+            try
+            {
+                value = DateTimeOffset.FromUnixTimeSeconds(unixSeconds);
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+        return false;
+    }
+
+    /// <summary>
+    /// Attempts to get a DateTimeOffset value from a unix timestamp in milliseconds stored as numeric value in the DynamoRecord.
+    /// </summary>
+    /// <param name="record">The DynamoRecord to extract from.</param>
+    /// <param name="columnName">The column name to extract.</param>
+    /// <param name="value">The extracted DateTimeOffset value, or default(DateTimeOffset) if not found.</param>
+    /// <returns>True if the column exists and has a valid numeric unix timestamp, false otherwise.</returns>
+    public static bool TryGetUnixTimestampMillisecondsAsOffset(this DynamoRecord record, string columnName, out DateTimeOffset value)
+    {
+        value = default;
+        if (!record.TryGetValue(columnName, out var attributeValue))
+            return false;
+
+        if (attributeValue == null || attributeValue.NULL == true)
+            return false;
+
+        if (string.IsNullOrEmpty(attributeValue.N))
+            return false;
+
+        if (long.TryParse(attributeValue.N, out var unixMilliseconds))
+        {
+            try
+            {
+                value = DateTimeOffset.FromUnixTimeMilliseconds(unixMilliseconds);
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+        return false;
+    }
+
+    /// <summary>
+    /// Attempts to get a nullable DateTimeOffset value from a unix timestamp in milliseconds stored as numeric value in the DynamoRecord.
+    /// </summary>
+    /// <param name="record">The DynamoRecord to extract from.</param>
+    /// <param name="columnName">The column name to extract.</param>
+    /// <param name="value">The extracted DateTimeOffset value, or null if not found or NULL attribute.</param>
+    /// <returns>True if the column exists, false otherwise.</returns>
+    public static bool TryGetNullableUnixTimestampMillisecondsAsOffset(this DynamoRecord record, string columnName, out DateTimeOffset? value)
+    {
+        value = null;
+        if (!record.TryGetValue(columnName, out var attributeValue))
+            return false;
+
+        if (attributeValue == null || attributeValue.NULL == true)
+        {
+            value = null;
+            return true;
+        }
+
+        if (string.IsNullOrEmpty(attributeValue.N))
+            return false;
+
+        if (long.TryParse(attributeValue.N, out var unixMilliseconds))
+        {
+            try
+            {
+                value = DateTimeOffset.FromUnixTimeMilliseconds(unixMilliseconds);
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+        return false;
+    }
 }

@@ -418,6 +418,7 @@ public class DynamoMapperGenerator : ISourceGenerator
         public static string ForBool(string propertyName) => $"new AttributeValue {{ BOOL = model.{propertyName} }}";
         public static string ForBoolSet(string propertyName) => $"new AttributeValue {{ SS = model.{propertyName}?.Select(x => x.ToString()).ToList() ?? new List<string>() }}";
         public static string ForDateTime(string propertyName) => $"new AttributeValue {{ S = model.{propertyName}.ToString(\"o\") }}";
+        public static string ForNullableDateTime(string propertyName) => $"model.{propertyName}.HasValue ? new AttributeValue {{ S = model.{propertyName}.Value.ToString(\"o\") }} : new AttributeValue {{ NULL = true }}";
         public static string ForDateTimeSet(string propertyName) => $"new AttributeValue {{ SS = model.{propertyName}?.Select(x => x.ToString(\"o\")).ToList() ?? new List<string>() }}";
         public static string ForEnum(string propertyName) => $"new AttributeValue {{ S = model.{propertyName}.ToString() }}";
         public static string ForEnumSet(string propertyName) => $"new AttributeValue {{ SS = model.{propertyName}?.Select(x => x.ToString()).ToList() ?? new List<string>() }}";
@@ -427,6 +428,10 @@ public class DynamoMapperGenerator : ISourceGenerator
         public static string ForGuidSet(string propertyName) => $"new AttributeValue {{ SS = model.{propertyName}?.Select(x => x.ToString()).ToList() ?? new List<string>() }}";
         public static string ForTimeSpanSet(string propertyName) => $"new AttributeValue {{ SS = model.{propertyName}?.Select(x => x.ToString()).ToList() ?? new List<string>() }}";
         public static string ForDateTimeOffsetSet(string propertyName) => $"new AttributeValue {{ SS = model.{propertyName}?.Select(x => x.ToString(\"o\")).ToList() ?? new List<string>() }}";
+        public static string ForUnixTimestampSeconds(string propertyName) => $"new AttributeValue {{ N = ((DateTimeOffset)model.{propertyName}).ToUnixTimeSeconds().ToString() }}";
+        public static string ForUnixTimestampMilliseconds(string propertyName) => $"new AttributeValue {{ N = ((DateTimeOffset)model.{propertyName}).ToUnixTimeMilliseconds().ToString() }}";
+        public static string ForNullableUnixTimestampSeconds(string propertyName) => $"model.{propertyName}.HasValue ? new AttributeValue {{ N = ((DateTimeOffset)model.{propertyName}.Value).ToUnixTimeSeconds().ToString() }} : new AttributeValue {{ NULL = true }}";
+        public static string ForNullableUnixTimestampMilliseconds(string propertyName) => $"model.{propertyName}.HasValue ? new AttributeValue {{ N = ((DateTimeOffset)model.{propertyName}.Value).ToUnixTimeMilliseconds().ToString() }} : new AttributeValue {{ NULL = true }}";
         public static string ForStringDictionary(string propertyName) => $"new AttributeValue {{ M = model.{propertyName}?.ToDictionary(kvp => kvp.Key, kvp => new AttributeValue {{ S = kvp.Value }}) ?? new Dictionary<string, AttributeValue>() }}";
         public static string ForStringIntDictionary(string propertyName) => $"new AttributeValue {{ M = model.{propertyName}?.ToDictionary(kvp => kvp.Key, kvp => new AttributeValue {{ N = kvp.Value.ToString() }}) ?? new Dictionary<string, AttributeValue>() }}";
         public static string ForComplexType(string propertyName, string typeName) => $"model.{propertyName} != null ? new AttributeValue {{ M = DynamoMapper.{typeName}.ToDynamoRecord(model.{propertyName}) }} : new AttributeValue {{ NULL = true }}";
@@ -500,11 +505,45 @@ public class DynamoMapperGenerator : ISourceGenerator
                 string placeholder;
                 if (propertySymbol.Type.Name == nameof(DateTime))
                 {
-                    placeholder = $"{{{propertyName.ToLowerInvariant()}:yyyy-MM-dd}}";
+                    // Check for UnixTimestampAttribute
+                    var unixTimestampAttr = propertySymbol.GetAttributes().FirstOrDefault(attr => 
+                        attr.AttributeClass?.ToDisplayString() == "Goa.Clients.Dynamo.UnixTimestampAttribute");
+                    
+                    if (unixTimestampAttr != null)
+                    {
+                        // For unix timestamps in composite keys, use direct timestamp value
+                        var formatArg = unixTimestampAttr.NamedArguments.FirstOrDefault(arg => arg.Key == "Format");
+                        var isMilliseconds = formatArg.Value.Value?.ToString() == "1"; // Milliseconds = 1
+                        
+                        placeholder = isMilliseconds 
+                            ? $"{{((DateTimeOffset){propertyName.ToLowerInvariant()}).ToUnixTimeMilliseconds()}}"
+                            : $"{{((DateTimeOffset){propertyName.ToLowerInvariant()}).ToUnixTimeSeconds()}}";
+                    }
+                    else
+                    {
+                        placeholder = $"{{{propertyName.ToLowerInvariant()}:yyyy-MM-dd}}";
+                    }
                 }
                 else if (propertySymbol.Type.Name == nameof(DateTimeOffset))
                 {
-                    placeholder = $"{{{propertyName.ToLowerInvariant()}:yyyy-MM-dd}}";
+                    // Check for UnixTimestampAttribute
+                    var unixTimestampAttr = propertySymbol.GetAttributes().FirstOrDefault(attr => 
+                        attr.AttributeClass?.ToDisplayString() == "Goa.Clients.Dynamo.UnixTimestampAttribute");
+                    
+                    if (unixTimestampAttr != null)
+                    {
+                        // For unix timestamps in composite keys, use direct timestamp value
+                        var formatArg = unixTimestampAttr.NamedArguments.FirstOrDefault(arg => arg.Key == "Format");
+                        var isMilliseconds = formatArg.Value.Value?.ToString() == "1"; // Milliseconds = 1
+                        
+                        placeholder = isMilliseconds 
+                            ? $"{{{propertyName.ToLowerInvariant()}.ToUnixTimeMilliseconds()}}"
+                            : $"{{{propertyName.ToLowerInvariant()}.ToUnixTimeSeconds()}}";
+                    }
+                    else
+                    {
+                        placeholder = $"{{{propertyName.ToLowerInvariant()}:yyyy-MM-dd}}";
+                    }
                 }
                 else
                 {
@@ -669,45 +708,111 @@ public class DynamoMapperGenerator : ISourceGenerator
         {
             return AttributeValueConverters.ForBool(attributeName);
         }
-        else if (property.Type.Name == nameof(DateTime))
+        else
         {
-            return AttributeValueConverters.ForDateTime(attributeName);
-        }
-        else if (property.Type.Name == nameof(DateTimeOffset))
-        {
-            return AttributeValueConverters.ForDateTime(attributeName); // Use same converter
-        }
-        else if (property.Type.Name == nameof(TimeSpan))
-        {
-            return AttributeValueConverters.ForTimeSpan(attributeName); // Store as string
-        }
-        else if (property.Type.Name == nameof(Guid))
-        {
-            return AttributeValueConverters.ForGuid(attributeName); // Store as string
-        }
-        else if (property.Type.TypeKind == TypeKind.Enum)
-        {
-            return AttributeValueConverters.ForEnum(attributeName);
-        }
-        else if (IsDictionaryType(property.Type, out var keyType, out var valueType))
-        {
-            // Handle dictionary types - only support string keys for now
-            if (keyType.SpecialType == SpecialType.System_String && valueType.SpecialType == SpecialType.System_String)
+            // Handle nullable types and regular types
+            var underlyingType = property.Type;
+            if (IsNullableType(property.Type) && property.Type is INamedTypeSymbol nullableType)
             {
-                return AttributeValueConverters.ForStringDictionary(attributeName);
+                underlyingType = nullableType.TypeArguments[0];
             }
-            else if (keyType.SpecialType == SpecialType.System_String && valueType.SpecialType == SpecialType.System_Int32)
+            
+            if (underlyingType.Name == nameof(DateTime))
             {
-                return AttributeValueConverters.ForStringIntDictionary(attributeName);
+                // Check for UnixTimestampAttribute first
+                var unixTimestampAttr = property.GetAttributes().FirstOrDefault(attr => 
+                    attr.AttributeClass?.ToDisplayString() == "Goa.Clients.Dynamo.UnixTimestampAttribute");
+                
+                if (unixTimestampAttr != null)
+                {
+                    // Get the format from the attribute, defaulting to Seconds
+                    var formatArg = unixTimestampAttr.NamedArguments.FirstOrDefault(arg => arg.Key == "Format");
+                    var isMilliseconds = formatArg.Value.Value?.ToString() == "1"; // Milliseconds = 1
+                    var isNullableDateTime = IsNullableType(property.Type);
+                    
+                    if (isNullableDateTime)
+                    {
+                        return isMilliseconds 
+                            ? AttributeValueConverters.ForNullableUnixTimestampMilliseconds(attributeName)
+                            : AttributeValueConverters.ForNullableUnixTimestampSeconds(attributeName);
+                    }
+                    else
+                    {
+                        return isMilliseconds 
+                            ? AttributeValueConverters.ForUnixTimestampMilliseconds(attributeName)
+                            : AttributeValueConverters.ForUnixTimestampSeconds(attributeName);
+                    }
+                }
+                
+                var isNullableDateTimeFallback = IsNullableType(property.Type);
+                return isNullableDateTimeFallback 
+                    ? AttributeValueConverters.ForNullableDateTime(attributeName)
+                    : AttributeValueConverters.ForDateTime(attributeName);
             }
+            else if (underlyingType.Name == nameof(DateTimeOffset))
+            {
+                // Check for UnixTimestampAttribute first
+                var unixTimestampAttr = property.GetAttributes().FirstOrDefault(attr => 
+                    attr.AttributeClass?.ToDisplayString() == "Goa.Clients.Dynamo.UnixTimestampAttribute");
+                
+                if (unixTimestampAttr != null)
+                {
+                    // Get the format from the attribute, defaulting to Seconds
+                    var formatArg = unixTimestampAttr.NamedArguments.FirstOrDefault(arg => arg.Key == "Format");
+                    var isMilliseconds = formatArg.Value.Value?.ToString() == "1"; // Milliseconds = 1
+                    var isNullableDateTimeOffset = IsNullableType(property.Type);
+                    
+                    if (isNullableDateTimeOffset)
+                    {
+                        return isMilliseconds 
+                            ? AttributeValueConverters.ForNullableUnixTimestampMilliseconds(attributeName)
+                            : AttributeValueConverters.ForNullableUnixTimestampSeconds(attributeName);
+                    }
+                    else
+                    {
+                        return isMilliseconds 
+                            ? AttributeValueConverters.ForUnixTimestampMilliseconds(attributeName)
+                            : AttributeValueConverters.ForUnixTimestampSeconds(attributeName);
+                    }
+                }
+                
+                var isNullableDateTimeOffsetFallback = IsNullableType(property.Type);
+                return isNullableDateTimeOffsetFallback 
+                    ? AttributeValueConverters.ForNullableDateTime(attributeName)
+                    : AttributeValueConverters.ForDateTime(attributeName); // Use same converter
+            }
+            else if (underlyingType.Name == nameof(TimeSpan))
+            {
+                return AttributeValueConverters.ForTimeSpan(attributeName); // Store as string
+            }
+            else if (underlyingType.Name == nameof(Guid))
+            {
+                return AttributeValueConverters.ForGuid(attributeName); // Store as string
+            }
+            else if (underlyingType.TypeKind == TypeKind.Enum)
+            {
+                return AttributeValueConverters.ForEnum(attributeName);
+            }
+            else if (IsDictionaryType(property.Type, out var keyType, out var valueType))
+            {
+                // Handle dictionary types - only support string keys for now
+                if (keyType.SpecialType == SpecialType.System_String && valueType.SpecialType == SpecialType.System_String)
+                {
+                    return AttributeValueConverters.ForStringDictionary(attributeName);
+                }
+                else if (keyType.SpecialType == SpecialType.System_String && valueType.SpecialType == SpecialType.System_Int32)
+                {
+                    return AttributeValueConverters.ForStringIntDictionary(attributeName);
+                }
 
-            // Skip unsupported dictionary types
-            return string.Empty;
-        }
-        else if (IsComplexType(property.Type))
-        {
-            // Handle complex types (records, classes)
-            return AttributeValueConverters.ForComplexType(attributeName, GetNormalizedTypeName(property.Type));
+                // Skip unsupported dictionary types
+                return string.Empty;
+            }
+            else if (IsComplexType(property.Type))
+            {
+                // Handle complex types (records, classes)
+                return AttributeValueConverters.ForComplexType(attributeName, GetNormalizedTypeName(property.Type));
+            }
         }
 
         return string.Empty;
@@ -1200,6 +1305,21 @@ public class DynamoMapperGenerator : ISourceGenerator
 
     private string GetFromDynamoRecordConversionWithExtensions(string memberName, ITypeSymbol type, bool isNullable, string pkValue, string skValue, INamedTypeSymbol model, ModelInfo modelInfo)
     {
+        // Check if this property corresponds to the PK or SK attribute to avoid variable conflicts
+        // and reuse already-extracted values for efficiency
+        if (memberName == modelInfo.PKName)
+        {
+            return isNullable 
+                ? $"string.IsNullOrEmpty({pkValue}) ? null : {pkValue}"
+                : $"string.IsNullOrEmpty({pkValue}) ? MissingAttributeException.Throw<string>(\"{memberName}\", {pkValue}, {skValue}) : {pkValue}";
+        }
+        if (memberName == modelInfo.SKName)
+        {
+            return isNullable 
+                ? $"string.IsNullOrEmpty({skValue}) ? null : {skValue}"
+                : $"string.IsNullOrEmpty({skValue}) ? MissingAttributeException.Throw<string>(\"{memberName}\", {pkValue}, {skValue}) : {skValue}";
+        }
+        
         if (IsCollectionType(type, out var collectionElementType))
         {
             // Skip nested collections for now (e.g., IEnumerable<IEnumerable<string>>)
@@ -1264,10 +1384,10 @@ public class DynamoMapperGenerator : ISourceGenerator
                 SpecialType.System_Decimal => $"record.TryGetDecimal(\"{memberName}\", out var {memberName.ToLowerInvariant()}) ? {memberName.ToLowerInvariant()} : default(decimal)",
                 SpecialType.System_Boolean when isNullable => $"record.TryGetNullableBool(\"{memberName}\", out var {memberName.ToLowerInvariant()}) ? {memberName.ToLowerInvariant()} : null",
                 SpecialType.System_Boolean => $"record.TryGetBool(\"{memberName}\", out var {memberName.ToLowerInvariant()}) ? {memberName.ToLowerInvariant()} : default(bool)",
-                _ when underlyingType.Name == nameof(DateTime) && isNullable => $"record.TryGetNullableDateTime(\"{memberName}\", out var {memberName.ToLowerInvariant()}) ? {memberName.ToLowerInvariant()} : null",
-                _ when underlyingType.Name == nameof(DateTime) => $"record.TryGetDateTime(\"{memberName}\", out var {memberName.ToLowerInvariant()}) ? {memberName.ToLowerInvariant()} : default(DateTime)",
-                _ when underlyingType.Name == nameof(DateTimeOffset) && isNullable => $"record.TryGetNullableDateTimeOffset(\"{memberName}\", out var {memberName.ToLowerInvariant()}) ? {memberName.ToLowerInvariant()} : null",
-                _ when underlyingType.Name == nameof(DateTimeOffset) => $"record.TryGetDateTimeOffset(\"{memberName}\", out var {memberName.ToLowerInvariant()}) ? {memberName.ToLowerInvariant()} : default(DateTimeOffset)",
+                _ when underlyingType.Name == nameof(DateTime) && isNullable => GetDateTimeFromDynamoRecordConversion(memberName, underlyingType, isNullable, model),
+                _ when underlyingType.Name == nameof(DateTime) => GetDateTimeFromDynamoRecordConversion(memberName, underlyingType, isNullable, model),
+                _ when underlyingType.Name == nameof(DateTimeOffset) && isNullable => GetDateTimeFromDynamoRecordConversion(memberName, underlyingType, isNullable, model),
+                _ when underlyingType.Name == nameof(DateTimeOffset) => GetDateTimeFromDynamoRecordConversion(memberName, underlyingType, isNullable, model),
                 _ when underlyingType.Name == nameof(TimeSpan) && isNullable => $"record.TryGetNullableTimeSpan(\"{memberName}\", out var {memberName.ToLowerInvariant()}) ? {memberName.ToLowerInvariant()} : null",
                 _ when underlyingType.Name == nameof(TimeSpan) => $"record.TryGetTimeSpan(\"{memberName}\", out var {memberName.ToLowerInvariant()}) ? {memberName.ToLowerInvariant()} : default(TimeSpan)",
                 _ when underlyingType.Name == nameof(Guid) && isNullable => $"record.TryGetNullableGuid(\"{memberName}\", out var {memberName.ToLowerInvariant()}) ? {memberName.ToLowerInvariant()} : null",
@@ -1382,6 +1502,71 @@ public class DynamoMapperGenerator : ISourceGenerator
         sourceBuilder.Append(mapperBuilder.ToString());
         sourceBuilder.AppendLine("}");
         return sourceBuilder.ToString();
+    }
+
+    private string GetDateTimeFromDynamoRecordConversion(string memberName, ITypeSymbol underlyingType, bool isNullable, INamedTypeSymbol model)
+    {
+        // Find the corresponding property on the model to check for UnixTimestampAttribute
+        var property = GetPropertyIncludingInherited(model, memberName);
+        if (property != null)
+        {
+            var unixTimestampAttr = property.GetAttributes().FirstOrDefault(attr => 
+                attr.AttributeClass?.ToDisplayString() == "Goa.Clients.Dynamo.UnixTimestampAttribute");
+            
+            if (unixTimestampAttr != null)
+            {
+                // Get the format from the attribute, defaulting to Seconds
+                var formatArg = unixTimestampAttr.NamedArguments.FirstOrDefault(arg => arg.Key == "Format");
+                var isMilliseconds = formatArg.Value.Value?.ToString() == "1"; // Milliseconds = 1
+                
+                if (underlyingType.Name == nameof(DateTime))
+                {
+                    if (isNullable)
+                    {
+                        return isMilliseconds 
+                            ? $"record.TryGetNullableUnixTimestampMilliseconds(\"{memberName}\", out var {memberName.ToLowerInvariant()}) ? {memberName.ToLowerInvariant()} : null"
+                            : $"record.TryGetNullableUnixTimestampSeconds(\"{memberName}\", out var {memberName.ToLowerInvariant()}) ? {memberName.ToLowerInvariant()} : null";
+                    }
+                    else
+                    {
+                        return isMilliseconds 
+                            ? $"record.TryGetUnixTimestampMilliseconds(\"{memberName}\", out var {memberName.ToLowerInvariant()}) ? {memberName.ToLowerInvariant()} : default(DateTime)"
+                            : $"record.TryGetUnixTimestampSeconds(\"{memberName}\", out var {memberName.ToLowerInvariant()}) ? {memberName.ToLowerInvariant()} : default(DateTime)";
+                    }
+                }
+                else if (underlyingType.Name == nameof(DateTimeOffset))
+                {
+                    if (isNullable)
+                    {
+                        return isMilliseconds 
+                            ? $"record.TryGetNullableUnixTimestampMillisecondsAsOffset(\"{memberName}\", out var {memberName.ToLowerInvariant()}) ? {memberName.ToLowerInvariant()} : null"
+                            : $"record.TryGetNullableUnixTimestampSecondsAsOffset(\"{memberName}\", out var {memberName.ToLowerInvariant()}) ? {memberName.ToLowerInvariant()} : null";
+                    }
+                    else
+                    {
+                        return isMilliseconds 
+                            ? $"record.TryGetUnixTimestampMillisecondsAsOffset(\"{memberName}\", out var {memberName.ToLowerInvariant()}) ? {memberName.ToLowerInvariant()} : default(DateTimeOffset)"
+                            : $"record.TryGetUnixTimestampSecondsAsOffset(\"{memberName}\", out var {memberName.ToLowerInvariant()}) ? {memberName.ToLowerInvariant()} : default(DateTimeOffset)";
+                    }
+                }
+            }
+        }
+        
+        // Fallback to regular DateTime/DateTimeOffset handling
+        if (underlyingType.Name == nameof(DateTime))
+        {
+            return isNullable 
+                ? $"record.TryGetNullableDateTime(\"{memberName}\", out var {memberName.ToLowerInvariant()}) ? {memberName.ToLowerInvariant()} : null"
+                : $"record.TryGetDateTime(\"{memberName}\", out var {memberName.ToLowerInvariant()}) ? {memberName.ToLowerInvariant()} : default(DateTime)";
+        }
+        else if (underlyingType.Name == nameof(DateTimeOffset))
+        {
+            return isNullable 
+                ? $"record.TryGetNullableDateTimeOffset(\"{memberName}\", out var {memberName.ToLowerInvariant()}) ? {memberName.ToLowerInvariant()} : null"
+                : $"record.TryGetDateTimeOffset(\"{memberName}\", out var {memberName.ToLowerInvariant()}) ? {memberName.ToLowerInvariant()} : default(DateTimeOffset)";
+        }
+        
+        return $"default({underlyingType.ToDisplayString()})";
     }
 
     private bool HasDynamoModelAttribute(INamedTypeSymbol symbol)
