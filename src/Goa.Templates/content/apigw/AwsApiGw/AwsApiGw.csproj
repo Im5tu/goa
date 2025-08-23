@@ -26,7 +26,7 @@
         </PackageReference>
 //#if (includeOpenApi)
         <PackageReference Include="Microsoft.OpenApi" Version="1.6.25" />
-        <PackageReference Include="Scalar.AspNetCore" Version="1.2.47" />
+        <PackageReference Include="Scalar.AspNetCore" Version="1.2.76" />
 //#endif
     </ItemGroup>
 
