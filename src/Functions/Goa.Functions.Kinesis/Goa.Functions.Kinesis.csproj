@@ -2,6 +2,10 @@
   <PropertyGroup>
     <PackageTitle>Goa - Kinesis Functions</PackageTitle>
     <Description>Kinesis stream processing for high-performance AWS Lambda functions</Description>
-    <PackageTags>$(PackageBaseTags);function;kinesis;streaming</PackageTags>
+    <PackageTags>$(PackageBaseTags);function;kinesis;streams;realtime</PackageTags>
   </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\Goa.Core\Goa.Core.csproj" />
+  </ItemGroup>
 </Project>

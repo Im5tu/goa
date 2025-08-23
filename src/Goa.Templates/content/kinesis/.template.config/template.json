@@ -1,0 +1,13 @@
+{
+    "$schema": "http://json.schemastore.org/template",
+    "author": "Goa",
+    "classifications": [ "AWS", "Lambda", "Serverless", "Goa" ],
+    "identity": "Goa.Templates.Kinesis",
+    "name": "Lambda - Kinesis Function",
+    "shortName": "goa.kinesis",
+    "sourceName": "AwsKinesis",
+    "tags": {
+        "language": "C#",
+        "type": "project"
+    }
+}
