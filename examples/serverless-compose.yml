@@ -1,6 +1,0 @@
-services:
-  sample-api:
-    path: SampleApi
-
-  sample-api-aspnetcore:
-    path: SampleApi.AspNetCore
