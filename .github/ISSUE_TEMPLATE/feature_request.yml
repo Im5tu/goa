@@ -39,22 +39,6 @@ body:
         - Documentation
         - Other
 
-  - type: dropdown
-    id: type
-    attributes:
-      label: Feature Type
-      description: What type of feature is this?
-      options:
-        - New AWS service client
-        - New Lambda function integration
-        - Performance improvement
-        - Developer experience enhancement
-        - New template
-        - Documentation improvement
-        - Other
-    validations:
-      required: true
-
   - type: textarea
     id: problem
     attributes:
@@ -70,8 +54,6 @@ body:
       label: Proposed Solution
       description: Describe the feature you'd like to see implemented
       placeholder: I would like Goa to provide...
-    validations:
-      required: true
 
   - type: textarea
     id: alternatives
@@ -79,33 +61,3 @@ body:
       label: Alternatives Considered
       description: Have you considered any alternative solutions or workarounds?
       placeholder: I considered using [alternative], but it has these limitations...
-
-  - type: textarea
-    id: examples
-    attributes:
-      label: Usage Examples
-      description: Show how you would like to use this feature
-      placeholder: |
-        // Example usage:
-        var client = new SomeNewClient();
-        await client.DoSomething();
-      render: csharp
-
-  - type: checkboxes
-    id: requirements
-    attributes:
-      label: Requirements
-      description: What requirements should this feature meet?
-      options:
-        - label: Native AOT compatible
-        - label: Minimal allocations/high performance
-        - label: Follows existing Goa patterns
-        - label: Includes appropriate tests
-        - label: Includes documentation
-        - label: Backwards compatible
-
-  - type: textarea
-    id: additional
-    attributes:
-      label: Additional Context
-      description: Add any other context, screenshots, or examples about the feature request

@@ -10,20 +10,6 @@ jobs:
   build:
     runs-on: ubuntu-latest
 
-    services:
-      localstack:
-        image: localstack/localstack:latest
-        ports:
-          - 4566:4566
-        env:
-          SERVICES: dynamodb,sns,sqs,lambda,events
-          DEBUG: 1
-        options: >-
-          --health-cmd="curl -f http://localhost:4566/_localstack/health || exit 1"
-          --health-interval=10s
-          --health-timeout=5s
-          --health-retries=3
-
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
