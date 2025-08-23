@@ -27,6 +27,9 @@
         <InternalsVisibleTo Include="Goa.Clients.Sns" />
         <InternalsVisibleTo Include="Goa.Clients.Sqs" />
         <InternalsVisibleTo Include="Goa.Clients.StepFunctions" />
+        <InternalsVisibleTo Include="Goa.Performance.Benchmarks" />
+        <InternalsVisibleTo Include="Goa.Clients.Core.Tests" />
+        <InternalsVisibleTo Include="DynamicProxyGenAssembly2" />
     </ItemGroup>
 
 </Project>

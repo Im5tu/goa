@@ -1,9 +1,6 @@
 using Goa.Functions.Core.Bootstrapping;
 using Moq;
 using System.Text.Json;
-using TUnit.Assertions;
-using TUnit.Assertions.Extensions;
-using TUnit.Core;
 
 namespace Goa.Functions.Core.Tests.Bootstrapping;
 
