@@ -29,15 +29,17 @@ public sealed class CredentialProviderChain : ICredentialProviderChain, IDisposa
     /// <inheritdoc />
     public ValueTask<ErrorOr<AwsCredentials>> GetCredentialsAsync()
     {
+        var now = DateTime.UtcNow; // Capture once, reuse everywhere
+        
         // Fast path: Check if cached credentials are still valid without async overhead
-        if (_cachedCredentials != null && DateTime.UtcNow < _cacheExpiry)
+        if (_cachedCredentials != null && now < _cacheExpiry)
         {
-            // If credentials have expiration, check if they expire soon (within 1 minute)
-            if (_cachedCredentials.Expiration.HasValue &&
-                DateTime.UtcNow.Add(_expirationBuffer) >= _cachedCredentials.Expiration.Value)
+            // If credentials have expiration, check if they expire soon
+            // Note: _cacheExpiry already has the buffer applied, so no need to add it again
+            if (_cachedCredentials.Expiration.HasValue && now >= _cacheExpiry)
             {
                 // Credentials expire soon, take slow path to refresh
-                return new (GetCredentialsSlowPathAsync());
+                return new (GetCredentialsSlowPathAsync(now));
             }
 
             // Return cached credentials synchronously
@@ -45,20 +47,20 @@ public sealed class CredentialProviderChain : ICredentialProviderChain, IDisposa
         }
 
         // Slow path: Need to acquire lock and potentially fetch new credentials
-        return new (GetCredentialsSlowPathAsync());
+        return new (GetCredentialsSlowPathAsync(now));
     }
 
-    private async Task<ErrorOr<AwsCredentials>> GetCredentialsSlowPathAsync()
+    private async Task<ErrorOr<AwsCredentials>> GetCredentialsSlowPathAsync(DateTime now)
     {
         await _semaphore.WaitAsync();
         try
         {
             // Double-check the cache after acquiring the lock (another thread might have updated it)
-            if (_cachedCredentials != null && DateTime.UtcNow < _cacheExpiry)
+            if (_cachedCredentials != null && now < _cacheExpiry)
             {
-                // If credentials have expiration, check if they expire soon (within 1 minute)
-                if (_cachedCredentials.Expiration.HasValue &&
-                    DateTime.UtcNow.Add(_expirationBuffer) >= _cachedCredentials.Expiration.Value)
+                // If credentials have expiration, check if they expire soon
+                // Note: _cacheExpiry already has the buffer applied, so no need to add it again
+                if (_cachedCredentials.Expiration.HasValue && now >= _cacheExpiry)
                 {
                     // Credentials expire soon, clear cache to force refresh
                     _cachedCredentials = null;
@@ -84,7 +86,7 @@ public sealed class CredentialProviderChain : ICredentialProviderChain, IDisposa
                     _cachedCredentials = result.Value;
 
                     // Set cache expiry to the earlier of: credential expiration or cache TTL
-                    var defaultExpiry = DateTime.UtcNow.Add(_cacheTtl);
+                    var defaultExpiry = now.Add(_cacheTtl);
                     if (result.Value.Expiration.HasValue)
                     {
                         var credentialExpiry = result.Value.Expiration.Value.Subtract(_expirationBuffer);
