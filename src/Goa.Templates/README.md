@@ -39,6 +39,26 @@ dotnet new goa.dynamodb -n MyDynamoFunction
 - Record failure handling
 - AOT compilation ready
 
+### S3 Lambda (`goa.s3`)
+Creates a Lambda function for processing S3 events.
+
+**Usage:**
+```bash
+dotnet new goa.s3 -n MyS3Function
+```
+
+**Options:**
+- `--processingType` - Choose processing mode:
+  - `batch` (default) - Process S3 events as a batch
+  - `single` - Process S3 events one at a time
+
+**Features:**
+- Single or batch processing of S3 events
+- Support for all S3 event types (ObjectCreated, ObjectRemoved, etc.)
+- Event failure handling
+- Dependency injection support
+- AOT compilation ready
+
 ## Getting Started
 
 1. Install the template package:
@@ -53,6 +73,15 @@ dotnet new goa.dynamodb -n MyDynamoFunction
    
    # With OpenAPI documentation
    dotnet new goa.apigw -n MyFunction --includeOpenApi true
+   
+   # DynamoDB stream function
+   dotnet new goa.dynamodb -n MyDynamoFunction
+   
+   # S3 event function (batch processing)
+   dotnet new goa.s3 -n MyS3Function
+   
+   # S3 event function (single processing)
+   dotnet new goa.s3 -n MyS3Function --processingType single
    
    cd MyFunction
    ```

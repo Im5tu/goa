@@ -3,8 +3,8 @@
     <PropertyGroup>
         <PackageId>Goa.Templates</PackageId>
         <PackageTitle>Goa - Project Templates</PackageTitle>
-        <Description>Project templates for creating AWS Lambda functions using the Goa framework with support for API Gateway and DynamoDB triggers</Description>
-        <PackageTags>AWS Lambda Serverless Templates DotNet Goa ApiGateway DynamoDB</PackageTags>
+        <Description>Project templates for creating AWS Lambda functions using the Goa framework with support for API Gateway, DynamoDB, Kinesis, and S3 triggers</Description>
+        <PackageTags>AWS Lambda Serverless Templates DotNet Goa ApiGateway DynamoDB Kinesis S3</PackageTags>
 
         <!-- Keep package type as 'Template' to show the package as a template package on nuget.org and make your template available in dotnet new search.-->
         <PackageType>Template</PackageType>
