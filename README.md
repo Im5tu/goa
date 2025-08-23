@@ -52,19 +52,28 @@ dotnet build
 
 ## Components
 
-### AWS Service Clients
-- **Goa.Clients.Core** - Base functionality for all AWS clients
-- **Goa.Clients.Dynamo** - DynamoDB client with source generator support
-- **Goa.Clients.EventBridge** - EventBridge client for event routing
-- **Goa.Clients.Lambda** - Lambda client for function invocation
-- **Goa.Clients.Sns** - SNS client for messaging
-- **Goa.Clients.Sqs** - SQS client for queue operations
-
-### Lambda Functions
-- **Goa.Functions.Core** - Core runtime and bootstrapping functionality
-- **Goa.Functions.ApiGateway** - API Gateway integration with V1/V2 payload support
-- **Goa.Functions.Dynamo** - DynamoDB stream processing
-
-### Tools
-- **Goa.Templates** - Project templates for rapid development
-- **Goa.Clients.Dynamo.Generator** - Source generator for DynamoDB models
+| Name | Description | NuGet | Docs |
+|------|-------------|-------|------|
+| **Goa.Core** | Core utilities and extensions | [![NuGet](https://img.shields.io/nuget/v/Goa.Core.svg)](https://nuget.org/packages/Goa.Core) | [📖](src/Goa.Core/README.md) |
+| **Goa.Functions.Core** | Core runtime and bootstrapping functionality | [![NuGet](https://img.shields.io/nuget/v/Goa.Functions.Core.svg)](https://nuget.org/packages/Goa.Functions.Core) | [📖](src/Functions/Goa.Functions.Core/README.md) |
+| **Goa.Functions.ApiGateway** | API Gateway integration with V1/V2 payload support | [![NuGet](https://img.shields.io/nuget/v/Goa.Functions.ApiGateway.svg)](https://nuget.org/packages/Goa.Functions.ApiGateway) | [📖](src/Functions/Goa.Functions.ApiGateway/README.md) |
+| **Goa.Functions.ApiGateway.Authorizer** | Custom authorizer support for API Gateway | [![NuGet](https://img.shields.io/nuget/v/Goa.Functions.ApiGateway.Authorizer.svg)](https://nuget.org/packages/Goa.Functions.ApiGateway.Authorizer) | [📖](src/Functions/Goa.Functions.ApiGateway.Authorizer/README.md) |
+| **Goa.Functions.Dynamo** | DynamoDB stream processing | [![NuGet](https://img.shields.io/nuget/v/Goa.Functions.Dynamo.svg)](https://nuget.org/packages/Goa.Functions.Dynamo) | [📖](src/Functions/Goa.Functions.Dynamo/README.md) |
+| **Goa.Functions.EventBridge** | EventBridge event processing | [![NuGet](https://img.shields.io/nuget/v/Goa.Functions.EventBridge.svg)](https://nuget.org/packages/Goa.Functions.EventBridge) | [📖](src/Functions/Goa.Functions.EventBridge/README.md) |
+| **Goa.Functions.Kinesis** | Kinesis stream processing | [![NuGet](https://img.shields.io/nuget/v/Goa.Functions.Kinesis.svg)](https://nuget.org/packages/Goa.Functions.Kinesis) | [📖](src/Functions/Goa.Functions.Kinesis/README.md) |
+| **Goa.Functions.S3** | S3 event processing | [![NuGet](https://img.shields.io/nuget/v/Goa.Functions.S3.svg)](https://nuget.org/packages/Goa.Functions.S3) | [📖](src/Functions/Goa.Functions.S3/README.md) |
+| **Goa.Functions.Sqs** | SQS message processing | [![NuGet](https://img.shields.io/nuget/v/Goa.Functions.Sqs.svg)](https://nuget.org/packages/Goa.Functions.Sqs) | [📖](src/Functions/Goa.Functions.Sqs/README.md) |
+| **Goa.Clients.Core** | Base functionality for all AWS clients | [![NuGet](https://img.shields.io/nuget/v/Goa.Clients.Core.svg)](https://nuget.org/packages/Goa.Clients.Core) | [📖](src/Clients/Goa.Clients.Core/README.md) |
+| **Goa.Clients.Dynamo** | DynamoDB client with source generator support | [![NuGet](https://img.shields.io/nuget/v/Goa.Clients.Dynamo.svg)](https://nuget.org/packages/Goa.Clients.Dynamo) | [📖](src/Clients/Goa.Clients.Dynamo/README.md) |
+| **Goa.Clients.Dynamo.Generator** | Source generator for DynamoDB models | [![NuGet](https://img.shields.io/nuget/v/Goa.Clients.Dynamo.Generator.svg)](https://nuget.org/packages/Goa.Clients.Dynamo.Generator) | [📖](src/Clients/Goa.Clients.Dynamo.Generator/README.md) |
+| **Goa.Clients.EventBridge** | EventBridge client for event routing | [![NuGet](https://img.shields.io/nuget/v/Goa.Clients.EventBridge.svg)](https://nuget.org/packages/Goa.Clients.EventBridge) | [📖](src/Clients/Goa.Clients.EventBridge/README.md) |
+| **Goa.Clients.Kinesis** | Kinesis client for stream operations | [![NuGet](https://img.shields.io/nuget/v/Goa.Clients.Kinesis.svg)](https://nuget.org/packages/Goa.Clients.Kinesis) | [📖](src/Clients/Goa.Clients.Kinesis/README.md) |
+| **Goa.Clients.Lambda** | Lambda client for function invocation | [![NuGet](https://img.shields.io/nuget/v/Goa.Clients.Lambda.svg)](https://nuget.org/packages/Goa.Clients.Lambda) | [📖](src/Clients/Goa.Clients.Lambda/README.md) |
+| **Goa.Clients.ParameterStore** | Systems Manager Parameter Store client | [![NuGet](https://img.shields.io/nuget/v/Goa.Clients.ParameterStore.svg)](https://nuget.org/packages/Goa.Clients.ParameterStore) | [📖](src/Clients/Goa.Clients.ParameterStore/README.md) |
+| **Goa.Clients.S3** | S3 client for object storage operations | [![NuGet](https://img.shields.io/nuget/v/Goa.Clients.S3.svg)](https://nuget.org/packages/Goa.Clients.S3) | [📖](src/Clients/Goa.Clients.S3/README.md) |
+| **Goa.Clients.SecretsManager** | Secrets Manager client for secure storage | [![NuGet](https://img.shields.io/nuget/v/Goa.Clients.SecretsManager.svg)](https://nuget.org/packages/Goa.Clients.SecretsManager) | [📖](src/Clients/Goa.Clients.SecretsManager/README.md) |
+| **Goa.Clients.Ses** | Simple Email Service client | [![NuGet](https://img.shields.io/nuget/v/Goa.Clients.Ses.svg)](https://nuget.org/packages/Goa.Clients.Ses) | [📖](src/Clients/Goa.Clients.Ses/README.md) |
+| **Goa.Clients.Sns** | SNS client for messaging | [![NuGet](https://img.shields.io/nuget/v/Goa.Clients.Sns.svg)](https://nuget.org/packages/Goa.Clients.Sns) | [📖](src/Clients/Goa.Clients.Sns/README.md) |
+| **Goa.Clients.Sqs** | SQS client for queue operations | [![NuGet](https://img.shields.io/nuget/v/Goa.Clients.Sqs.svg)](https://nuget.org/packages/Goa.Clients.Sqs) | [📖](src/Clients/Goa.Clients.Sqs/README.md) |
+| **Goa.Clients.StepFunctions** | Step Functions client for workflow orchestration | [![NuGet](https://img.shields.io/nuget/v/Goa.Clients.StepFunctions.svg)](https://nuget.org/packages/Goa.Clients.StepFunctions) | [📖](src/Clients/Goa.Clients.StepFunctions/README.md) |
+| **Goa.Templates** | Project templates for rapid development | [![NuGet](https://img.shields.io/nuget/v/Goa.Templates.svg)](https://nuget.org/packages/Goa.Templates) | [📖](src/Goa.Templates/README.md) |
