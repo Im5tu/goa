@@ -65,17 +65,6 @@ dotnet test
 - Update documentation as needed
 - Ensure CI/CD pipeline passes
 
-## Versioning
-
-When making changes that require a version bump:
-
-1. Update the `AssemblyVersion` in the root `Directory.Build.props` file
-2. Update the `PackageVersion` accordingly (typically `$(AssemblyVersion)-preview.X`)
-3. Follow semantic versioning principles:
-   - **Patch** (0.0.X): Bug fixes and minor improvements
-   - **Minor** (0.X.0): New features, backward compatible
-   - **Major** (X.0.0): Breaking changes
-
 ## Reporting Issues
 
 When reporting issues, please include:

@@ -12,24 +12,6 @@ body:
         - [Documentation](https://github.com/im5tu/goa#readme)
         - [Existing issues](https://github.com/im5tu/goa/issues)
 
-  - type: dropdown
-    id: category
-    attributes:
-      label: Question Category
-      description: What category does your question fall into?
-      options:
-        - Getting Started
-        - Configuration
-        - Performance
-        - Best Practices
-        - Troubleshooting
-        - AWS Integration
-        - Native AOT
-        - Templates
-        - Other
-    validations:
-      required: true
-
   - type: textarea
     id: question
     attributes:
@@ -55,14 +37,3 @@ body:
       label: Code Sample
       description: If applicable, include relevant code
       render: csharp
-
-  - type: textarea
-    id: environment
-    attributes:
-      label: Environment
-      description: If relevant, describe your environment
-      placeholder: |
-        .NET Version: 9.0
-        Goa Version: 0.0.2-preview.2
-        AWS Service: DynamoDB
-        Deployment: AWS SAM

@@ -1,8 +1,8 @@
 blank_issues_enabled: false
 contact_links:
-  - name: "💬 Discussions"
-    url: "https://github.com/im5tu/goa/discussions"
-    about: "Ask questions and discuss ideas with the community"
   - name: "📖 Documentation"
     url: "https://github.com/im5tu/goa#readme"
     about: "Read the documentation and getting started guide"
+  - name: "💬 Reach Out"
+    url: "https://x.com/codewithstu"
+    about: "Talk to the author directly on X"

@@ -35,15 +35,28 @@ body:
       label: Affected Component
       description: Which Goa component is affected?
       options:
+        - Goa.Core
         - Goa.Functions.Core
         - Goa.Functions.ApiGateway
+        - Goa.Functions.ApiGateway.Authorizer
         - Goa.Functions.Dynamo
+        - Goa.Functions.EventBridge
+        - Goa.Functions.Kinesis
+        - Goa.Functions.S3
+        - Goa.Functions.Sqs
         - Goa.Clients.Core
         - Goa.Clients.Dynamo
+        - Goa.Clients.Dynamo.Generator
         - Goa.Clients.EventBridge
+        - Goa.Clients.Kinesis
         - Goa.Clients.Lambda
+        - Goa.Clients.ParameterStore
+        - Goa.Clients.S3
+        - Goa.Clients.SecretsManager
+        - Goa.Clients.Ses
         - Goa.Clients.Sns
         - Goa.Clients.Sqs
+        - Goa.Clients.StepFunctions
         - Goa.Templates
         - Other (please specify in description)
 
