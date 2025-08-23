@@ -1,8 +1,10 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
     <PropertyGroup>
+        <TargetFramework>netstandard2.0</TargetFramework>
         <PackageTitle>Goa - DynamoDB Source Generator</PackageTitle>
         <Description>Source generator for DynamoDB models in high-performance AWS Lambda functions</Description>
         <PackageTags>$(PackageBaseTags);dynamodb;generator;source-generator;codegen</PackageTags>
+        <NoWarn>$(NoWarn);RS1032;RS2008</NoWarn>
     </PropertyGroup>
     
     <ItemGroup>

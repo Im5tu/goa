@@ -1,5 +1,3 @@
-using Goa.Core;
-
 namespace Goa.Clients.Dynamo.Operations.Batch;
 
 /// <summary>

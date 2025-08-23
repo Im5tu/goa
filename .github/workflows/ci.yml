@@ -1,14 +1,13 @@
-name: Build and Publish NuGet Packages
+name: CI
 
 on:
   push:
     branches: [ main ]
   pull_request:
     branches: [ main ]
-  workflow_dispatch:
 
 jobs:
-  build-and-publish:
+  build:
     runs-on: ubuntu-latest
 
     services:
@@ -28,8 +27,6 @@ jobs:
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
-      with:
-        fetch-depth: 0  # Needed for versioning
 
     - name: Setup .NET
       uses: actions/setup-dotnet@v4
@@ -54,11 +51,3 @@ jobs:
 
     - name: List generated packages
       run: find artifacts/package/release -name "*.nupkg" -type f
-
-    - name: Publish to NuGet (on main branch only)
-      if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-      run: |
-        for package in artifacts/package/release/*.nupkg; do
-          echo "Publishing $package"
-          dotnet nuget push "$package" --api-key ${{ secrets.NUGET_API_KEY }} --source https://api.nuget.org/v3/index.json --skip-duplicate
-        done

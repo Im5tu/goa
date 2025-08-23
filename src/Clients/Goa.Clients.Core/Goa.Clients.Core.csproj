@@ -19,8 +19,14 @@
         <InternalsVisibleTo Include="Goa.Clients.Dynamo" />
         <InternalsVisibleTo Include="Goa.Clients.EventBridge" />
         <InternalsVisibleTo Include="Goa.Clients.Lambda" />
+        <InternalsVisibleTo Include="Goa.Clients.Kinesis" />
+        <InternalsVisibleTo Include="Goa.Clients.ParameterStore" />
+        <InternalsVisibleTo Include="Goa.Clients.S3" />
+        <InternalsVisibleTo Include="Goa.Clients.SecretsManager" />
+        <InternalsVisibleTo Include="Goa.Clients.Ses" />
         <InternalsVisibleTo Include="Goa.Clients.Sns" />
         <InternalsVisibleTo Include="Goa.Clients.Sqs" />
+        <InternalsVisibleTo Include="Goa.Clients.StepFunctions" />
     </ItemGroup>
 
 </Project>

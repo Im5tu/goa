@@ -1,7 +1,6 @@
 using Goa.Clients.Dynamo.Enums;
 using Goa.Clients.Dynamo.Models;
 using Goa.Core;
-using System.Globalization;
 
 namespace Goa.Clients.Dynamo.Operations.UpdateItem;
 

@@ -1459,4 +1459,30 @@ public static class DynamoRecordExtensions
         }
         return false;
     }
+    
+    /// <summary>
+    /// Attempts to get a DynamoRecord (Map) value from the DynamoRecord.
+    /// </summary>
+    /// <param name="record">The DynamoRecord to extract from.</param>
+    /// <param name="columnName">The column name to extract.</param>
+    /// <param name="value">The extracted DynamoRecord, or null if not found.</param>
+    /// <returns>True if the column exists and has a Map value, false otherwise.</returns>
+    public static bool TryGetMap(this DynamoRecord record, string columnName, out DynamoRecord? value)
+    {
+        value = null;
+        if (!record.TryGetValue(columnName, out var attributeValue))
+            return false;
+
+        if (attributeValue == null || attributeValue.NULL == true)
+        {
+            value = null;
+            return true;
+        }
+
+        if (attributeValue.M == null)
+            return false;
+
+        value = new DynamoRecord(attributeValue.M);
+        return true;
+    }
 }

@@ -1,7 +1,5 @@
 using Goa.Clients.Dynamo.Enums;
 using Goa.Clients.Dynamo.Models;
-using Goa.Clients.Dynamo.Operations.Transactions;
-using Goa.Core;
 
 namespace Goa.Clients.Dynamo.Operations.Transactions;
 

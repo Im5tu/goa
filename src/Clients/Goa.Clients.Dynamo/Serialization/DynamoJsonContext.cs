@@ -1,6 +1,6 @@
+using Goa.Clients.Core.Http;
 using Goa.Clients.Dynamo.Enums;
 using Goa.Clients.Dynamo.Models;
-using Goa.Clients.Dynamo.Operations;
 using Goa.Clients.Dynamo.Operations.Batch;
 using Goa.Clients.Dynamo.Operations.DeleteItem;
 using Goa.Clients.Dynamo.Operations.GetItem;
@@ -66,6 +66,7 @@ namespace Goa.Clients.Dynamo.Serialization;
 [JsonSerializable(typeof(List<DynamoRecord>))]
 [JsonSerializable(typeof(List<string>))]
 [JsonSerializable(typeof(List<ConsumedCapacity>))]
+[JsonSerializable(typeof(ApiError))]
 public partial class DynamoJsonContext : JsonSerializerContext
 {
 }

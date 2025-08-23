@@ -1,5 +1,4 @@
 using Goa.Clients.Dynamo.Enums;
-using Goa.Core;
 
 namespace Goa.Clients.Dynamo.Operations.Batch;
 
