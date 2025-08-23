@@ -2,8 +2,6 @@ using Goa.Clients.Sqs.Models;
 using Goa.Clients.Sqs.Operations.DeleteMessage;
 using Goa.Clients.Sqs.Operations.ReceiveMessage;
 using Goa.Clients.Sqs.Operations.SendMessage;
-using TUnit.Assertions;
-using TUnit.Core;
 
 namespace Goa.Clients.Sqs.Tests;
 
