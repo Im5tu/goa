@@ -1,6 +1,5 @@
 using Goa.Clients.Dynamo.Generator.TypeHandlers;
 using Goa.Clients.Dynamo.Generator.Tests.Helpers;
-using Goa.Clients.Dynamo.Generator.Models;
 
 namespace Goa.Clients.Dynamo.Generator.Tests.TypeHandlers;
 

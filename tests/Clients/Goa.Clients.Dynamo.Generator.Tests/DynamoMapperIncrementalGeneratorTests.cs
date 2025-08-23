@@ -2,7 +2,6 @@ using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Goa.Clients.Dynamo.Generator.Tests.Helpers;
 using System.Collections.Immutable;
-using Moq;
 
 namespace Goa.Clients.Dynamo.Generator.Tests;
 

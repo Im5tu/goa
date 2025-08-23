@@ -1,6 +1,5 @@
 using Goa.Clients.Dynamo.Generator.TypeHandlers;
 using Goa.Clients.Dynamo.Generator.Tests.Helpers;
-using Microsoft.CodeAnalysis;
 
 namespace Goa.Clients.Dynamo.Generator.Tests.TypeHandlers;
 

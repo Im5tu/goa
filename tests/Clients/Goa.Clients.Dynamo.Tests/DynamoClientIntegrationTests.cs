@@ -1,6 +1,5 @@
 using Goa.Clients.Dynamo.Enums;
 using Goa.Clients.Dynamo.Models;
-using Goa.Clients.Dynamo.Operations;
 using Goa.Clients.Dynamo.Operations.Batch;
 using Goa.Clients.Dynamo.Operations.DeleteItem;
 using Goa.Clients.Dynamo.Operations.GetItem;

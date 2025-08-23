@@ -3,9 +3,6 @@ using Goa.Clients.Lambda.Models;
 using Goa.Clients.Lambda.Operations.Invoke;
 using Goa.Clients.Lambda.Operations.InvokeAsync;
 using Goa.Clients.Lambda.Operations.InvokeDryRun;
-using TUnit.Assertions;
-using TUnit.Assertions.AssertConditions.Throws;
-using TUnit.Core;
 
 namespace Goa.Clients.Lambda.Tests;
 

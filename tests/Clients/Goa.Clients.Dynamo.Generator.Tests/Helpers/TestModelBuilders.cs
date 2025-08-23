@@ -1,5 +1,4 @@
 using Microsoft.CodeAnalysis;
-using Moq;
 using Goa.Clients.Dynamo.Generator.Models;
 using System.Collections.Immutable;
 

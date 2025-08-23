@@ -1,8 +1,5 @@
 using Goa.Clients.Sns.Models;
 using Goa.Clients.Sns.Operations.Publish;
-using TUnit.Assertions;
-using TUnit.Assertions.AssertConditions.Throws;
-using TUnit.Core;
 
 namespace Goa.Clients.Sns.Tests;
 

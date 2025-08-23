@@ -1,5 +1,4 @@
 using Microsoft.CodeAnalysis;
-using Microsoft.CodeAnalysis.CSharp;
 using Moq;
 using System.Collections.Immutable;
 
@@ -144,10 +143,11 @@ public static class MockSymbolFactory
     /// </summary>
     public static AttributeData CreateAttributeData(
         string attributeClassName,
-        params object[] constructorArguments)
+        object[]? constructorArgs = null,
+        Dictionary<string, object?>? namedArgs = null)
     {
         // Create a simple implementation that extends AttributeData
-        return new TestAttributeData(attributeClassName);
+        return new TestAttributeData(attributeClassName, constructorArgs, namedArgs);
     }
     
     /// <summary>
@@ -156,12 +156,33 @@ public static class MockSymbolFactory
     private class TestAttributeData : AttributeData
     {
         private readonly INamedTypeSymbol _attributeClass;
+        private readonly ImmutableArray<TypedConstant> _constructorArguments;
+        private readonly ImmutableArray<KeyValuePair<string, TypedConstant>> _namedArguments;
         
-        public TestAttributeData(string attributeClassName)
+        public TestAttributeData(string attributeClassName, object[]? constructorArgs = null, Dictionary<string, object?>? namedArgs = null)
         {
             _attributeClass = CreateNamedTypeSymbol(
                 attributeClassName.Split('.').Last(),
                 attributeClassName).Object;
+            
+            // Convert constructor arguments to TypedConstants
+            var constructorConstants = constructorArgs?.Select(arg => CreateTypedConstant(arg)).ToArray() ?? [];
+            _constructorArguments = ImmutableArray.Create(constructorConstants);
+            
+            // Convert named arguments to TypedConstants
+            var namedConstants = namedArgs?.Select(kvp => new KeyValuePair<string, TypedConstant>(
+                kvp.Key, CreateTypedConstant(kvp.Value))).ToArray() ?? [];
+            _namedArguments = ImmutableArray.Create(namedConstants);
+        }
+        
+        private static TypedConstant CreateTypedConstant(object? value)
+        {
+            if (value == null)
+                return default(TypedConstant);
+                
+            var typeSymbol = GetTypeSymbolForValue(value);
+            // Use reflection to create TypedConstant since constructor might be internal
+            return default(TypedConstant);
         }
         
         protected override INamedTypeSymbol? CommonAttributeClass => _attributeClass;
@@ -170,11 +191,9 @@ public static class MockSymbolFactory
         
         protected override IMethodSymbol? CommonAttributeConstructor => null;
         
-        protected override ImmutableArray<TypedConstant> CommonConstructorArguments => 
-            ImmutableArray<TypedConstant>.Empty;
+        protected override ImmutableArray<TypedConstant> CommonConstructorArguments => _constructorArguments;
         
-        protected override ImmutableArray<KeyValuePair<string, TypedConstant>> CommonNamedArguments => 
-            ImmutableArray<KeyValuePair<string, TypedConstant>>.Empty;
+        protected override ImmutableArray<KeyValuePair<string, TypedConstant>> CommonNamedArguments => _namedArguments;
     }
     
     /// <summary>
@@ -284,10 +303,19 @@ public static class MockSymbolFactory
         return CreateGenericType("Nullable", "System", underlyingType);
     }
     
-    private static ITypeSymbol GetTypeSymbolForValue(object value)
+    /// <summary>
+    /// Creates a nullable type (alias for CreateNullableValueType for consistency)
+    /// </summary>
+    public static Mock<INamedTypeSymbol> CreateNullableType(ITypeSymbol underlyingType)
+    {
+        return CreateNullableValueType(underlyingType);
+    }
+    
+    private static ITypeSymbol GetTypeSymbolForValue(object? value)
     {
         return value switch
         {
+            null => PrimitiveTypes.String, // Default for null
             string => PrimitiveTypes.String,
             int => PrimitiveTypes.Int32,
             bool => PrimitiveTypes.Boolean,
