@@ -1,3 +1,4 @@
+using Goa.Clients.Core.Http;
 using System.Text.Json.Serialization;
 using Goa.Clients.Sqs.Models;
 using Goa.Clients.Sqs.Operations.DeleteMessage;
@@ -21,6 +22,7 @@ namespace Goa.Clients.Sqs.Serialization;
 [JsonSerializable(typeof(Dictionary<string, MessageAttributeValue>))]
 [JsonSerializable(typeof(Dictionary<string, string>))]
 [JsonSerializable(typeof(List<string>))]
+[JsonSerializable(typeof(ApiError))]
 internal partial class SqsJsonContext : JsonSerializerContext
 {
 }
