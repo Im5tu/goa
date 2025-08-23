@@ -1,8 +1,5 @@
 using System.Text.Json;
 using Goa.Clients.EventBridge.Operations.PutEvents;
-using TUnit.Assertions;
-using TUnit.Assertions.AssertConditions.Throws;
-using TUnit.Core;
 
 namespace Goa.Clients.EventBridge.Tests;
 

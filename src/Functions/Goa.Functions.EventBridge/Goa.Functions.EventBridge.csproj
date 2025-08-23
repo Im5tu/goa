@@ -4,4 +4,8 @@
     <Description>EventBridge function integration for high-performance AWS Lambda functions</Description>
     <PackageTags>$(PackageBaseTags);function;eventbridge;events</PackageTags>
   </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Goa.Functions.Core\Goa.Functions.Core.csproj" />
+  </ItemGroup>
 </Project>
