@@ -1,4 +1,3 @@
-using System.Text.Json;
 using ErrorOr;
 using Goa.Clients.Core;
 using Goa.Clients.Core.Http;

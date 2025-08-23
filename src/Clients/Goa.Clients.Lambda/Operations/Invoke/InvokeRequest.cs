@@ -1,4 +1,3 @@
-using System.Text.Json.Serialization;
 using Goa.Clients.Lambda.Models;
 
 namespace Goa.Clients.Lambda.Operations.Invoke;

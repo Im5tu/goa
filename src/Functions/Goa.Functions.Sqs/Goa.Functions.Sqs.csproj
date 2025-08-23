@@ -4,4 +4,8 @@
     <Description>SQS message processing for high-performance AWS Lambda functions</Description>
     <PackageTags>$(PackageBaseTags);function;sqs;messaging</PackageTags>
   </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Goa.Functions.Core\Goa.Functions.Core.csproj" />
+  </ItemGroup>
 </Project>
