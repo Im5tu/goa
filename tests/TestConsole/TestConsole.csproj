@@ -13,9 +13,14 @@
     </PropertyGroup>
 
     <ItemGroup>
+      <ProjectReference Include="..\..\src\Functions\Goa.Functions.ApiGateway.Authorizer\Goa.Functions.ApiGateway.Authorizer.csproj" />
       <ProjectReference Include="..\..\src\Functions\Goa.Functions.ApiGateway\Goa.Functions.ApiGateway.csproj" />
       <ProjectReference Include="..\..\src\Clients\Goa.Clients.Dynamo\Goa.Clients.Dynamo.csproj" />
       <ProjectReference Include="..\..\src\Functions\Goa.Functions.Dynamo\Goa.Functions.Dynamo.csproj" />
+      <ProjectReference Include="..\..\src\Functions\Goa.Functions.EventBridge\Goa.Functions.EventBridge.csproj" />
+      <ProjectReference Include="..\..\src\Functions\Goa.Functions.Kinesis\Goa.Functions.Kinesis.csproj" />
+      <ProjectReference Include="..\..\src\Functions\Goa.Functions.S3\Goa.Functions.S3.csproj" />
+      <ProjectReference Include="..\..\src\Functions\Goa.Functions.Sqs\Goa.Functions.Sqs.csproj" />
     </ItemGroup>
 
     <ItemGroup>

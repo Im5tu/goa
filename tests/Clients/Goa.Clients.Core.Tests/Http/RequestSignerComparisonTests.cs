@@ -89,14 +89,14 @@ public class RequestSignerComparisonTests
         request.Options.Set(HttpOptions.Service, "sqs");
 
         // Act
-        var authHeader = await _goaSigner.GetAuthorizationHeaderAsync(request, _fixedDateTime);
+        var (scheme, authValue) = await _goaSigner.GetAuthorizationHeaderAsync(request, _fixedDateTime);
 
         // Assert
-        await Assert.That(authHeader).IsNotNull();
-        await Assert.That(authHeader).Contains("AWS4-HMAC-SHA256");
-        await Assert.That(authHeader).Contains("Credential=AKIAIOSFODNN7EXAMPLE");
-        await Assert.That(authHeader).Contains("SignedHeaders=");
-        await Assert.That(authHeader).Contains("Signature=");
+        await Assert.That(scheme).IsEqualTo("AWS4-HMAC-SHA256");
+        await Assert.That(authValue).IsNotNull();
+        await Assert.That(authValue).Contains("Credential=AKIAIOSFODNN7EXAMPLE");
+        await Assert.That(authValue).Contains("SignedHeaders=");
+        await Assert.That(authValue).Contains("Signature=");
     }
 
     [Test]
@@ -114,12 +114,12 @@ public class RequestSignerComparisonTests
         request.Content = new StringContent(payload, Encoding.UTF8, "application/x-amz-json-1.1");
 
         // Act
-        var authHeader = await _goaSigner.GetAuthorizationHeaderAsync(request, _fixedDateTime);
+        var (scheme, authValue) = await _goaSigner.GetAuthorizationHeaderAsync(request, _fixedDateTime);
 
         // Assert
-        await Assert.That(authHeader).IsNotNull();
-        await Assert.That(authHeader).Contains("AWS4-HMAC-SHA256");
-        await Assert.That(authHeader).Contains("x-amz-content-sha256"); // Verify payload hash is included in signed headers
+        await Assert.That(scheme).IsEqualTo("AWS4-HMAC-SHA256");
+        await Assert.That(authValue).IsNotNull();
+        await Assert.That(authValue).Contains("x-amz-content-sha256"); // Verify payload hash is included in signed headers
     }
 
     [Test]
@@ -140,19 +140,20 @@ public class RequestSignerComparisonTests
         request.Headers.Add("X-Custom-Header2", "value2");
 
         // Act
-        var authHeader = await _goaSigner.GetAuthorizationHeaderAsync(request, _fixedDateTime);
+        var (scheme, authValue) = await _goaSigner.GetAuthorizationHeaderAsync(request, _fixedDateTime);
 
         // Assert
-        await Assert.That(authHeader).IsNotNull();
+        await Assert.That(scheme).IsEqualTo("AWS4-HMAC-SHA256");
+        await Assert.That(authValue).IsNotNull();
         // Verify that all expected headers are present in the signed headers (order may vary)
-        await Assert.That(authHeader).Contains("content-type");
-        await Assert.That(authHeader).Contains("host");
-        await Assert.That(authHeader).Contains("user-agent");
-        await Assert.That(authHeader).Contains("x-amz-content-sha256");
-        await Assert.That(authHeader).Contains("x-amz-date");
-        await Assert.That(authHeader).Contains("x-amz-target");
-        await Assert.That(authHeader).Contains("x-custom-header1");
-        await Assert.That(authHeader).Contains("x-custom-header2");
+        await Assert.That(authValue).Contains("content-type");
+        await Assert.That(authValue).Contains("host");
+        await Assert.That(authValue).Contains("user-agent");
+        await Assert.That(authValue).Contains("x-amz-content-sha256");
+        await Assert.That(authValue).Contains("x-amz-date");
+        await Assert.That(authValue).Contains("x-amz-target");
+        await Assert.That(authValue).Contains("x-custom-header1");
+        await Assert.That(authValue).Contains("x-custom-header2");
     }
 
     [Test]
@@ -180,11 +181,12 @@ public class RequestSignerComparisonTests
         request.Options.Set(HttpOptions.Service, "s3");
 
         // Act
-        var authHeader = await signer.GetAuthorizationHeaderAsync(request, _fixedDateTime);
+        var (scheme, authValue) = await signer.GetAuthorizationHeaderAsync(request, _fixedDateTime);
 
         // Assert
-        await Assert.That(authHeader).IsNotNull();
-        await Assert.That(authHeader).DoesNotContain("x-amz-security-token"); // Should not include session token in signed headers
+        await Assert.That(scheme).IsEqualTo("AWS4-HMAC-SHA256");
+        await Assert.That(authValue).IsNotNull();
+        await Assert.That(authValue).DoesNotContain("x-amz-security-token"); // Should not include session token in signed headers
     }
 
     [Test]
@@ -201,11 +203,11 @@ public class RequestSignerComparisonTests
         request.Content = new StringContent(largePayload, Encoding.UTF8, "text/plain");
 
         // Act
-        var authHeader = await _goaSigner.GetAuthorizationHeaderAsync(request, _fixedDateTime);
+        var (scheme, authValue) = await _goaSigner.GetAuthorizationHeaderAsync(request, _fixedDateTime);
 
         // Assert
-        await Assert.That(authHeader).IsNotNull();
-        await Assert.That(authHeader).Contains("AWS4-HMAC-SHA256");
+        await Assert.That(scheme).IsEqualTo("AWS4-HMAC-SHA256");
+        await Assert.That(authValue).IsNotNull();
         // Verify that large payload doesn't cause excessive memory allocation or errors
     }
 
@@ -221,11 +223,11 @@ public class RequestSignerComparisonTests
         request.Options.Set(HttpOptions.Service, "sqs");
 
         // Act
-        var authHeader = await _goaSigner.GetAuthorizationHeaderAsync(request, _fixedDateTime);
+        var (scheme, authValue) = await _goaSigner.GetAuthorizationHeaderAsync(request, _fixedDateTime);
 
         // Assert
-        await Assert.That(authHeader).IsNotNull();
-        await Assert.That(authHeader).Contains("AWS4-HMAC-SHA256");
+        await Assert.That(scheme).IsEqualTo("AWS4-HMAC-SHA256");
+        await Assert.That(authValue).IsNotNull();
         // Query parameters should be canonicalized in alphabetical order: Action, QueueNamePrefix, Version
     }
 
@@ -241,11 +243,12 @@ public class RequestSignerComparisonTests
         request.Options.Set(HttpOptions.Service, "sqs");
 
         // Act
-        var authHeader = await _goaSigner.GetAuthorizationHeaderAsync(request, _fixedDateTime);
+        var (scheme, authValue) = await _goaSigner.GetAuthorizationHeaderAsync(request, _fixedDateTime);
 
         // Assert
-        await Assert.That(authHeader).IsNotNull();
-        await Assert.That(authHeader).Contains("/20231201/eu-west-1/sqs/aws4_request"); // Verify region is in credential scope
+        await Assert.That(scheme).IsEqualTo("AWS4-HMAC-SHA256");
+        await Assert.That(authValue).IsNotNull();
+        await Assert.That(authValue).Contains("/20231201/eu-west-1/sqs/aws4_request"); // Verify region is in credential scope
     }
 
     [Test]
@@ -271,11 +274,12 @@ public class RequestSignerComparisonTests
             request.Content = new StringContent("{}", Encoding.UTF8, "application/json");
 
             // Act
-            var authHeader = await _goaSigner.GetAuthorizationHeaderAsync(request, _fixedDateTime);
+            var (scheme, authValue) = await _goaSigner.GetAuthorizationHeaderAsync(request, _fixedDateTime);
 
             // Assert
-            await Assert.That(authHeader).IsNotNull();
-            await Assert.That(authHeader).Contains($"/us-east-1/{service}/aws4_request"); // Verify service is in credential scope
+            await Assert.That(scheme).IsEqualTo("AWS4-HMAC-SHA256");
+            await Assert.That(authValue).IsNotNull();
+            await Assert.That(authValue).Contains($"/us-east-1/{service}/aws4_request"); // Verify service is in credential scope
         }
     }
 
@@ -294,11 +298,11 @@ public class RequestSignerComparisonTests
         request.Headers.Add("X-Custom-Header", "value with spaces and special chars: !@#$%^&*()");
 
         // Act
-        var authHeader = await _goaSigner.GetAuthorizationHeaderAsync(request, _fixedDateTime);
+        var (scheme, authValue) = await _goaSigner.GetAuthorizationHeaderAsync(request, _fixedDateTime);
 
         // Assert
-        await Assert.That(authHeader).IsNotNull();
-        await Assert.That(authHeader).Contains("AWS4-HMAC-SHA256");
+        await Assert.That(scheme).IsEqualTo("AWS4-HMAC-SHA256");
+        await Assert.That(authValue).IsNotNull();
         // UTF-8 payload should be properly hashed and encoded
     }
 
@@ -315,11 +319,11 @@ public class RequestSignerComparisonTests
         request.Content = new StringContent("", Encoding.UTF8, "application/json");
 
         // Act
-        var authHeader = await _goaSigner.GetAuthorizationHeaderAsync(request, _fixedDateTime);
+        var (scheme, authValue) = await _goaSigner.GetAuthorizationHeaderAsync(request, _fixedDateTime);
 
         // Assert
-        await Assert.That(authHeader).IsNotNull();
-        await Assert.That(authHeader).Contains("AWS4-HMAC-SHA256");
+        await Assert.That(scheme).IsEqualTo("AWS4-HMAC-SHA256");
+        await Assert.That(authValue).IsNotNull();
         // Empty body should still produce valid signature
     }
 
@@ -335,12 +339,13 @@ public class RequestSignerComparisonTests
         request.Options.Set(HttpOptions.Service, "sqs");
 
         // Act
-        var authHeader = await _goaSigner.GetAuthorizationHeaderAsync(request, _fixedDateTime);
+        var (scheme, authValue) = await _goaSigner.GetAuthorizationHeaderAsync(request, _fixedDateTime);
 
         // Assert - Validate exact AWS SigV4 format
-        await Assert.That(authHeader).StartsWith("AWS4-HMAC-SHA256 Credential=AKIAIOSFODNN7EXAMPLE/20231201/us-east-1/sqs/aws4_request");
-        await Assert.That(authHeader).Contains("SignedHeaders=");
-        await Assert.That(authHeader).Contains("Signature=");
+        await Assert.That(scheme).IsEqualTo("AWS4-HMAC-SHA256");
+        await Assert.That(authValue).StartsWith("Credential=AKIAIOSFODNN7EXAMPLE/20231201/us-east-1/sqs/aws4_request");
+        await Assert.That(authValue).Contains("SignedHeaders=");
+        await Assert.That(authValue).Contains("Signature=");
     }
 
     [Test]
@@ -355,11 +360,11 @@ public class RequestSignerComparisonTests
         request.Options.Set(HttpOptions.Service, "sqs");
 
         // Act
-        var authHeader = await _goaSigner.GetAuthorizationHeaderAsync(request, _fixedDateTime);
+        var (scheme, authValue) = await _goaSigner.GetAuthorizationHeaderAsync(request, _fixedDateTime);
 
         // Assert
-        await Assert.That(authHeader).IsNotNull();
-        await Assert.That(authHeader).Contains("AWS4-HMAC-SHA256");
+        await Assert.That(scheme).IsEqualTo("AWS4-HMAC-SHA256");
+        await Assert.That(authValue).IsNotNull();
         // Query parameters should be properly encoded and canonicalized
     }
 
@@ -377,11 +382,12 @@ public class RequestSignerComparisonTests
         request.Headers.Add("X-Custom-Header", new[] { "  value1  ", "\tvalue2\t", "value3   with   spaces" });
 
         // Act
-        var authHeader = await _goaSigner.GetAuthorizationHeaderAsync(request, _fixedDateTime);
+        var (scheme, authValue) = await _goaSigner.GetAuthorizationHeaderAsync(request, _fixedDateTime);
 
         // Assert
-        await Assert.That(authHeader).IsNotNull();
-        await Assert.That(authHeader).Contains("x-custom-header"); // Header should be included in signed headers
+        await Assert.That(scheme).IsEqualTo("AWS4-HMAC-SHA256");
+        await Assert.That(authValue).IsNotNull();
+        await Assert.That(authValue).Contains("x-custom-header"); // Header should be included in signed headers
         // Multiple header values should be normalized and joined with commas
     }
 
@@ -400,11 +406,11 @@ public class RequestSignerComparisonTests
         request.Content = new StringContent(payload, Encoding.UTF8, "application/x-amz-json-1.1");
 
         // Act
-        var authHeader = await _goaSigner.GetAuthorizationHeaderAsync(request, _fixedDateTime);
+        var (scheme, authValue) = await _goaSigner.GetAuthorizationHeaderAsync(request, _fixedDateTime);
 
         // Assert
-        await Assert.That(authHeader).IsNotNull();
-        await Assert.That(authHeader).Contains("AWS4-HMAC-SHA256");
+        await Assert.That(scheme).IsEqualTo("AWS4-HMAC-SHA256");
+        await Assert.That(authValue).IsNotNull();
         // Should use pre-computed payload instead of reading from Content stream
     }
 
@@ -421,11 +427,11 @@ public class RequestSignerComparisonTests
         // Explicitly no Content set
 
         // Act
-        var authHeader = await _goaSigner.GetAuthorizationHeaderAsync(request, _fixedDateTime);
+        var (scheme, authValue) = await _goaSigner.GetAuthorizationHeaderAsync(request, _fixedDateTime);
 
         // Assert
-        await Assert.That(authHeader).IsNotNull();
-        await Assert.That(authHeader).Contains("AWS4-HMAC-SHA256");
+        await Assert.That(scheme).IsEqualTo("AWS4-HMAC-SHA256");
+        await Assert.That(authValue).IsNotNull();
         // Should handle null content gracefully
     }
 
@@ -448,11 +454,11 @@ public class RequestSignerComparisonTests
         }
 
         // Act
-        var authHeader = await _goaSigner.GetAuthorizationHeaderAsync(request, _fixedDateTime);
+        var (scheme, authValue) = await _goaSigner.GetAuthorizationHeaderAsync(request, _fixedDateTime);
 
         // Assert
-        await Assert.That(authHeader).IsNotNull();
-        await Assert.That(authHeader).Contains("AWS4-HMAC-SHA256");
+        await Assert.That(scheme).IsEqualTo("AWS4-HMAC-SHA256");
+        await Assert.That(authValue).IsNotNull();
         // Should handle large header count without performance degradation
     }
 
@@ -471,15 +477,16 @@ public class RequestSignerComparisonTests
         request.Content = new StringContent("{}", Encoding.UTF8, "application/x-amz-json-1.0");
 
         // Act
-        var authHeader = await _goaSigner.GetAuthorizationHeaderAsync(request, _fixedDateTime);
+        var (scheme, authValue) = await _goaSigner.GetAuthorizationHeaderAsync(request, _fixedDateTime);
 
         // Assert
-        await Assert.That(authHeader).IsNotNull();
-        await Assert.That(authHeader).Contains("SignedHeaders=");
+        await Assert.That(scheme).IsEqualTo("AWS4-HMAC-SHA256");
+        await Assert.That(authValue).IsNotNull();
+        await Assert.That(authValue).Contains("SignedHeaders=");
         // Should include: host, x-amz-api-version, x-amz-content-sha256, x-amz-date, x-amz-security-token, x-amz-target
-        var signedHeadersStart = authHeader.IndexOf("SignedHeaders=") + "SignedHeaders=".Length;
-        var signedHeadersEnd = authHeader.IndexOf(",", signedHeadersStart);
-        var signedHeaders = authHeader.Substring(signedHeadersStart, signedHeadersEnd - signedHeadersStart);
+        var signedHeadersStart = authValue.IndexOf("SignedHeaders=") + "SignedHeaders=".Length;
+        var signedHeadersEnd = authValue.IndexOf(",", signedHeadersStart);
+        var signedHeaders = authValue.Substring(signedHeadersStart, signedHeadersEnd - signedHeadersStart);
 
         await Assert.That(signedHeaders).Contains("host");
         await Assert.That(signedHeaders).Contains("x-amz-content-sha256");
@@ -599,308 +606,5 @@ public class RequestSignerComparisonTests
 
         // If signatures don't match, this helps debug the canonical request construction
         await Assert.That(goaSignature).IsEqualTo(awsSignature);
-    }
-
-    [Test]
-    public async Task RequestSigner_Produces_Identical_Signature_To_AWS_SDK_Simple_GET()
-    {
-        // Test validates that our RequestSigner produces exactly the same signature as AWS SDK
-        // This is the ultimate test of SigV4 compliance for simple GET requests
-
-        // Arrange - Use identical credentials and fixed time for both signers
-        var awsCredentials = new BasicAWSCredentials("AKIAIOSFODNN7EXAMPLE", "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY");
-        var goaCredentials = new AwsCredentials("AKIAIOSFODNN7EXAMPLE", "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY", null, DateTime.UtcNow.AddHours(1));
-
-        var mockCredProvider = new Mock<ICredentialProviderChain>();
-        mockCredProvider.Setup(x => x.GetCredentialsAsync())
-            .ReturnsAsync(ErrorOrFactory.From(goaCredentials));
-
-        var goaSigner = new RequestSigner(mockCredProvider.Object);
-        var awsSigner = new AWS4Signer();
-
-        var fixedTime = new DateTime(2023, 12, 1, 12, 0, 0, DateTimeKind.Utc);
-
-        // Create Goa request
-        var goaRequest = new HttpRequestMessage(HttpMethod.Get, "https://sqs.us-east-1.amazonaws.com/123456789012/MyQueue");
-        goaRequest.Options.Set(HttpOptions.Region, "us-east-1");
-        goaRequest.Options.Set(HttpOptions.Service, "sqs");
-
-        // Create AWS SDK request
-        var awsRequest = new DefaultRequest(new Amazon.SQS.Model.GetQueueUrlRequest(), "SQS");
-        awsRequest.HttpMethod = "GET";
-        awsRequest.Endpoint = new Uri("https://sqs.us-east-1.amazonaws.com/123456789012/MyQueue");
-        awsRequest.ResourcePath = "/123456789012/MyQueue";
-
-        // Setup identical headers for both requests using fixed timestamp
-        SetupIdenticalHeaders(goaRequest, awsRequest, fixedTime);
-
-        // Act - Generate signatures with both implementations using identical input data
-        var goaSignature = await goaSigner.SignRequestAsync(goaRequest, fixedTime);
-        var awsSigningResult = awsSigner.SignRequest(awsRequest, new AmazonSQSConfig { RegionEndpoint = Amazon.RegionEndpoint.USEast1 }, null, awsCredentials.GetCredentials().AccessKey, awsCredentials.GetCredentials().SecretKey);
-        var awsSignature = awsSigningResult.Signature;
-
-        // Assert - Signatures must be identical
-        await Assert.That(goaSignature).IsEqualTo(awsSignature);
-    }
-
-    [Test]
-    public async Task RequestSigner_Produces_Identical_Signature_To_AWS_SDK_POST_With_JSON_Body()
-    {
-        // Test validates signature compatibility for POST requests with JSON payloads
-        // This covers the majority of AWS service interactions
-
-        // Arrange
-        var awsCredentials = new BasicAWSCredentials("AKIAIOSFODNN7EXAMPLE", "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY");
-        var goaCredentials = new AwsCredentials("AKIAIOSFODNN7EXAMPLE", "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY", null, DateTime.UtcNow.AddHours(1));
-
-        var mockCredProvider = new Mock<ICredentialProviderChain>();
-        mockCredProvider.Setup(x => x.GetCredentialsAsync())
-            .ReturnsAsync(ErrorOrFactory.From(goaCredentials));
-
-        var goaSigner = new RequestSigner(mockCredProvider.Object);
-        var awsSigner = new AWS4Signer();
-
-        var fixedTime = new DateTime(2023, 12, 1, 12, 0, 0, DateTimeKind.Utc);
-        var payload = "{\"QueueUrl\":\"https://sqs.us-east-1.amazonaws.com/123456789012/MyQueue\",\"MessageBody\":\"Hello World\"}";
-
-        // Create Goa request
-        var goaRequest = new HttpRequestMessage(HttpMethod.Post, "https://sqs.us-east-1.amazonaws.com/");
-        goaRequest.Options.Set(HttpOptions.Region, "us-east-1");
-        goaRequest.Options.Set(HttpOptions.Service, "sqs");
-        goaRequest.Options.Set(HttpOptions.Target, "AmazonSQS.SendMessage");
-        goaRequest.Content = new StringContent(payload, Encoding.UTF8, "application/x-amz-json-1.1");
-
-        // Create AWS SDK request
-        var awsRequest = new DefaultRequest(new Amazon.SQS.Model.SendMessageRequest(), "SQS");
-        awsRequest.HttpMethod = "POST";
-        awsRequest.Endpoint = new Uri("https://sqs.us-east-1.amazonaws.com/");
-        awsRequest.ResourcePath = "/";
-        awsRequest.Content = Encoding.UTF8.GetBytes(payload);
-        awsRequest.Headers["Content-Type"] = "application/x-amz-json-1.1";
-        awsRequest.Headers["X-Amz-Target"] = "AmazonSQS.SendMessage";
-
-        // Act
-        var goaSignature = await goaSigner.SignRequestAsync(goaRequest, fixedTime);
-        var awsSigningResult = awsSigner.SignRequest(awsRequest, new AmazonSQSConfig { RegionEndpoint = Amazon.RegionEndpoint.USEast1 }, null, awsCredentials.GetCredentials().AccessKey, awsCredentials.GetCredentials().SecretKey);
-        var awsSignature = awsSigningResult.Signature;
-
-        // Assert
-        await Assert.That(goaSignature).IsEqualTo(awsSignature);
-    }
-
-    [Test]
-    public async Task RequestSigner_Produces_Identical_Signature_To_AWS_SDK_With_Query_Parameters()
-    {
-        // Test validates signature compatibility for requests with query string parameters
-        // This ensures proper query canonicalization matches AWS SDK behavior
-
-        // Arrange
-        var awsCredentials = new BasicAWSCredentials("AKIAIOSFODNN7EXAMPLE", "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY");
-        var goaCredentials = new AwsCredentials("AKIAIOSFODNN7EXAMPLE", "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY", null, DateTime.UtcNow.AddHours(1));
-
-        var mockCredProvider = new Mock<ICredentialProviderChain>();
-        mockCredProvider.Setup(x => x.GetCredentialsAsync())
-            .ReturnsAsync(ErrorOrFactory.From(goaCredentials));
-
-        var goaSigner = new RequestSigner(mockCredProvider.Object);
-        var awsSigner = new AWS4Signer();
-
-        var fixedTime = new DateTime(2023, 12, 1, 12, 0, 0, DateTimeKind.Utc);
-
-        // Create Goa request with query parameters
-        var goaRequest = new HttpRequestMessage(HttpMethod.Get, "https://sqs.us-east-1.amazonaws.com/?Action=ListQueues&Version=2012-11-05&QueueNamePrefix=Test");
-        goaRequest.Options.Set(HttpOptions.Region, "us-east-1");
-        goaRequest.Options.Set(HttpOptions.Service, "sqs");
-
-        // Create AWS SDK request with same query parameters
-        var awsRequest = new DefaultRequest(new Amazon.SQS.Model.ListQueuesRequest(), "SQS");
-        awsRequest.HttpMethod = "GET";
-        awsRequest.Endpoint = new Uri("https://sqs.us-east-1.amazonaws.com/");
-        awsRequest.ResourcePath = "/";
-        awsRequest.Parameters["Action"] = "ListQueues";
-        awsRequest.Parameters["Version"] = "2012-11-05";
-        awsRequest.Parameters["QueueNamePrefix"] = "Test";
-
-        // Act
-        var goaSignature = await goaSigner.SignRequestAsync(goaRequest, fixedTime);
-        var awsSigningResult = awsSigner.SignRequest(awsRequest, new AmazonSQSConfig { RegionEndpoint = Amazon.RegionEndpoint.USEast1 }, null, awsCredentials.GetCredentials().AccessKey, awsCredentials.GetCredentials().SecretKey);
-        var awsSignature = awsSigningResult.Signature;
-
-        // Assert
-        await Assert.That(goaSignature).IsEqualTo(awsSignature);
-    }
-
-    [Test]
-    public async Task RequestSigner_Produces_Identical_Signature_To_AWS_SDK_With_Custom_Headers()
-    {
-        // Test validates signature compatibility when custom headers are present
-        // This ensures proper header canonicalization and sorting
-
-        // Arrange
-        var awsCredentials = new BasicAWSCredentials("AKIAIOSFODNN7EXAMPLE", "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY");
-        var goaCredentials = new AwsCredentials("AKIAIOSFODNN7EXAMPLE", "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY", null, DateTime.UtcNow.AddHours(1));
-
-        var mockCredProvider = new Mock<ICredentialProviderChain>();
-        mockCredProvider.Setup(x => x.GetCredentialsAsync())
-            .ReturnsAsync(ErrorOrFactory.From(goaCredentials));
-
-        var goaSigner = new RequestSigner(mockCredProvider.Object);
-        var awsSigner = new AWS4Signer();
-
-        var fixedTime = new DateTime(2023, 12, 1, 12, 0, 0, DateTimeKind.Utc);
-        var payload = "{\"Action\":\"SendMessage\",\"MessageBody\":\"Test message\"}";
-
-        // Create Goa request with custom headers
-        var goaRequest = new HttpRequestMessage(HttpMethod.Post, "https://sqs.us-east-1.amazonaws.com/");
-        goaRequest.Options.Set(HttpOptions.Region, "us-east-1");
-        goaRequest.Options.Set(HttpOptions.Service, "sqs");
-        goaRequest.Options.Set(HttpOptions.Target, "AmazonSQS.SendMessage");
-        goaRequest.Content = new StringContent(payload, Encoding.UTF8, "application/x-amz-json-1.1");
-        goaRequest.Headers.Add("User-Agent", "Goa/1.0");
-        goaRequest.Headers.Add("X-Custom-Header", "test-value");
-
-        // Create AWS SDK request with same headers
-        var awsRequest = new DefaultRequest(new Amazon.SQS.Model.SendMessageRequest(), "SQS");
-        awsRequest.HttpMethod = "POST";
-        awsRequest.Endpoint = new Uri("https://sqs.us-east-1.amazonaws.com/");
-        awsRequest.ResourcePath = "/";
-        awsRequest.Content = Encoding.UTF8.GetBytes(payload);
-        awsRequest.Headers["Content-Type"] = "application/x-amz-json-1.1";
-        awsRequest.Headers["X-Amz-Target"] = "AmazonSQS.SendMessage";
-        awsRequest.Headers["User-Agent"] = "Goa/1.0";
-        awsRequest.Headers["X-Custom-Header"] = "test-value";
-
-        // Act
-        var goaSignature = await goaSigner.SignRequestAsync(goaRequest, fixedTime);
-        var awsSigningResult = awsSigner.SignRequest(awsRequest, new AmazonSQSConfig { RegionEndpoint = Amazon.RegionEndpoint.USEast1 }, null, awsCredentials.GetCredentials().AccessKey, awsCredentials.GetCredentials().SecretKey);
-        var awsSignature = awsSigningResult.Signature;
-
-        // Assert
-        await Assert.That(goaSignature).IsEqualTo(awsSignature);
-    }
-
-    [Test]
-    public async Task RequestSigner_Produces_Identical_Signature_To_AWS_SDK_Large_Payload()
-    {
-        // Test validates signature compatibility with large payloads
-        // This ensures our ArrayPool optimization doesn't affect signature accuracy
-
-        // Arrange
-        var awsCredentials = new BasicAWSCredentials("AKIAIOSFODNN7EXAMPLE", "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY");
-        var goaCredentials = new AwsCredentials("AKIAIOSFODNN7EXAMPLE", "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY", null, DateTime.UtcNow.AddHours(1));
-
-        var mockCredProvider = new Mock<ICredentialProviderChain>();
-        mockCredProvider.Setup(x => x.GetCredentialsAsync())
-            .ReturnsAsync(ErrorOrFactory.From(goaCredentials));
-
-        var goaSigner = new RequestSigner(mockCredProvider.Object);
-        var awsSigner = new AWS4Signer();
-
-        var fixedTime = new DateTime(2023, 12, 1, 12, 0, 0, DateTimeKind.Utc);
-        var largePayload = "{\"MessageBody\":\"" + new string('x', 50000) + "\"}"; // Large SQS message
-
-        // Create Goa request
-        var goaRequest = new HttpRequestMessage(HttpMethod.Post, "https://sqs.us-east-1.amazonaws.com/");
-        goaRequest.Options.Set(HttpOptions.Region, "us-east-1");
-        goaRequest.Options.Set(HttpOptions.Service, "sqs");
-        goaRequest.Options.Set(HttpOptions.Target, "AmazonSQS.SendMessage");
-        goaRequest.Content = new StringContent(largePayload, Encoding.UTF8, "application/x-amz-json-1.1");
-
-        // Create AWS SDK request
-        var awsRequest = new DefaultRequest(new Amazon.SQS.Model.SendMessageRequest(), "SQS");
-        awsRequest.HttpMethod = "POST";
-        awsRequest.Endpoint = new Uri("https://sqs.us-east-1.amazonaws.com/");
-        awsRequest.ResourcePath = "/";
-        awsRequest.Content = Encoding.UTF8.GetBytes(largePayload);
-        awsRequest.Headers["Content-Type"] = "application/x-amz-json-1.1";
-        awsRequest.Headers["X-Amz-Target"] = "AmazonSQS.SendMessage";
-
-        // Act
-        var goaSignature = await goaSigner.SignRequestAsync(goaRequest, fixedTime);
-        var awsSigningResult = awsSigner.SignRequest(awsRequest, new AmazonSQSConfig { RegionEndpoint = Amazon.RegionEndpoint.USEast1 }, null, awsCredentials.GetCredentials().AccessKey, awsCredentials.GetCredentials().SecretKey);
-        var awsSignature = awsSigningResult.Signature;
-
-        // Assert
-        await Assert.That(goaSignature).IsEqualTo(awsSignature);
-    }
-
-    [Test]
-    public async Task RequestSigner_Produces_Identical_Signature_To_AWS_SDK_Different_SQS_Operations()
-    {
-        // Test validates signature compatibility across different SQS operations
-        // This ensures our implementation handles various request patterns correctly
-
-        var testCases = new[]
-        {
-            (Action: "SendMessage", Method: HttpMethod.Post, Target: "AmazonSQS.SendMessage"),
-            (Action: "ReceiveMessage", Method: HttpMethod.Post, Target: "AmazonSQS.ReceiveMessage"),
-            (Action: "DeleteMessage", Method: HttpMethod.Post, Target: "AmazonSQS.DeleteMessage"),
-            (Action: "CreateQueue", Method: HttpMethod.Post, Target: "AmazonSQS.CreateQueue")
-        };
-
-        // Use identical credentials without session token for both signers to ensure signature compatibility
-        var awsCredentials = new BasicAWSCredentials("AKIAIOSFODNN7EXAMPLE", "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY");
-        var goaCredentials = new AwsCredentials("AKIAIOSFODNN7EXAMPLE", "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY", null, DateTime.UtcNow.AddHours(1));
-
-        var mockCredProvider = new Mock<ICredentialProviderChain>();
-        mockCredProvider.Setup(x => x.GetCredentialsAsync())
-            .ReturnsAsync(ErrorOrFactory.From(goaCredentials));
-
-        var goaSigner = new RequestSigner(mockCredProvider.Object);
-        var awsSigner = new AWS4Signer();
-        var fixedTime = new DateTime(2023, 12, 1, 12, 0, 0, DateTimeKind.Utc);
-
-        foreach (var (action, method, target) in testCases)
-        {
-            var payload = $"{{\"Action\":\"{action}\"}}";
-
-            // Create Goa request
-            var goaRequest = new HttpRequestMessage(method, "https://sqs.us-east-1.amazonaws.com/");
-            goaRequest.Options.Set(HttpOptions.Region, "us-east-1");
-            goaRequest.Options.Set(HttpOptions.Service, "sqs");
-            goaRequest.Options.Set(HttpOptions.Target, target);
-            goaRequest.Content = new StringContent(payload, Encoding.UTF8, "application/x-amz-json-1.1");
-
-            // Create AWS SDK request
-            var awsRequest = new DefaultRequest(new Amazon.SQS.Model.SendMessageRequest(), "SQS");
-            awsRequest.HttpMethod = method.Method;
-            awsRequest.Endpoint = new Uri("https://sqs.us-east-1.amazonaws.com/");
-            awsRequest.ResourcePath = "/";
-            awsRequest.Content = Encoding.UTF8.GetBytes(payload);
-            // Note: Content-Type and X-Amz-Target will be set by SetupIdenticalHeaders to match Goa request
-
-            // Setup identical headers to ensure both signers use the same timestamp and headers
-            SetupIdenticalHeaders(goaRequest, awsRequest, fixedTime, payload);
-
-            // Act - Use ComputeSignature for direct comparison with identical inputs
-            var goaSignature = await goaSigner.SignRequestAsync(goaRequest, fixedTime);
-            
-            // Build the canonical request manually following AWS SigV4 specification
-            // Sort headers by name (case-insensitive)
-            var sortedHeaders = awsRequest.Headers.OrderBy(h => h.Key, StringComparer.OrdinalIgnoreCase).ToList();
-            
-            // Build canonical headers string
-            var canonicalHeaders = string.Join("\n", sortedHeaders.Select(h => $"{h.Key.ToLowerInvariant()}:{h.Value.Trim()}")) + "\n";
-            
-            // Build signed headers list
-            var signedHeaderNames = string.Join(";", sortedHeaders.Select(h => h.Key.ToLowerInvariant()));
-            
-            // Build complete canonical request
-            var canonicalRequest = $"{awsRequest.HttpMethod}\n{awsRequest.ResourcePath}\n\n{canonicalHeaders}\n{signedHeaderNames}\n{awsRequest.Headers["X-Amz-Content-SHA256"]}";
-            
-            var awsSigningResult = AWS4Signer.ComputeSignature(
-                awsCredentials.GetCredentials().AccessKey,
-                awsCredentials.GetCredentials().SecretKey,
-                "us-east-1",
-                fixedTime,
-                "sqs",
-                signedHeaderNames,
-                canonicalRequest,
-                null);
-            var awsSignature = awsSigningResult.Signature;
-
-            // Assert
-            await Assert.That(goaSignature).IsEqualTo(awsSignature);
-        }
     }
 }

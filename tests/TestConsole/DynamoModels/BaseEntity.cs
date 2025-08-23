@@ -1,6 +1,4 @@
 using Goa.Clients.Dynamo;
-using Goa.Clients.Dynamo.Extensions;
-using Goa.Clients.Dynamo.Models;
 
 namespace TestConsole.DynamoModels;
 

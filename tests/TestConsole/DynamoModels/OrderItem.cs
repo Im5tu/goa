@@ -13,8 +13,10 @@ public class OrderItem
     public int Quantity { get; }
     public decimal UnitPrice { get; }
     public decimal TotalPrice { get; }
+    public DateOnly DateOnlyProp { get; set; }
+    public TimeOnly TimeOnlyProp { get; set; }
 
-    public OrderItem(string orderId, string itemId, string productId, string productName, 
+    public OrderItem(string orderId, string itemId, string productId, string productName,
         int quantity, decimal unitPrice, decimal totalPrice)
     {
         OrderId = orderId;

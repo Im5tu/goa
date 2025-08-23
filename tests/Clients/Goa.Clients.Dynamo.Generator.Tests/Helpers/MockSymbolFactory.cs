@@ -1,6 +1,8 @@
 using Microsoft.CodeAnalysis;
 using Moq;
+using System;
 using System.Collections.Immutable;
+using System.Linq;
 
 namespace Goa.Clients.Dynamo.Generator.Tests.Helpers;
 
@@ -181,8 +183,9 @@ public static class MockSymbolFactory
                 return default(TypedConstant);
                 
             var typeSymbol = GetTypeSymbolForValue(value);
-            // Use reflection to create TypedConstant since constructor might be internal
-            return default(TypedConstant);
+            
+            // Create a mock TypedConstant implementation that returns the value
+            return new MockTypedConstant(typeSymbol, value);
         }
         
         protected override INamedTypeSymbol? CommonAttributeClass => _attributeClass;
@@ -194,6 +197,80 @@ public static class MockSymbolFactory
         protected override ImmutableArray<TypedConstant> CommonConstructorArguments => _constructorArguments;
         
         protected override ImmutableArray<KeyValuePair<string, TypedConstant>> CommonNamedArguments => _namedArguments;
+    }
+    
+    /// <summary>
+    /// A mock implementation of TypedConstant that properly exposes values
+    /// </summary>
+    internal struct MockTypedConstant
+    {
+        private readonly ITypeSymbol _type;
+        private readonly object? _value;
+        
+        public MockTypedConstant(ITypeSymbol type, object? value)
+        {
+            _type = type;
+            _value = value;
+        }
+        
+        public static implicit operator TypedConstant(MockTypedConstant mock)
+        {
+            // Create the TypedConstant using the available static factory methods
+            var kind = mock._value switch
+            {
+                null => TypedConstantKind.Primitive,
+                string => TypedConstantKind.Primitive,
+                int => TypedConstantKind.Primitive,
+                bool => TypedConstantKind.Primitive,
+                Enum => TypedConstantKind.Enum,
+                _ => TypedConstantKind.Primitive
+            };
+            
+            // Use reflection to create a TypedConstant with proper values
+            var typedConstantType = typeof(TypedConstant);
+            var constructors = typedConstantType.GetConstructors(
+                System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance |
+                System.Reflection.BindingFlags.Public);
+            
+            // Try to find a constructor that accepts (ITypeSymbol, TypedConstantKind, object)
+            foreach (var constructor in constructors)
+            {
+                var parameters = constructor.GetParameters();
+                if (parameters.Length == 3 &&
+                    parameters[0].ParameterType == typeof(ITypeSymbol) &&
+                    parameters[1].ParameterType == typeof(TypedConstantKind) &&
+                    parameters[2].ParameterType == typeof(object))
+                {
+                    return (TypedConstant)constructor.Invoke(new object[] { mock._type, kind, mock._value! });
+                }
+            }
+            
+            // If no constructor found, try using the struct fields directly
+            var result = default(TypedConstant);
+            
+            // Get the backing fields
+            var fields = typedConstantType.GetFields(
+                System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+            
+            object boxed = result;
+            foreach (var field in fields)
+            {
+                if (field.Name.Contains("Kind", StringComparison.OrdinalIgnoreCase))
+                {
+                    field.SetValue(boxed, kind);
+                }
+                else if (field.Name.Contains("Type", StringComparison.OrdinalIgnoreCase) && field.FieldType == typeof(ITypeSymbol))
+                {
+                    field.SetValue(boxed, mock._type);
+                }
+                else if (field.Name.Contains("Value", StringComparison.OrdinalIgnoreCase) && field.FieldType == typeof(object))
+                {
+                    field.SetValue(boxed, mock._value);
+                }
+            }
+            
+            return (TypedConstant)boxed;
+        }
     }
     
     /// <summary>
