@@ -41,6 +41,14 @@ jobs:
         echo "Release version: $RELEASE_VERSION"
         echo "Assembly version: $ASSEMBLY_VERSION"
 
+    - name: Update template PackageReference versions
+      run: |
+        echo "Updating template project files with version ${{ steps.version.outputs.release_version }}"
+        for csproj in src/Goa.Templates/content/**/*.csproj; do
+          echo "Updating $csproj"
+          sed -i 's/Include="Goa\.Functions\.\([^"]*\)" Version="[^"]*"/Include="Goa.Functions.\1" Version="${{ steps.version.outputs.release_version }}"/' "$csproj"
+        done
+
     - name: Restore dependencies
       run: dotnet restore
 
