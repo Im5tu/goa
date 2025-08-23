@@ -4,4 +4,8 @@
     <Description>S3 event processing for high-performance AWS Lambda functions</Description>
     <PackageTags>$(PackageBaseTags);function;s3;events;storage</PackageTags>
   </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Goa.Functions.Core\Goa.Functions.Core.csproj" />
+  </ItemGroup>
 </Project>

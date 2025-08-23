@@ -1,0 +1,32 @@
+{
+    "$schema": "http://json.schemastore.org/template",
+    "author": "Goa",
+    "classifications": [ "AWS", "Lambda", "Serverless", "Goa" ],
+    "identity": "Goa.Templates.S3",
+    "name": "Lambda - S3 Function",
+    "shortName": "goa.s3",
+    "sourceName": "AwsS3",
+    "tags": {
+        "language": "C#",
+        "type": "project"
+    },
+    "symbols": {
+        "processingType": {
+            "type": "parameter",
+            "description": "The type of S3 event processing to use.",
+            "datatype": "choice",
+            "choices": [
+                {
+                    "choice": "single",
+                    "description": "Process S3 events one at a time"
+                },
+                {
+                    "choice": "batch",
+                    "description": "Process S3 events as a batch (Default)"
+                }
+            ],
+            "replaces": "processingType",
+            "defaultValue": "batch"
+        }
+    }
+}
