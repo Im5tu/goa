@@ -19,8 +19,8 @@
     <PackageReference Include="AWSSDK.SecurityToken" Version="4.0.2" />
 
     <!-- LocalStack/Docker support -->
-    <PackageReference Include="Testcontainers" Version="4.6.0" />
-    <PackageReference Include="Testcontainers.LocalStack" Version="4.6.0" />
+    <PackageReference Include="Testcontainers" Version="4.7.0" />
+    <PackageReference Include="Testcontainers.LocalStack" Version="4.7.0" />
 
     <!-- Reference Goa projects -->
     <ProjectReference Include="..\..\src\Goa.Core\Goa.Core.csproj" />
