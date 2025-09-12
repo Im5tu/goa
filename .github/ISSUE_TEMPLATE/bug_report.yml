@@ -13,7 +13,7 @@ body:
     attributes:
       label: Goa Version
       description: What version of Goa are you using?
-      placeholder: e.g., 0.0.2-preview.2
+      placeholder: e.g., 0.0.3-preview.2
     validations:
       required: true
 

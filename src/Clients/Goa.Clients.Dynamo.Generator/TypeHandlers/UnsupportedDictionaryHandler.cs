@@ -48,4 +48,10 @@ public class UnsupportedDictionaryHandler : ITypeHandler
         // Unsupported dictionaries in keys - return empty string
         return "\"\"";
     }
+    
+    public string? GenerateConditionalAssignment(PropertyInfo propertyInfo, string recordVariable)
+    {
+        // Unsupported dictionaries don't need conditional assignment
+        return null;
+    }
 }

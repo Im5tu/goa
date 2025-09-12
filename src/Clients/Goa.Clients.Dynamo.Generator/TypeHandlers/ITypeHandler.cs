@@ -20,8 +20,9 @@ public interface ITypeHandler
     
     /// <summary>
     /// Generates code to convert from model property to DynamoDB AttributeValue.
+    /// Returns null for nullable properties that should use conditional assignment.
     /// </summary>
-    string GenerateToAttributeValue(PropertyInfo propertyInfo);
+    string? GenerateToAttributeValue(PropertyInfo propertyInfo);
     
     /// <summary>
     /// Generates code to convert from DynamoDB record to model property value.
@@ -33,4 +34,10 @@ public interface ITypeHandler
     /// For example, a DateTime might be formatted as "2023-12-01T10:30:00Z" in a key.
     /// </summary>
     string GenerateKeyFormatting(PropertyInfo propertyInfo);
+    
+    /// <summary>
+    /// Generates conditional assignment code for nullable properties.
+    /// Returns null if the property doesn't need conditional assignment.
+    /// </summary>
+    string? GenerateConditionalAssignment(PropertyInfo propertyInfo, string recordVariable);
 }

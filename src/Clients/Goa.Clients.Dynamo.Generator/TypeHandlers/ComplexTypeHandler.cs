@@ -201,6 +201,12 @@ public class ComplexTypeHandler : ICompositeTypeHandler
         return $"model.{propertyInfo.Name}?.ToString() ?? \"\"";
     }
     
+    public string? GenerateConditionalAssignment(PropertyInfo propertyInfo, string recordVariable)
+    {
+        // Complex types currently use null coalescing in GenerateToAttributeValue, not conditional assignment
+        return null;
+    }
+    
     private static bool IsNumericType(ITypeSymbol type)
     {
         return type.SpecialType switch

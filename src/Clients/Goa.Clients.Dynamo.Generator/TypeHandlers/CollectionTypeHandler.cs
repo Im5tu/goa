@@ -66,7 +66,7 @@ public class CollectionTypeHandler : ICompositeTypeHandler
     
     public string GenerateFromDynamoRecord(PropertyInfo propertyInfo, string recordVariableName, string pkVariable, string skVariable)
     {
-        var memberName = propertyInfo.Name;
+        var memberName = propertyInfo.GetDynamoAttributeName();
         var collectionType = propertyInfo.Type.ToDisplayString();
         
         if (propertyInfo.ElementType == null || _registry == null)
@@ -190,5 +190,11 @@ public class CollectionTypeHandler : ICompositeTypeHandler
     {
         // Collections can't be used directly in keys - convert to string representation
         return $"string.Join(\",\", model.{propertyInfo.Name} ?? Enumerable.Empty<object>())";
+    }
+    
+    public string? GenerateConditionalAssignment(PropertyInfo propertyInfo, string recordVariable)
+    {
+        // Collections currently use null coalescing in GenerateToAttributeValue, not conditional assignment
+        return null;
     }
 }

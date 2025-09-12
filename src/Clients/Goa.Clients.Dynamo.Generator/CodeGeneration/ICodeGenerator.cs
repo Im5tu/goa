@@ -1,4 +1,3 @@
-using Microsoft.CodeAnalysis;
 using Goa.Clients.Dynamo.Generator.Models;
 
 namespace Goa.Clients.Dynamo.Generator.CodeGeneration;
@@ -12,14 +11,4 @@ public interface ICodeGenerator
     /// Generates code for the given types and returns the source code.
     /// </summary>
     string GenerateCode(IEnumerable<DynamoTypeInfo> types, GenerationContext context);
-}
-
-/// <summary>
-/// Context information available during code generation.
-/// </summary>
-public class GenerationContext
-{
-    public Dictionary<string, string> AvailableConversions { get; set; } = new();
-    public Dictionary<string, List<DynamoTypeInfo>> TypeRegistry { get; set; } = new();
-    public Action<Diagnostic>? ReportDiagnostic { get; set; }
 }

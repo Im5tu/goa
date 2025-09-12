@@ -45,8 +45,9 @@ public class TypeHandlerRegistry
     
     /// <summary>
     /// Generates code to convert from model property to DynamoDB AttributeValue.
+    /// Returns null for nullable properties that should use conditional assignment.
     /// </summary>
-    public string GenerateToAttributeValue(PropertyInfo propertyInfo)
+    public string? GenerateToAttributeValue(PropertyInfo propertyInfo)
     {
         var handler = GetHandler(propertyInfo);
         if (handler == null)
@@ -55,6 +56,15 @@ public class TypeHandlerRegistry
         }
         
         return handler.GenerateToAttributeValue(propertyInfo);
+    }
+    
+    /// <summary>
+    /// Generates conditional assignment code for nullable properties.
+    /// </summary>
+    public string? GenerateConditionalAssignment(PropertyInfo propertyInfo, string recordVariable)
+    {
+        var handler = GetHandler(propertyInfo);
+        return handler?.GenerateConditionalAssignment(propertyInfo, recordVariable);
     }
     
     /// <summary>
@@ -109,7 +119,7 @@ public class TypeHandlerRegistry
         
         // Replace the property access with the provided value expression
         var attributeValueCode = handler.GenerateToAttributeValue(nestedProperty);
-        return attributeValueCode.Replace($"model.{nestedProperty.Name}", valueExpression);
+        return attributeValueCode?.Replace($"model.{nestedProperty.Name}", valueExpression) ?? "new AttributeValue { NULL = true }";
     }
     
     /// <summary>

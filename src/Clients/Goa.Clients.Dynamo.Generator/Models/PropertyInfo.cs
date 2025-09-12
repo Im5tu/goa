@@ -50,4 +50,32 @@ public class PropertyInfo
     /// For non-dictionary types, returns null.
     /// </summary>
     public (ITypeSymbol KeyType, ITypeSymbol ValueType)? DictionaryTypes { get; set; }
+    
+    /// <summary>
+    /// Gets the effective name for this property in DynamoDB records.
+    /// Returns the SerializedName if specified, otherwise the property name.
+    /// </summary>
+    public string GetDynamoAttributeName()
+    {
+        var serializedNameAttr = Attributes.OfType<SerializedNameAttributeInfo>().FirstOrDefault();
+        return serializedNameAttr?.Name ?? Name;
+    }
+    
+    /// <summary>
+    /// Checks if this property should be ignored based on the specified direction.
+    /// </summary>
+    public bool IsIgnored(IgnoreDirection checkDirection)
+    {
+        var ignoreAttr = Attributes.OfType<IgnoreAttributeInfo>().FirstOrDefault();
+        if (ignoreAttr == null)
+            return false;
+            
+        return checkDirection switch
+        {
+            IgnoreDirection.Always => ignoreAttr.Direction == IgnoreDirection.Always,
+            IgnoreDirection.WhenReading => ignoreAttr.Direction is IgnoreDirection.Always or IgnoreDirection.WhenReading,
+            IgnoreDirection.WhenWriting => ignoreAttr.Direction is IgnoreDirection.Always or IgnoreDirection.WhenWriting,
+            _ => false
+        };
+    }
 }

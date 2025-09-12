@@ -210,15 +210,26 @@ public class MapperGenerator : ICodeGenerator
         // Get all properties including inherited ones
         var allProperties = GetAllProperties(type);
         
-        // Filter out properties that don't have handlers
-        var supportedProperties = allProperties.Where(p => _typeHandlerRegistry.CanHandle(p));
+        // Filter out properties that don't have handlers and aren't ignored for writing
+        var supportedProperties = allProperties
+            .Where(p => _typeHandlerRegistry.CanHandle(p) && !p.IsIgnored(IgnoreDirection.WhenWriting));
         
         foreach (var property in supportedProperties)
         {
             var attributeValueCode = _typeHandlerRegistry.GenerateToAttributeValue(property);
             if (!string.IsNullOrEmpty(attributeValueCode))
             {
-                builder.AppendLine($"record[\"{property.Name}\"] = {attributeValueCode};");
+                // Non-nullable property - use direct assignment
+                builder.AppendLine($"record[\"{property.GetDynamoAttributeName()}\"] = {attributeValueCode};");
+            }
+            else
+            {
+                // Nullable property - use conditional assignment for sparse GSI compatibility
+                var conditionalCode = _typeHandlerRegistry.GenerateConditionalAssignment(property, "record");
+                if (conditionalCode != null && !string.IsNullOrEmpty(conditionalCode))
+                {
+                    builder.AppendLine(conditionalCode);
+                }
             }
         }
     }
@@ -319,8 +330,10 @@ public class MapperGenerator : ICodeGenerator
         // Check if we need mixed construction (constructor + property setters)
         var constructorParams = new HashSet<string>(constructor.Parameters.Select(p => p.Name));
         
-        // Get all properties including inherited ones, only supported ones
-        var allProperties = GetAllProperties(type).Where(p => _typeHandlerRegistry.CanHandle(p)).ToList();
+        // Get all properties including inherited ones, only supported ones that aren't ignored for reading
+        var allProperties = GetAllProperties(type)
+            .Where(p => _typeHandlerRegistry.CanHandle(p) && !p.IsIgnored(IgnoreDirection.WhenReading))
+            .ToList();
         var additionalProperties = allProperties.Where(p => !constructorParams.Contains(p.Name)).ToList();
         
         if (additionalProperties.Any())
@@ -399,10 +412,10 @@ public class MapperGenerator : ICodeGenerator
         builder.AppendLine("{");
         builder.Indent();
         
-        // Get all properties including inherited ones, but only include those that have setters and are supported
+        // Get all properties including inherited ones, but only include those that have setters, are supported, and aren't ignored for reading
         var allProperties = GetAllProperties(type);
         var settableProperties = allProperties
-            .Where(p => p.Symbol.SetMethod != null && _typeHandlerRegistry.CanHandle(p))
+            .Where(p => p.Symbol.SetMethod != null && _typeHandlerRegistry.CanHandle(p) && !p.IsIgnored(IgnoreDirection.WhenReading))
             .ToList();
         
         for (int i = 0; i < settableProperties.Count; i++)
@@ -445,8 +458,8 @@ public class MapperGenerator : ICodeGenerator
         var property = FindPropertyIgnoreCase(type, param.Name);
         var attributes = property?.Attributes ?? new List<AttributeInfo>();
         
-        // Use the original property name (PascalCase) for the DynamoDB attribute lookup
-        var attributeName = property?.Name ?? param.Name;
+        // Use the serialized name if available, otherwise the original property name (PascalCase) for the DynamoDB attribute lookup
+        var attributeName = property?.GetDynamoAttributeName() ?? param.Name;
         
         var tempPropertyInfo = new PropertyInfo
         {

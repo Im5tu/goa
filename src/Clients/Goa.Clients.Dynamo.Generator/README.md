@@ -84,6 +84,85 @@ Defines Global Secondary Indexes (up to 5 per model):
 )]
 ```
 
+### IgnoreAttribute
+
+Controls whether properties are included in DynamoDB mapping operations:
+
+```csharp
+public record UserProfile(
+    string Id,
+    
+    [property: Ignore]                                    // Ignore in both directions (default)
+    string ComputedField,
+    
+    [property: Ignore(Direction = IgnoreDirection.WhenWriting)]  // Only ignore when writing to DynamoDB
+    string ReadOnlyData,
+    
+    [property: Ignore(Direction = IgnoreDirection.WhenReading)]  // Only ignore when reading from DynamoDB
+    string WriteOnlyField
+);
+
+// Or on class properties
+public record UserProfile(string Id, string Name)
+{
+    [Ignore(Direction = IgnoreDirection.Always)]
+    public string FullDisplayName => $"User: {Name}";
+}
+```
+
+**IgnoreDirection Options:**
+- `Always` (default): Property is ignored in both reading and writing operations
+- `WhenReading`: Property is written to DynamoDB but not read back (useful for write-only audit fields)
+- `WhenWriting`: Property is read from DynamoDB but not written (useful for computed or temporary fields)
+
+### SerializedNameAttribute
+
+Overrides the DynamoDB attribute name for a property:
+
+```csharp
+public record UserProfile(
+    string Id,
+    
+    [property: SerializedName("user_name")]
+    string Name,                          // Stored as "user_name" in DynamoDB
+    
+    [property: SerializedName("email_addr")]
+    string Email,                         // Stored as "email_addr" in DynamoDB
+    
+    [property: SerializedName("created_timestamp")]
+    DateTime CreatedAt                    // Stored as "created_timestamp" in DynamoDB
+);
+```
+
+**Use Cases:**
+- Working with existing DynamoDB tables that use different naming schemes
+- Maintaining backward compatibility when refactoring property names
+
+Note: You are responsible for ensuring that the name of the property is a valid DynamoDB Attribute name. No manipulation of the name occurs.
+
+### UnixTimestampAttribute
+
+Controls how DateTime and DateTimeOffset properties are stored as Unix timestamps:
+
+```csharp
+public record EventRecord(
+    string Id,
+    
+    [property: UnixTimestamp]                                    // Seconds (default)
+    DateTime CreatedAt,
+    
+    [property: UnixTimestamp(Format = UnixTimestampFormat.Milliseconds)]
+    DateTime? UpdatedAt,
+    
+    [property: UnixTimestamp(Format = UnixTimestampFormat.Seconds)]
+    DateTimeOffset ExpiresAt
+);
+```
+
+**UnixTimestampFormat Options:**
+- `Seconds`: Unix timestamp in seconds (default, compatible with DynamoDB TTL)
+- `Milliseconds`: Unix timestamp in milliseconds (for higher precision)
+
 ## Key Patterns
 
 Use `<PropertyName>` placeholders in key patterns that will be replaced with actual property values:
@@ -257,6 +336,10 @@ The generator provides helpful error messages:
 - **DYNAMO003**: Missing SK property in DynamoModelAttribute
 - **DYNAMO004**: Missing Name property in GlobalSecondaryIndexAttribute
 - **DYNAMO005**: Property not found in placeholder - occurs when a placeholder like `<PropertyName>` in PK/SK patterns references a property that doesn't exist on the model or any of its base classes
+- **DYNAMO006**: Invalid UnixTimestamp usage - occurs when UnixTimestamp attribute is applied to non-DateTime/DateTimeOffset properties
+- **DYNAMO007**: Invalid Ignore usage - occurs when Ignore attribute is applied to non-property symbols
+- **DYNAMO008**: Invalid SerializedName usage - occurs when SerializedName attribute is applied to non-property symbols
+- **DYNAMO009**: Invalid SerializedName value - occurs when SerializedName attribute has an empty or null name
 
 ## Usage Examples
 
@@ -264,6 +347,43 @@ The generator provides helpful error messages:
 ```csharp
 var user = new UserProfile("123", "john@example.com", "John", "Doe", DateTime.Now, true);
 var dynamoRecord = DynamoMapper.UserProfile.ToDynamoRecord(user);
+```
+
+### Using SerializedName and Ignore Attributes
+```csharp
+[DynamoModel(PK = "USER#<Id>", SK = "METADATA")]
+public record UserAccount(
+    string Id,
+    
+    [property: SerializedName("username")]
+    string UserName,                      // Stored as "username" in DynamoDB
+    
+    [property: SerializedName("email_address")]
+    string Email,                         // Stored as "email_address" in DynamoDB
+    
+    [property: UnixTimestamp]
+    DateTime CreatedAt,                   // Stored as Unix timestamp in seconds
+    
+    [property: Ignore]
+    string? TempData                      // Never stored in DynamoDB
+)
+{
+    [Ignore(Direction = IgnoreDirection.WhenReading)]
+    public string AuditInfo => $"Created: {CreatedAt}";  // Only written, never read
+    
+    [Ignore(Direction = IgnoreDirection.WhenWriting)]
+    public string? CachedData { get; set; }              // Only read, never written
+};
+
+// Usage
+var account = new UserAccount("123", "john_doe", "john@example.com", DateTime.Now, "temp");
+var record = DynamoMapper.UserAccount.ToDynamoRecord(account);
+
+// record["username"] contains "john_doe" (not "UserName")
+// record["email_address"] contains "john@example.com" (not "Email") 
+// record["CreatedAt"] contains Unix timestamp (not ISO string)
+// record does not contain "TempData" or "AuditInfo"
+// record contains "AuditInfo" with computed value
 ```
 
 ### Querying with Keys

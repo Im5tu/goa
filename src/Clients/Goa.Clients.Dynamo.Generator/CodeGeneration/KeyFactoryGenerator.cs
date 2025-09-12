@@ -18,7 +18,8 @@ public class KeyFactoryGenerator : ICodeGenerator
     public string GenerateCode(IEnumerable<DynamoTypeInfo> types, GenerationContext context)
     {
         // Group types by namespace to generate separate files
-        var typesWithDynamoModel = types.Where(t => t.Attributes.OfType<DynamoModelAttributeInfo>().Any()).ToList();
+        // Include types that have DynamoModel either directly or inherited from base types
+        var typesWithDynamoModel = types.Where(t => HasDynamoModelAttribute(t)).ToList();
         var typesByNamespace = typesWithDynamoModel.GroupBy(t => t.Namespace).ToList();
 
         if (!typesByNamespace.Any())
@@ -42,7 +43,7 @@ public class KeyFactoryGenerator : ICodeGenerator
 
         foreach (var type in firstNamespaceGroup)
         {
-            var dynamoModelAttr = type.Attributes.OfType<DynamoModelAttributeInfo>().FirstOrDefault();
+            var dynamoModelAttr = GetDynamoModelAttribute(type);
             if (dynamoModelAttr == null)
                 continue; // Skip types without DynamoModel attribute
 
@@ -256,6 +257,37 @@ public class KeyFactoryGenerator : ICodeGenerator
             current = current.BaseType;
         }
 
+        return null;
+    }
+
+    /// <summary>
+    /// Checks if a type has a DynamoModel attribute either directly or inherited from base types.
+    /// </summary>
+    private bool HasDynamoModelAttribute(DynamoTypeInfo type)
+    {
+        var current = type;
+        while (current != null)
+        {
+            if (current.Attributes.OfType<DynamoModelAttributeInfo>().Any())
+                return true;
+            current = current.BaseType;
+        }
+        return false;
+    }
+
+    /// <summary>
+    /// Gets the DynamoModel attribute from the type or its base types.
+    /// </summary>
+    private DynamoModelAttributeInfo? GetDynamoModelAttribute(DynamoTypeInfo type)
+    {
+        var current = type;
+        while (current != null)
+        {
+            var attr = current.Attributes.OfType<DynamoModelAttributeInfo>().FirstOrDefault();
+            if (attr != null)
+                return attr;
+            current = current.BaseType;
+        }
         return null;
     }
 }

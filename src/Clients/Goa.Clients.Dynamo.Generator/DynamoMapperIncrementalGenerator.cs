@@ -41,13 +41,35 @@ public class DynamoMapperIncrementalGenerator : IIncrementalGenerator
         if (symbol == null)
             return null;
         
-        // Check if it has any relevant attributes
-        var hasRelevantAttribute = symbol.GetAttributes().Any(attr =>
-            attr.AttributeClass?.ToDisplayString() == "Goa.Clients.Dynamo.DynamoModelAttribute" ||
-            attr.AttributeClass?.ToDisplayString() == "Goa.Clients.Dynamo.GlobalSecondaryIndexAttribute" ||
-            IsReferencedByDynamoTypes(symbol));
+        // Check if it has any relevant attributes directly or through inheritance
+        var hasRelevantAttribute = HasRelevantAttribute(symbol) || IsReferencedByDynamoTypes(symbol);
         
         return hasRelevantAttribute ? symbol : null;
+    }
+    
+    private static bool HasRelevantAttribute(INamedTypeSymbol symbol)
+    {
+        // Check current type for attributes
+        if (symbol.GetAttributes().Any(attr =>
+            attr.AttributeClass?.ToDisplayString() == "Goa.Clients.Dynamo.DynamoModelAttribute" ||
+            attr.AttributeClass?.ToDisplayString() == "Goa.Clients.Dynamo.GlobalSecondaryIndexAttribute"))
+        {
+            return true;
+        }
+        
+        // Check base types for DynamoModel attribute
+        var baseType = symbol.BaseType;
+        while (baseType != null && baseType.SpecialType != SpecialType.System_Object)
+        {
+            if (baseType.GetAttributes().Any(attr =>
+                attr.AttributeClass?.ToDisplayString() == "Goa.Clients.Dynamo.DynamoModelAttribute"))
+            {
+                return true;
+            }
+            baseType = baseType.BaseType;
+        }
+        
+        return false;
     }
     
     private static bool IsReferencedByDynamoTypes(INamedTypeSymbol symbol)
@@ -116,6 +138,8 @@ public class DynamoMapperIncrementalGenerator : IIncrementalGenerator
         registry.RegisterHandler(new DynamoModelAttributeHandler());
         registry.RegisterHandler(new GSIAttributeHandler());
         registry.RegisterHandler(new UnixTimestampAttributeHandler());
+        registry.RegisterHandler(new IgnoreAttributeHandler());
+        registry.RegisterHandler(new SerializedNameAttributeHandler());
         return registry;
     }
     
@@ -143,13 +167,28 @@ public class DynamoMapperIncrementalGenerator : IIncrementalGenerator
         var dynamoTypes = new List<INamedTypeSymbol>();
         foreach (var type in types)
         {
+            // Check for attributes on the type itself
             var dynamoAttr = type.GetAttributes().FirstOrDefault(attr => 
                 attr.AttributeClass?.ToDisplayString() == "Goa.Clients.Dynamo.DynamoModelAttribute");
             var gsiAttr = type.GetAttributes().FirstOrDefault(attr => 
                 attr.AttributeClass?.ToDisplayString() == "Goa.Clients.Dynamo.GlobalSecondaryIndexAttribute");
             
-            // Include types that have [DynamoModel] OR [GlobalSecondaryIndex] attributes
-            if (dynamoAttr != null || gsiAttr != null)
+            // Also check if type inherits DynamoModel from base type
+            var hasDynamoModelFromBase = false;
+            var baseType = type.BaseType;
+            while (baseType != null && baseType.SpecialType != SpecialType.System_Object)
+            {
+                if (baseType.GetAttributes().Any(attr =>
+                    attr.AttributeClass?.ToDisplayString() == "Goa.Clients.Dynamo.DynamoModelAttribute"))
+                {
+                    hasDynamoModelFromBase = true;
+                    break;
+                }
+                baseType = baseType.BaseType;
+            }
+            
+            // Include types that have [DynamoModel] OR [GlobalSecondaryIndex] attributes OR inherit [DynamoModel]
+            if (dynamoAttr != null || gsiAttr != null || hasDynamoModelFromBase)
             {
                 dynamoTypes.Add(type);
             }

@@ -15,13 +15,15 @@ public class DateOnlyTypeHandler : ITypeHandler
         return underlyingType?.Name == "DateOnly";
     }
     
-    public string GenerateToAttributeValue(PropertyInfo propertyInfo)
+    public string? GenerateToAttributeValue(PropertyInfo propertyInfo)
     {
         var propertyName = propertyInfo.Name;
         var isNullable = propertyInfo.IsNullable;
         
         return isNullable
-            ? $"model.{propertyName}.HasValue ? new AttributeValue {{ S = model.{propertyName}.Value.ToString(\"yyyy-MM-dd\") }} : new AttributeValue {{ NULL = true }}"
+#pragma warning disable CS8603 // Possible null reference return - intentional for conditional assignment
+            ? null // Use conditional assignment instead
+#pragma warning restore CS8603
             : $"new AttributeValue {{ S = model.{propertyName}.ToString(\"yyyy-MM-dd\") }}";
     }
     
@@ -30,13 +32,47 @@ public class DateOnlyTypeHandler : ITypeHandler
         var memberName = propertyInfo.Name;
         var isNullable = propertyInfo.IsNullable;
         
+        // Avoid variable name conflicts with pk/sk extraction variables
+        var varName = GetSafeVariableName(memberName);
+        
         return isNullable
-            ? $"{recordVariableName}.TryGetNullableString(\"{memberName}\", out var {memberName.ToLowerInvariant()}Str) && DateOnly.TryParse({memberName.ToLowerInvariant()}Str, out var {memberName.ToLowerInvariant()}) ? {memberName.ToLowerInvariant()} : (DateOnly?)null"
-            : $"{recordVariableName}.TryGetString(\"{memberName}\", out var {memberName.ToLowerInvariant()}Str) && DateOnly.TryParse({memberName.ToLowerInvariant()}Str, out var {memberName.ToLowerInvariant()}) ? {memberName.ToLowerInvariant()} : MissingAttributeException.Throw<DateOnly>(\"{memberName}\", {pkVariable}, {skVariable})";
+            ? $"{recordVariableName}.TryGetNullableString(\"{memberName}\", out var {varName}Str) && DateOnly.TryParse({varName}Str, out var {varName}) ? {varName} : (DateOnly?)null"
+            : $"{recordVariableName}.TryGetString(\"{memberName}\", out var {varName}Str) && DateOnly.TryParse({varName}Str, out var {varName}) ? {varName} : MissingAttributeException.Throw<DateOnly>(\"{memberName}\", {pkVariable}, {skVariable})";
     }
     
     public string GenerateKeyFormatting(PropertyInfo propertyInfo)
     {
-        return $"model.{propertyInfo.Name}.ToString(\"yyyy-MM-dd\")";
+        var isNullable = propertyInfo.IsNullable;
+        
+        return isNullable
+            ? $"(model.{propertyInfo.Name}.HasValue ? model.{propertyInfo.Name}.Value.ToString(\"yyyy-MM-dd\") : \"NULL\")"
+            : $"model.{propertyInfo.Name}.ToString(\"yyyy-MM-dd\")";
+    }
+    
+    public string? GenerateConditionalAssignment(PropertyInfo propertyInfo, string recordVariable)
+    {
+        var propertyName = propertyInfo.Name;
+        var isNullable = propertyInfo.IsNullable;
+        
+        if (!isNullable)
+        {
+            return null;
+        }
+        
+        return $@"if (model.{propertyName}.HasValue)
+{{
+    {recordVariable}[""{propertyName}""] = new AttributeValue {{ S = model.{propertyName}.Value.ToString(""yyyy-MM-dd"") }};
+}}";
+    }
+    
+    private static string GetSafeVariableName(string memberName)
+    {
+        // Avoid conflicts with pk/sk extraction variables
+        var lowerName = memberName.ToLowerInvariant();
+        if (lowerName == "pk" || lowerName == "sk")
+        {
+            return lowerName + "Prop";  // Use "Prop" suffix to distinguish from extracted values
+        }
+        return lowerName;
     }
 }
