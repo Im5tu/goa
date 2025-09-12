@@ -72,8 +72,8 @@ public class TimeOnlyTypeHandlerTests
         
         var result = _handler.GenerateToAttributeValue(property);
         
-        var expected = "model.OptionalTime.HasValue ? new AttributeValue { S = model.OptionalTime.Value.ToString(\"HH:mm:ss.fffffff\") } : new AttributeValue { NULL = true }";
-        await Assert.That(result).IsEqualTo(expected);
+        // Nullable TimeOnly properties return null to trigger conditional assignment for sparse GSI compatibility
+        await Assert.That(result).IsNull();
     }
 
     [Test]

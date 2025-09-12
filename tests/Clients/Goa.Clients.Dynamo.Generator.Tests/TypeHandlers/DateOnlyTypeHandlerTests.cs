@@ -72,8 +72,8 @@ public class DateOnlyTypeHandlerTests
         
         var result = _handler.GenerateToAttributeValue(property);
         
-        var expected = "model.OptionalDate.HasValue ? new AttributeValue { S = model.OptionalDate.Value.ToString(\"yyyy-MM-dd\") } : new AttributeValue { NULL = true }";
-        await Assert.That(result).IsEqualTo(expected);
+        // Nullable DateOnly properties return null to trigger conditional assignment for sparse GSI compatibility
+        await Assert.That(result).IsNull();
     }
 
     [Test]

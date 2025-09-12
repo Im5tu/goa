@@ -58,8 +58,8 @@ public class NullAwarenessIntegrationTests
 
         var result = _typeHandlerRegistry.GenerateToAttributeValue(property);
 
-        var expected = "model.Count.HasValue ? new AttributeValue { N = model.Count.Value.ToString() } : new AttributeValue { NULL = true }";
-        await Assert.That(result).IsEqualTo(expected);
+        // Nullable properties return null to trigger conditional assignment for sparse GSI compatibility
+        await Assert.That(result).IsNull();
     }
 
     [Test]
@@ -144,7 +144,9 @@ public class NullAwarenessIntegrationTests
         // Verify the generated code contains correct null handling
         await Assert.That(generatedCode).Contains("new AttributeValue { S = model.RequiredName ?? string.Empty }");
         await Assert.That(generatedCode).Contains("new AttributeValue { S = model.OptionalDescription ?? string.Empty }");
-        await Assert.That(generatedCode).Contains("model.OptionalCount.HasValue ? new AttributeValue { N = model.OptionalCount.Value.ToString() } : new AttributeValue { NULL = true }");
+        // Nullable properties use conditional assignment for sparse GSI compatibility
+        await Assert.That(generatedCode).Contains("if (model.OptionalCount.HasValue)");
+        await Assert.That(generatedCode).Contains("new AttributeValue { N = model.OptionalCount.Value.ToString() }");
         
         // Verify MissingAttributeException for non-nullable types
         await Assert.That(generatedCode).Contains("MissingAttributeException.Throw<string>(\"RequiredName\"");
@@ -171,8 +173,8 @@ public class NullAwarenessIntegrationTests
         var nullableResult = _typeHandlerRegistry.GenerateToAttributeValue(nullableDateOnlyProperty);
         var nonNullableResult = _typeHandlerRegistry.GenerateToAttributeValue(nonNullableDateOnlyProperty);
 
-        await Assert.That(nullableResult).Contains("model.OptionalDate.HasValue");
-        await Assert.That(nullableResult).Contains("new AttributeValue { NULL = true }");
+        // Nullable DateOnly properties return null to trigger conditional assignment for sparse GSI compatibility
+        await Assert.That(nullableResult).IsNull();
         
         await Assert.That(nonNullableResult).DoesNotContain("HasValue");
         await Assert.That(nonNullableResult).DoesNotContain("NULL = true");

@@ -87,12 +87,10 @@ public class PrimitiveTypeHandlerTests
     {
         var testCases = new[]
         {
-            (MockSymbolFactory.PrimitiveTypes.Boolean, "BoolProp", 
-             "model.BoolProp.HasValue ? new AttributeValue { BOOL = model.BoolProp.Value } : new AttributeValue { NULL = true }"),
-            (MockSymbolFactory.PrimitiveTypes.Int32, "IntProp", 
-             "model.IntProp.HasValue ? new AttributeValue { N = model.IntProp.Value.ToString() } : new AttributeValue { NULL = true }"),
+            (MockSymbolFactory.PrimitiveTypes.Boolean, "BoolProp", (string?)null), // Nullable primitives return null for conditional assignment
+            (MockSymbolFactory.PrimitiveTypes.Int32, "IntProp", (string?)null),     // Nullable primitives return null for conditional assignment
             (MockSymbolFactory.PrimitiveTypes.String, "StringProp", 
-             "new AttributeValue { S = model.StringProp ?? string.Empty }")
+             "new AttributeValue { S = model.StringProp ?? string.Empty }")         // Strings still use direct assignment
         };
 
         foreach (var (type, propName, expectedCode) in testCases)
@@ -102,7 +100,7 @@ public class PrimitiveTypeHandlerTests
             
             await Assert.That(result)
                 .IsEqualTo(expectedCode)
-                .Because($"ToAttributeValue for nullable {type.Name} should generate correct code");
+                .Because($"ToAttributeValue for nullable {type.Name} should return {(expectedCode == null ? "null to trigger conditional assignment" : "direct assignment")}");
         }
     }
 

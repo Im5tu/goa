@@ -147,9 +147,9 @@ public class UnixTimestampTypeHandlerTests
         var result = _handler.GenerateToAttributeValue(propertyInfo);
 
         // Assert
-        var expected = "model.UpdatedAt.HasValue ? new AttributeValue { N = ((DateTimeOffset)model.UpdatedAt.Value).ToUnixTimeSeconds().ToString() } : new AttributeValue { NULL = true }";
+        // Nullable Unix timestamp properties return null to trigger conditional assignment for sparse GSI compatibility
         await Assert.That(result)
-            .IsEqualTo(expected);
+            .IsNull();
     }
 
     [Test]
@@ -167,9 +167,9 @@ public class UnixTimestampTypeHandlerTests
         var result = _handler.GenerateToAttributeValue(propertyInfo);
 
         // Assert
-        var expected = "model.UpdatedAt.HasValue ? new AttributeValue { N = ((DateTimeOffset)model.UpdatedAt.Value).ToUnixTimeMilliseconds().ToString() } : new AttributeValue { NULL = true }";
+        // Nullable Unix timestamp properties return null to trigger conditional assignment for sparse GSI compatibility
         await Assert.That(result)
-            .IsEqualTo(expected);
+            .IsNull();
     }
 
     [Test]

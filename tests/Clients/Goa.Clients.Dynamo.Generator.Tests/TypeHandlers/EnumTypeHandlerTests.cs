@@ -97,8 +97,8 @@ public class EnumTypeHandlerTests
         
         var result = _handler.GenerateToAttributeValue(property);
         
-        var expected = "model.OptionalStatus.HasValue ? new AttributeValue { S = model.OptionalStatus.Value.ToString() } : new AttributeValue { NULL = true }";
-        await Assert.That(result).IsEqualTo(expected);
+        // Nullable enum properties return null to trigger conditional assignment for sparse GSI compatibility
+        await Assert.That(result).IsNull();
     }
 
     [Test]

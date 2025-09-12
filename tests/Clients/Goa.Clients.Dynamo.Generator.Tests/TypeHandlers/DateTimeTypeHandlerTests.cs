@@ -142,9 +142,9 @@ public class DateTimeTypeHandlerTests
         var result = _handler.GenerateToAttributeValue(propertyInfo);
 
         // Assert
-        var expected = "model.UpdatedAt.HasValue ? new AttributeValue { S = model.UpdatedAt.Value.ToString(\"o\") } : new AttributeValue { NULL = true }";
+        // Nullable DateTime properties return null to trigger conditional assignment for sparse GSI compatibility
         await Assert.That(result)
-            .IsEqualTo(expected);
+            .IsNull();
     }
 
     [Test]
@@ -180,9 +180,9 @@ public class DateTimeTypeHandlerTests
         var result = _handler.GenerateToAttributeValue(propertyInfo);
 
         // Assert
-        var expected = "model.UpdatedAt.HasValue ? new AttributeValue { S = model.UpdatedAt.Value.ToString(\"o\") } : new AttributeValue { NULL = true }";
+        // Nullable DateTime properties return null to trigger conditional assignment for sparse GSI compatibility
         await Assert.That(result)
-            .IsEqualTo(expected);
+            .IsNull();
     }
 
     [Test]
