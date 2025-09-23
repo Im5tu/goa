@@ -12,11 +12,11 @@
     <PackageReference Include="BenchmarkDotNet.Diagnostics.Windows" Version="0.15.2" Condition="'$(OS)' == 'Windows_NT'" />
 
     <!-- AWS SDK for comparison -->
-    <PackageReference Include="AWSSDK.Core" Version="4.0.0.26" />
-    <PackageReference Include="AWSSDK.SQS" Version="4.0.1.2" />
-    <PackageReference Include="AWSSDK.DynamoDBv2" Version="4.0.6.1" />
-    <PackageReference Include="AWSSDK.Lambda" Version="4.0.2.8" />
-    <PackageReference Include="AWSSDK.SecurityToken" Version="4.0.2.1" />
+    <PackageReference Include="AWSSDK.Core" Version="4.0.0.29" />
+    <PackageReference Include="AWSSDK.SQS" Version="4.0.1.5" />
+    <PackageReference Include="AWSSDK.DynamoDBv2" Version="4.0.6.3" />
+    <PackageReference Include="AWSSDK.Lambda" Version="4.0.2.10" />
+    <PackageReference Include="AWSSDK.SecurityToken" Version="4.0.2.3" />
 
     <!-- LocalStack/Docker support -->
     <PackageReference Include="Testcontainers" Version="4.7.0" />
