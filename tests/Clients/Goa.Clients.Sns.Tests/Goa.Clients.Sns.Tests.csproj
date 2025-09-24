@@ -7,7 +7,7 @@
     <ItemGroup>
         <PackageReference Include="AWSSDK.SimpleNotificationService" Version="4.0.1.1" />
         <PackageReference Include="Moq" Version="4.20.72" />
-        <PackageReference Include="TUnit" Version="0.57.24" />
+        <PackageReference Include="TUnit" Version="0.61.31" />
         <PackageReference Include="Testcontainers" Version="4.7.0" />
     </ItemGroup>
 
