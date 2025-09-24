@@ -9,7 +9,7 @@
   <ItemGroup>
     <!-- BenchmarkDotNet -->
     <PackageReference Include="BenchmarkDotNet" Version="0.15.2" />
-    <PackageReference Include="BenchmarkDotNet.Diagnostics.Windows" Version="0.15.2" Condition="'$(OS)' == 'Windows_NT'" />
+    <PackageReference Include="BenchmarkDotNet.Diagnostics.Windows" Version="0.15.4" Condition="'$(OS)' == 'Windows_NT'" />
 
     <!-- AWS SDK for comparison -->
     <PackageReference Include="AWSSDK.Core" Version="4.0.0.26" />
