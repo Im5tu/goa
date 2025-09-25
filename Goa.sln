@@ -54,6 +54,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = ".sln", ".sln", "{64F3A82A-C
 		LICENSE = LICENSE
 		README.md = README.md
 		.editorconfig = .editorconfig
+		renovate.json = renovate.json
 	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "docs", "docs", "{F1E2D3C4-5B6A-7F8E-9D0C-1B2A3F4E5D6C}"

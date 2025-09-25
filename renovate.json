@@ -5,12 +5,47 @@
     ],
     "packageRules": [
         {
-            "packageNames": [
+            "matchPackageNames": [
                 "Microsoft.CodeAnalysis.CSharp",
                 "Microsoft.CodeAnalysis.Analyzers",
                 "Microsoft.CodeAnalysis.CSharp.Workspaces"
             ],
             "enabled": false
+        },
+        {
+            "matchManagers": ["nuget"],
+            "matchPackagePatterns": ["^AWSSDK\\."],
+            "groupName": "AWS SDK Updates"
+        },
+        {
+            "matchManagers": ["nuget"],
+            "matchPackagePatterns": [
+                "^Microsoft\\.",
+                "^System\\.",
+                "^DotNet\\."
+            ],
+            "excludePackageNames": [
+                "Microsoft.CodeAnalysis.CSharp",
+                "Microsoft.CodeAnalysis.Analyzers",
+                "Microsoft.CodeAnalysis.CSharp.Workspaces"
+            ],
+            "groupName": ".NET Updates"
+        },
+        {
+            "matchManagers": ["nuget"],
+            "excludePackagePatterns": [
+                "^AWSSDK\\.",
+                "^Microsoft\\.",
+                "^System\\.",
+                "^DotNet\\.",
+                "^Goa\\."
+            ],
+            "excludePackageNames": [
+                "Microsoft.CodeAnalysis.CSharp",
+                "Microsoft.CodeAnalysis.Analyzers",
+                "Microsoft.CodeAnalysis.CSharp.Workspaces"
+            ],
+            "groupName": "Dependencies Updates"
         }
     ]
 }
