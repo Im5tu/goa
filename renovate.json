@@ -13,39 +13,43 @@
             "enabled": false
         },
         {
-            "matchManagers": ["nuget"],
-            "matchPackagePatterns": ["^AWSSDK\\."],
-            "groupName": "AWS SDK Updates"
+            "matchManagers": [
+                "nuget"
+            ],
+            "groupName": "AWS SDK Updates",
+            "matchPackageNames": [
+                "/^AWSSDK\\./"
+            ]
         },
         {
-            "matchManagers": ["nuget"],
-            "matchPackagePatterns": [
-                "^Microsoft\\.",
-                "^System\\.",
-                "^DotNet\\."
+            "matchManagers": [
+                "nuget"
             ],
-            "excludePackageNames": [
-                "Microsoft.CodeAnalysis.CSharp",
-                "Microsoft.CodeAnalysis.Analyzers",
-                "Microsoft.CodeAnalysis.CSharp.Workspaces"
-            ],
-            "groupName": ".NET Updates"
+            "groupName": ".NET Updates",
+            "matchPackageNames": [
+                "/^Microsoft\\./",
+                "/^System\\./",
+                "/^DotNet\\./",
+                "!Microsoft.CodeAnalysis.CSharp",
+                "!Microsoft.CodeAnalysis.Analyzers",
+                "!Microsoft.CodeAnalysis.CSharp.Workspaces"
+            ]
         },
         {
-            "matchManagers": ["nuget"],
-            "excludePackagePatterns": [
-                "^AWSSDK\\.",
-                "^Microsoft\\.",
-                "^System\\.",
-                "^DotNet\\.",
-                "^Goa\\."
+            "matchManagers": [
+                "nuget"
             ],
-            "excludePackageNames": [
-                "Microsoft.CodeAnalysis.CSharp",
-                "Microsoft.CodeAnalysis.Analyzers",
-                "Microsoft.CodeAnalysis.CSharp.Workspaces"
-            ],
-            "groupName": "Dependencies Updates"
+            "groupName": "Dependencies Updates",
+            "matchPackageNames": [
+                "!/^AWSSDK\\./",
+                "!/^Microsoft\\./",
+                "!/^System\\./",
+                "!/^DotNet\\./",
+                "!/^Goa\\./",
+                "!Microsoft.CodeAnalysis.CSharp",
+                "!Microsoft.CodeAnalysis.Analyzers",
+                "!Microsoft.CodeAnalysis.CSharp.Workspaces"
+            ]
         }
     ]
 }
