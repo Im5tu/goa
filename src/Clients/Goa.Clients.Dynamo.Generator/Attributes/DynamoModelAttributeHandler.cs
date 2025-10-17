@@ -27,6 +27,7 @@ public class DynamoModelAttributeHandler : IAttributeHandler
         string? sk = null;
         string pkName = "PK";
         string skName = "SK";
+        string typeName = "Type";
         
         // Get PK and SK from constructor arguments
         if (attributeData.ConstructorArguments.Length >= 2)
@@ -35,7 +36,7 @@ public class DynamoModelAttributeHandler : IAttributeHandler
             sk = attributeData.ConstructorArguments[1].Value?.ToString();
         }
         
-        // Get named arguments for PKName and SKName
+        // Get named arguments for PKName, SKName, and TypeName
         foreach (var namedArg in attributeData.NamedArguments)
         {
             switch (namedArg.Key)
@@ -52,6 +53,9 @@ public class DynamoModelAttributeHandler : IAttributeHandler
                 case "SKName":
                     skName = namedArg.Value.Value?.ToString() ?? "SK";
                     break;
+                case "TypeName":
+                    typeName = namedArg.Value.Value?.ToString() ?? "Type";
+                    break;
             }
         }
         
@@ -67,7 +71,8 @@ public class DynamoModelAttributeHandler : IAttributeHandler
             PK = pk!,
             SK = sk!,
             PKName = pkName,
-            SKName = skName
+            SKName = skName,
+            TypeName = typeName
         };
     }
     

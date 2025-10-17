@@ -38,12 +38,15 @@ public class PrimitiveTypeHandler : ITypeHandler
         
         return underlyingType.SpecialType switch
         {
-            SpecialType.System_String => $"new AttributeValue {{ S = model.{propertyName} ?? string.Empty }}",
+            SpecialType.System_String when isNullable =>
+                null, // Use conditional assignment instead
+            SpecialType.System_String =>
+                $"new AttributeValue {{ S = model.{propertyName} }}",
             SpecialType.System_Byte or SpecialType.System_SByte or
             SpecialType.System_Int16 or SpecialType.System_UInt16 or
             SpecialType.System_Int32 or SpecialType.System_UInt32 or
             SpecialType.System_Int64 or SpecialType.System_UInt64 or
-            SpecialType.System_Decimal or SpecialType.System_Single or SpecialType.System_Double when isNullable => 
+            SpecialType.System_Decimal or SpecialType.System_Single or SpecialType.System_Double when isNullable =>
                 null, // Use conditional assignment instead
             SpecialType.System_Byte or SpecialType.System_SByte or
             SpecialType.System_Int16 or SpecialType.System_UInt16 or
@@ -155,39 +158,45 @@ public class PrimitiveTypeHandler : ITypeHandler
         
         var attributeValue = underlyingType.SpecialType switch
         {
-            SpecialType.System_String => null, // String uses null coalescing, not conditional assignment
+            SpecialType.System_String =>
+                $"new AttributeValue {{ S = model.{propertyName} }}",
             SpecialType.System_Byte or SpecialType.System_SByte or
             SpecialType.System_Int16 or SpecialType.System_UInt16 or
             SpecialType.System_Int32 or SpecialType.System_UInt32 or
             SpecialType.System_Int64 or SpecialType.System_UInt64 or
-            SpecialType.System_Decimal or SpecialType.System_Single or SpecialType.System_Double => 
+            SpecialType.System_Decimal or SpecialType.System_Single or SpecialType.System_Double =>
                 $"new AttributeValue {{ N = model.{propertyName}.Value.ToString() }}",
-            SpecialType.System_Boolean => 
+            SpecialType.System_Boolean =>
                 $"new AttributeValue {{ BOOL = model.{propertyName}.Value }}",
-            SpecialType.System_Char => 
+            SpecialType.System_Char =>
                 $"new AttributeValue {{ S = model.{propertyName}.Value.ToString() }}",
-            SpecialType.System_DateTime => 
+            SpecialType.System_DateTime =>
                 $"new AttributeValue {{ S = model.{propertyName}.Value.ToString(\\\"o\\\") }}",
-            _ when underlyingType.Name == nameof(Guid) => 
+            _ when underlyingType.Name == nameof(Guid) =>
                 $"new AttributeValue {{ S = model.{propertyName}.Value.ToString() }}",
-            _ when underlyingType.Name == nameof(TimeSpan) => 
+            _ when underlyingType.Name == nameof(TimeSpan) =>
                 $"new AttributeValue {{ S = model.{propertyName}.Value.ToString() }}",
-            _ when underlyingType.Name == nameof(DateTimeOffset) => 
+            _ when underlyingType.Name == nameof(DateTimeOffset) =>
                 $"new AttributeValue {{ S = model.{propertyName}.Value.ToString(\\\"o\\\") }}",
-            _ when underlyingType.TypeKind == TypeKind.Enum => 
+            _ when underlyingType.TypeKind == TypeKind.Enum =>
                 $"new AttributeValue {{ S = model.{propertyName}.Value.ToString() }}",
             _ => null
         };
-        
+
         if (attributeValue == null)
         {
             return null;
         }
-        
-        return $@"if (model.{propertyName}.HasValue)
-{{
-    {recordVariable}[""{dynamoAttributeName}""] = {attributeValue};
-}}";
+
+        // For nullable strings, check if not null; for other nullable types, check HasValue
+        var condition = underlyingType.SpecialType == SpecialType.System_String
+            ? $"model.{propertyName} != null"
+            : $"model.{propertyName}.HasValue";
+
+        return $@"if ({condition})
+            {{
+                {recordVariable}[""{dynamoAttributeName}""] = {attributeValue};
+            }}";
     }
     
     private static string GetSafeVariableName(string memberName)

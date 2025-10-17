@@ -1,4 +1,5 @@
 using Microsoft.CodeAnalysis;
+using Goa.Clients.Dynamo.Generator.CodeGeneration;
 using Goa.Clients.Dynamo.Generator.Models;
 
 namespace Goa.Clients.Dynamo.Generator.TypeHandlers;
@@ -26,24 +27,130 @@ public class CollectionTypeHandler : ICompositeTypeHandler
     public string GenerateToAttributeValue(PropertyInfo propertyInfo)
     {
         var propertyName = propertyInfo.Name;
-        
+
         if (propertyInfo.ElementType == null || _registry == null)
         {
             return "new AttributeValue { NULL = true }"; // Skip invalid collections
         }
-        
+
         var elementType = propertyInfo.ElementType;
-        
-        // Handle simple primitive types directly for performance
+
+        // Handle simple primitive types directly for performance (maps to SS/NS)
         var primitiveResult = TryGeneratePrimitiveCollection(propertyName, elementType);
         if (primitiveResult != null)
         {
             return primitiveResult;
         }
-        
-        // For complex element types, we need to handle them differently
-        // For now, fallback to NULL for unsupported complex collections
+
+        // For non-primitive types, we need to map to AttributeValue.L
+        // This includes: complex types (classes/records/structs) AND nested collections
+        var elementMapping = GenerateElementToAttributeValue(elementType);
+        if (elementMapping != null)
+        {
+            return $"model.{propertyName} != null ? new AttributeValue {{ L = model.{propertyName}.Select(item => {elementMapping}).ToList() }} : new AttributeValue {{ NULL = true }}";
+        }
+
+        // Fallback to NULL for unsupported types
         return "new AttributeValue { NULL = true }";
+    }
+
+    /// <summary>
+    /// Generates code to convert a single element to an AttributeValue.
+    /// Returns null if the type is not supported.
+    /// </summary>
+    private string? GenerateElementToAttributeValue(ITypeSymbol elementType)
+    {
+        // Check if it's a complex type (user-defined class/record/struct)
+        if (IsComplexType(elementType))
+        {
+            // Use just the type name (not the full namespace) to match the mapper naming convention
+            var normalizedTypeName = NamingHelpers.NormalizeTypeName(elementType.Name);
+            return $"new AttributeValue {{ M = DynamoMapper.{normalizedTypeName}.ToDynamoRecord(item) }}";
+        }
+
+        // Check if it's a nested collection
+        if (IsCollectionType(elementType))
+        {
+            // Get the element type of the nested collection
+            var nestedElementType = GetCollectionElementType(elementType);
+            if (nestedElementType != null)
+            {
+                var nestedPrimitiveMapping = TryGeneratePrimitiveCollectionForElement(nestedElementType);
+                if (nestedPrimitiveMapping != null)
+                {
+                    return nestedPrimitiveMapping;
+                }
+
+                // Recursively handle nested collection elements
+                var nestedElementMapping = GenerateElementToAttributeValue(nestedElementType);
+                if (nestedElementMapping != null)
+                {
+                    return $"new AttributeValue {{ L = item.Select(nested => {nestedElementMapping.Replace("item", "nested")}).ToList() }}";
+                }
+            }
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// Generates primitive collection mapping for a nested collection element.
+    /// </summary>
+    private string? TryGeneratePrimitiveCollectionForElement(ITypeSymbol elementType)
+    {
+        return elementType.SpecialType switch
+        {
+            SpecialType.System_String => "new AttributeValue { SS = item?.ToList() ?? new List<string>() }",
+            SpecialType.System_Byte or SpecialType.System_SByte or SpecialType.System_Int16 or SpecialType.System_UInt16 or
+            SpecialType.System_Int32 or SpecialType.System_UInt32 or SpecialType.System_Int64 or SpecialType.System_UInt64 or
+            SpecialType.System_Decimal or SpecialType.System_Single or SpecialType.System_Double => "new AttributeValue { NS = item?.Select(x => x.ToString()).ToList() ?? new List<string>() }",
+            SpecialType.System_Boolean => "new AttributeValue { SS = item?.Select(x => x.ToString()).ToList() ?? new List<string>() }",
+            SpecialType.System_DateTime => "new AttributeValue { SS = item?.Select(x => x.ToString(\"o\")).ToList() ?? new List<string>() }",
+            _ when elementType.Name == nameof(Guid) => "new AttributeValue { SS = item?.Select(x => x.ToString()).ToList() ?? new List<string>() }",
+            _ when elementType.Name == nameof(TimeSpan) => "new AttributeValue { SS = item?.Select(x => x.ToString()).ToList() ?? new List<string>() }",
+            _ when elementType.Name == nameof(DateTimeOffset) => "new AttributeValue { SS = item?.Select(x => x.ToString(\"o\")).ToList() ?? new List<string>() }",
+            _ when elementType.TypeKind == TypeKind.Enum => "new AttributeValue { SS = item?.Select(x => x.ToString()).ToList() ?? new List<string>() }",
+            _ => null
+        };
+    }
+
+    /// <summary>
+    /// Checks if a type is a collection type.
+    /// </summary>
+    private static bool IsCollectionType(ITypeSymbol type)
+    {
+        if (type is IArrayTypeSymbol)
+            return true;
+
+        if (type is INamedTypeSymbol namedType)
+        {
+            return namedType.AllInterfaces.Any(i =>
+                i.OriginalDefinition?.ToDisplayString() == "System.Collections.Generic.IEnumerable<T>");
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    /// Gets the element type of a collection.
+    /// </summary>
+    private static ITypeSymbol? GetCollectionElementType(ITypeSymbol type)
+    {
+        if (type is IArrayTypeSymbol arrayType)
+            return arrayType.ElementType;
+
+        if (type is INamedTypeSymbol namedType)
+        {
+            var enumerableInterface = namedType.AllInterfaces.FirstOrDefault(i =>
+                i.OriginalDefinition?.ToDisplayString() == "System.Collections.Generic.IEnumerable<T>");
+
+            if (enumerableInterface is INamedTypeSymbol genericInterface && genericInterface.TypeArguments.Length > 0)
+            {
+                return genericInterface.TypeArguments[0];
+            }
+        }
+
+        return null;
     }
     
     private string? TryGeneratePrimitiveCollection(string propertyName, ITypeSymbol elementType)
@@ -68,15 +175,15 @@ public class CollectionTypeHandler : ICompositeTypeHandler
     {
         var memberName = propertyInfo.GetDynamoAttributeName();
         var collectionType = propertyInfo.Type.ToDisplayString();
-        
+
         if (propertyInfo.ElementType == null || _registry == null)
         {
             return $"default({collectionType})";
         }
-        
+
         var elementType = propertyInfo.ElementType;
         var elementTypeName = elementType.ToDisplayString();
-        
+
         // Try primitive extraction first for performance
         var primitiveExtraction = TryGetPrimitiveCollectionExtraction(memberName, elementType, recordVariableName);
         if (primitiveExtraction != null)
@@ -84,9 +191,17 @@ public class CollectionTypeHandler : ICompositeTypeHandler
             var conversion = ConvertToTargetCollectionType(propertyInfo.Type, elementType, primitiveExtraction);
             return conversion;
         }
-        
-        // For complex element types, use default empty collection for now
-        // TODO: Implement full composition support for complex nested collections
+
+        // For complex element types, extract from AttributeValue.L
+        if (IsComplexType(elementType))
+        {
+            var normalizedTypeName = elementType.Name.Replace(".", "_").Replace("`", "_");
+            var varName = memberName.ToLowerInvariant();
+            var sourceExpression = $"{recordVariableName}.TryGetList(\"{memberName}\", out var {varName}List) && {varName}List != null ? {varName}List.Where(item => item.M != null).Select(item => DynamoMapper.{normalizedTypeName}.FromDynamoRecord(new DynamoRecord(item.M!), {pkVariable}, {skVariable})) : null";
+            return ConvertToTargetCollectionType(propertyInfo.Type, elementType, sourceExpression);
+        }
+
+        // For unsupported types, use default empty collection
         return GenerateDefaultCollection(propertyInfo.Type, elementType);
     }
     
@@ -196,5 +311,30 @@ public class CollectionTypeHandler : ICompositeTypeHandler
     {
         // Collections currently use null coalescing in GenerateToAttributeValue, not conditional assignment
         return null;
+    }
+
+    /// <summary>
+    /// Determines if a type is a complex type (user-defined class, record, or struct) rather than a primitive type or collection.
+    /// </summary>
+    private static bool IsComplexType(ITypeSymbol type)
+    {
+        // Exclude primitive types
+        if (type.SpecialType != SpecialType.None)
+            return false;
+
+        // Exclude common value types that are treated as primitives
+        if (type.Name == nameof(Guid) || type.Name == nameof(TimeSpan) || type.Name == nameof(DateTimeOffset))
+            return false;
+
+        // Exclude enums
+        if (type.TypeKind == TypeKind.Enum)
+            return false;
+
+        // Exclude collections (they're handled separately)
+        if (IsCollectionType(type))
+            return false;
+
+        // Include user-defined classes, records, and structs
+        return type.TypeKind == TypeKind.Class || type.TypeKind == TypeKind.Struct || type.IsRecord;
     }
 }
