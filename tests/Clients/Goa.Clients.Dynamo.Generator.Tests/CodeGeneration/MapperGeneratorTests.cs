@@ -219,9 +219,9 @@ public class MapperGeneratorTests
 
         // Assert - Based on actual output from debug test
         await Assert.That(result)
-            .Contains("record[\"Id\"] = new AttributeValue { S = model.Id ?? string.Empty };");
+            .Contains("record[\"Id\"] = new AttributeValue { S = model.Id };");
         await Assert.That(result)
-            .Contains("record[\"Name\"] = new AttributeValue { S = model.Name ?? string.Empty };");
+            .Contains("record[\"Name\"] = new AttributeValue { S = model.Name };");
         await Assert.That(result)
             .Contains("record[\"Age\"] = new AttributeValue { N = model.Age.ToString() };");
     }

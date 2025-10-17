@@ -375,18 +375,18 @@ public class CollectionTypeHandlerTests
     }
 
     [Test]
-    public async Task GenerateToAttributeValue_ShouldReturnNull_ForUnsupportedComplexCollections()
+    public async Task GenerateToAttributeValue_ShouldGenerateMapList_ForComplexCollections()
     {
         var customType = MockSymbolFactory.CreateNamedTypeSymbol("CustomClass", "TestNamespace.CustomClass", "TestNamespace").Object;
         var customCollectionType = MockSymbolFactory.CreateGenericType("List", "System.Collections.Generic", customType).Object;
         var property = TestModelBuilders.CreateCollectionPropertyInfo("CustomList", customCollectionType, customType);
-        
+
         var result = _handler.GenerateToAttributeValue(property);
-        
-        var expected = "new AttributeValue { NULL = true }";
+
+        var expected = "model.CustomList != null ? new AttributeValue { L = model.CustomList.Select(item => new AttributeValue { M = DynamoMapper.CustomClass.ToDynamoRecord(item) }).ToList() } : new AttributeValue { NULL = true }";
         await Assert.That(result)
             .IsEqualTo(expected)
-            .Because("Unsupported complex collections should return NULL attribute value");
+            .Because("Complex type collections should generate L (List) attribute with M (Map) elements");
     }
 
     [Test]

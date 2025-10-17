@@ -58,7 +58,10 @@ public static class MockSymbolFactory
         
         // Setup constructors (empty by default)
         mock.Setup(x => x.Constructors).Returns(ImmutableArray<IMethodSymbol>.Empty);
-        
+
+        // Setup AllInterfaces (empty by default to avoid NullReferenceException)
+        mock.Setup(x => x.AllInterfaces).Returns(ImmutableArray<INamedTypeSymbol>.Empty);
+
         return mock;
     }
     
@@ -359,7 +362,7 @@ public static class MockSymbolFactory
         var mock = CreateNamedTypeSymbol(typeName, fullTypeName, namespaceName);
         mock.Setup(x => x.IsGenericType).Returns(true);
         mock.Setup(x => x.TypeArguments).Returns(ImmutableArray.Create(typeArguments));
-        
+
         // For nullable types, set up OriginalDefinition to have System_Nullable_T
         if (typeName == "Nullable" && namespaceName == "System" && typeArguments.Length == 1)
         {
@@ -368,7 +371,25 @@ public static class MockSymbolFactory
             originalDef.Setup(x => x.Name).Returns("Nullable");
             mock.Setup(x => x.OriginalDefinition).Returns(originalDef.Object);
         }
-        
+
+        // For collection types, set up AllInterfaces to include IEnumerable<T>
+        if (namespaceName == "System.Collections.Generic" && typeArguments.Length > 0)
+        {
+            var collectionTypes = new[] { "List", "IList", "ICollection", "IEnumerable", "HashSet", "ISet",
+                "IReadOnlyCollection", "IReadOnlyList", "IReadOnlySet", "Collection" };
+
+            if (collectionTypes.Contains(typeName))
+            {
+                var ienumerableInterface = CreateGenericTypeForInterface("IEnumerable", "System.Collections.Generic", typeArguments[0]);
+                mock.Setup(x => x.AllInterfaces).Returns(ImmutableArray.Create(ienumerableInterface.Object));
+            }
+        }
+        else if (namespaceName == "System.Collections.ObjectModel" && typeArguments.Length > 0 && typeName == "Collection")
+        {
+            var ienumerableInterface = CreateGenericTypeForInterface("IEnumerable", "System.Collections.Generic", typeArguments[0]);
+            mock.Setup(x => x.AllInterfaces).Returns(ImmutableArray.Create(ienumerableInterface.Object));
+        }
+
         return mock;
     }
     
@@ -398,5 +419,30 @@ public static class MockSymbolFactory
             bool => PrimitiveTypes.Boolean,
             _ => PrimitiveTypes.String // Default fallback
         };
+    }
+
+    /// <summary>
+    /// Creates a mock interface type (for AllInterfaces setup). This is a simplified version
+    /// of CreateGenericType that doesn't recursively set up AllInterfaces to avoid infinite loops.
+    /// </summary>
+    private static Mock<INamedTypeSymbol> CreateGenericTypeForInterface(string typeName, string namespaceName, ITypeSymbol typeArgument)
+    {
+        var fullTypeName = $"{namespaceName}.{typeName}<{typeArgument.Name}>";
+        var mock = new Mock<INamedTypeSymbol>();
+
+        mock.Setup(x => x.Name).Returns(typeName);
+        mock.Setup(x => x.ToDisplayString(It.IsAny<SymbolDisplayFormat?>())).Returns(fullTypeName);
+        mock.Setup(x => x.ToDisplayString(It.IsAny<SymbolDisplayFormat>())).Returns(fullTypeName);
+        mock.Setup(x => x.IsGenericType).Returns(true);
+        mock.Setup(x => x.TypeArguments).Returns(ImmutableArray.Create(typeArgument));
+        mock.Setup(x => x.OriginalDefinition).Returns(mock.Object);
+        mock.Setup(x => x.AllInterfaces).Returns(ImmutableArray<INamedTypeSymbol>.Empty);
+        mock.Setup(x => x.TypeKind).Returns(TypeKind.Interface);
+
+        var namespaceMock = new Mock<INamespaceSymbol>();
+        namespaceMock.Setup(x => x.ToDisplayString(It.IsAny<SymbolDisplayFormat?>())).Returns(namespaceName);
+        mock.Setup(x => x.ContainingNamespace).Returns(namespaceMock.Object);
+
+        return mock;
     }
 }

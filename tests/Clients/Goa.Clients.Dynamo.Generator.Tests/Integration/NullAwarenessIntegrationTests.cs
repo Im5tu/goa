@@ -24,27 +24,27 @@ public class NullAwarenessIntegrationTests
     public async Task NullableStringProperty_ShouldGenerateCorrectToAttributeValueCode()
     {
         var property = TestModelBuilders.CreatePropertyInfo(
-            "Description", 
-            MockSymbolFactory.PrimitiveTypes.String, 
+            "Description",
+            MockSymbolFactory.PrimitiveTypes.String,
             isNullable: true);
 
         var result = _typeHandlerRegistry.GenerateToAttributeValue(property);
 
-        var expected = "new AttributeValue { S = model.Description ?? string.Empty }";
-        await Assert.That(result).IsEqualTo(expected);
+        // Nullable strings return null to trigger conditional assignment for sparse GSI compatibility
+        await Assert.That(result).IsNull();
     }
 
     [Test]
     public async Task NonNullableStringProperty_ShouldGenerateCorrectToAttributeValueCode()
     {
         var property = TestModelBuilders.CreatePropertyInfo(
-            "Name", 
-            MockSymbolFactory.PrimitiveTypes.String, 
+            "Name",
+            MockSymbolFactory.PrimitiveTypes.String,
             isNullable: false);
 
         var result = _typeHandlerRegistry.GenerateToAttributeValue(property);
 
-        var expected = "new AttributeValue { S = model.Name ?? string.Empty }";
+        var expected = "new AttributeValue { S = model.Name }";
         await Assert.That(result).IsEqualTo(expected);
     }
 
@@ -142,12 +142,15 @@ public class NullAwarenessIntegrationTests
         var generatedCode = _mapperGenerator.GenerateCode(new[] { testModel }, generationContext);
 
         // Verify the generated code contains correct null handling
-        await Assert.That(generatedCode).Contains("new AttributeValue { S = model.RequiredName ?? string.Empty }");
-        await Assert.That(generatedCode).Contains("new AttributeValue { S = model.OptionalDescription ?? string.Empty }");
+        // Non-nullable strings are assigned directly
+        await Assert.That(generatedCode).Contains("new AttributeValue { S = model.RequiredName }");
+        // Nullable strings use conditional assignment for sparse GSI compatibility
+        await Assert.That(generatedCode).Contains("if (model.OptionalDescription != null)");
+        await Assert.That(generatedCode).Contains("record[\"OptionalDescription\"] = new AttributeValue { S = model.OptionalDescription };");
         // Nullable properties use conditional assignment for sparse GSI compatibility
         await Assert.That(generatedCode).Contains("if (model.OptionalCount.HasValue)");
         await Assert.That(generatedCode).Contains("new AttributeValue { N = model.OptionalCount.Value.ToString() }");
-        
+
         // Verify MissingAttributeException for non-nullable types
         await Assert.That(generatedCode).Contains("MissingAttributeException.Throw<string>(\"RequiredName\"");
         await Assert.That(generatedCode).Contains("MissingAttributeException.Throw<int>(\"RequiredId\"");

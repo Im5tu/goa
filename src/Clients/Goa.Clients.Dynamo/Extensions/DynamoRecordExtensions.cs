@@ -1485,4 +1485,30 @@ public static class DynamoRecordExtensions
         value = new DynamoRecord(attributeValue.M);
         return true;
     }
+
+    /// <summary>
+    /// Attempts to get a List value from the DynamoRecord.
+    /// </summary>
+    /// <param name="record">The DynamoRecord to extract from.</param>
+    /// <param name="columnName">The column name to extract.</param>
+    /// <param name="value">The extracted list of AttributeValues, or null if not found.</param>
+    /// <returns>True if the column exists and has a List value, false otherwise.</returns>
+    public static bool TryGetList(this DynamoRecord record, string columnName, out List<AttributeValue>? value)
+    {
+        value = null;
+        if (!record.TryGetValue(columnName, out var attributeValue))
+            return false;
+
+        if (attributeValue == null || attributeValue.NULL == true)
+        {
+            value = null;
+            return true;
+        }
+
+        if (attributeValue.L == null)
+            return false;
+
+        value = attributeValue.L;
+        return true;
+    }
 }

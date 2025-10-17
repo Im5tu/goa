@@ -65,7 +65,7 @@ public class PrimitiveTypeHandlerTests
         {
             (MockSymbolFactory.PrimitiveTypes.Boolean, "BoolProp", "new AttributeValue { BOOL = model.BoolProp }"),
             (MockSymbolFactory.PrimitiveTypes.Int32, "IntProp", "new AttributeValue { N = model.IntProp.ToString() }"),
-            (MockSymbolFactory.PrimitiveTypes.String, "StringProp", "new AttributeValue { S = model.StringProp ?? string.Empty }"),
+            (MockSymbolFactory.PrimitiveTypes.String, "StringProp", "new AttributeValue { S = model.StringProp }"),
             (MockSymbolFactory.PrimitiveTypes.Decimal, "DecimalProp", "new AttributeValue { N = model.DecimalProp.ToString() }"),
             (MockSymbolFactory.PrimitiveTypes.Double, "DoubleProp", "new AttributeValue { N = model.DoubleProp.ToString() }"),
             (MockSymbolFactory.PrimitiveTypes.Guid, "GuidProp", "new AttributeValue { S = model.GuidProp.ToString() }")
@@ -89,8 +89,7 @@ public class PrimitiveTypeHandlerTests
         {
             (MockSymbolFactory.PrimitiveTypes.Boolean, "BoolProp", (string?)null), // Nullable primitives return null for conditional assignment
             (MockSymbolFactory.PrimitiveTypes.Int32, "IntProp", (string?)null),     // Nullable primitives return null for conditional assignment
-            (MockSymbolFactory.PrimitiveTypes.String, "StringProp", 
-             "new AttributeValue { S = model.StringProp ?? string.Empty }")         // Strings still use direct assignment
+            (MockSymbolFactory.PrimitiveTypes.String, "StringProp", (string?)null)  // Nullable strings also return null for conditional assignment
         };
 
         foreach (var (type, propName, expectedCode) in testCases)

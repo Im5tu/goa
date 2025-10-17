@@ -28,4 +28,11 @@ public class DynamoModelAttribute : Attribute
     /// The DynamoDB attribute name for the sort key. Defaults to "SK".
     /// </summary>
     public string SKName { get; init; } = "SK";
+
+    /// <summary>
+    /// The DynamoDB attribute name for the type discriminator field used in inheritance scenarios.
+    /// This field is automatically set on concrete types that inherit from abstract types and is used
+    /// during deserialization to determine which concrete type to instantiate. Defaults to "Type".
+    /// </summary>
+    public string TypeName { get; init; } = "Type";
 }

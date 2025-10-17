@@ -109,13 +109,13 @@ public class ComplexTypeHandler : ICompositeTypeHandler
                 if (valueType.SpecialType == SpecialType.System_String)
                 {
                     // Use the existing TryGetStringDictionary
-                    return GenerateDictionaryConversion(propertyInfo.Type, 
+                    return GenerateDictionaryConversion(propertyInfo.Type, propertyInfo.IsNullable,
                         $"{recordVariableName}.TryGetStringDictionary(\"{memberName}\", out var {memberName.ToLowerInvariant()}) ? {memberName.ToLowerInvariant()} : null");
                 }
                 else if (valueType.SpecialType == SpecialType.System_Int32)
                 {
                     // Use the existing TryGetStringIntDictionary
-                    return GenerateDictionaryConversion(propertyInfo.Type,
+                    return GenerateDictionaryConversion(propertyInfo.Type, propertyInfo.IsNullable,
                         $"{recordVariableName}.TryGetStringIntDictionary(\"{memberName}\", out var {memberName.ToLowerInvariant()}) ? {memberName.ToLowerInvariant()} : null");
                 }
                 else if (valueType.SpecialType == SpecialType.System_Double)
@@ -270,24 +270,33 @@ public class ComplexTypeHandler : ICompositeTypeHandler
         return $"default({typeDisplayString})";
     }
     
-    private string GenerateDictionaryConversion(ITypeSymbol targetType, string sourceExpression)
+    private string GenerateDictionaryConversion(ITypeSymbol targetType, bool isNullable, string sourceExpression)
     {
         if (targetType is INamedTypeSymbol namedType && namedType.TypeArguments.Length == 2)
         {
             var keyType = namedType.TypeArguments[0].ToDisplayString();
             var valueType = namedType.TypeArguments[1].ToDisplayString();
-            var typeName = namedType.Name;
-            
-            return typeName switch
+
+            // For nullable dictionaries, just return the source expression (which is already "... ? value : null")
+            // For non-nullable dictionaries, add a null coalescing operator
+            if (isNullable)
             {
-                "Dictionary" => $"({sourceExpression} ?? new Dictionary<{keyType}, {valueType}>())",
-                "IDictionary" => $"({sourceExpression} ?? new Dictionary<{keyType}, {valueType}>())",
-                "IReadOnlyDictionary" => $"({sourceExpression} ?? new Dictionary<{keyType}, {valueType}>())",
-                _ => $"({sourceExpression} ?? new Dictionary<{keyType}, {valueType}>())"
-            };
+                return $"({sourceExpression})";
+            }
+            else
+            {
+                var typeName = namedType.Name;
+                return typeName switch
+                {
+                    "Dictionary" => $"({sourceExpression} ?? new Dictionary<{keyType}, {valueType}>())",
+                    "IDictionary" => $"({sourceExpression} ?? new Dictionary<{keyType}, {valueType}>())",
+                    "IReadOnlyDictionary" => $"({sourceExpression} ?? new Dictionary<{keyType}, {valueType}>())",
+                    _ => $"({sourceExpression} ?? new Dictionary<{keyType}, {valueType}>())"
+                };
+            }
         }
-        
-        return "new Dictionary<string, object>()";
+
+        return isNullable ? "null" : "new Dictionary<string, object>()";
     }
     
     private string GenerateEmptyDictionary(ITypeSymbol targetType, ITypeSymbol keyType, ITypeSymbol valueType)
