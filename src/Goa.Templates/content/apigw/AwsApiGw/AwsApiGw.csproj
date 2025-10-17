@@ -20,12 +20,12 @@
 
     <ItemGroup>
         <PackageReference Include="Goa.Functions.ApiGateway" Version="0.0.3-preview.2" />
-        <PackageReference Include="DotNet.ReproducibleBuilds" Version="1.2.25">
+        <PackageReference Include="DotNet.ReproducibleBuilds" Version="1.2.39">
             <PrivateAssets>all</PrivateAssets>
             <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
         </PackageReference>
 //#if (includeOpenApi)
-        <PackageReference Include="Microsoft.OpenApi" Version="2.3.2" />
+        <PackageReference Include="Microsoft.OpenApi" Version="2.3.5" />
         <PackageReference Include="Scalar.AspNetCore" Version="2.7.0" />
 //#endif
     </ItemGroup>
