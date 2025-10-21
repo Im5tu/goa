@@ -65,7 +65,7 @@ public class PrimitiveTypeHandlerTests
         {
             (MockSymbolFactory.PrimitiveTypes.Boolean, "BoolProp", "new AttributeValue { BOOL = model.BoolProp }"),
             (MockSymbolFactory.PrimitiveTypes.Int32, "IntProp", "new AttributeValue { N = model.IntProp.ToString() }"),
-            (MockSymbolFactory.PrimitiveTypes.String, "StringProp", "new AttributeValue { S = model.StringProp }"),
+            (MockSymbolFactory.PrimitiveTypes.String, "StringProp", (string?)null), // Strings now use conditional assignment to skip empty strings
             (MockSymbolFactory.PrimitiveTypes.Decimal, "DecimalProp", "new AttributeValue { N = model.DecimalProp.ToString() }"),
             (MockSymbolFactory.PrimitiveTypes.Double, "DoubleProp", "new AttributeValue { N = model.DoubleProp.ToString() }"),
             (MockSymbolFactory.PrimitiveTypes.Guid, "GuidProp", "new AttributeValue { S = model.GuidProp.ToString() }")
@@ -75,7 +75,7 @@ public class PrimitiveTypeHandlerTests
         {
             var property = TestModelBuilders.CreatePropertyInfo(propName, type, isNullable: false);
             var result = _handler.GenerateToAttributeValue(property);
-            
+
             await Assert.That(result)
                 .IsEqualTo(expectedCode)
                 .Because($"ToAttributeValue for non-nullable {type.Name} should generate correct code");

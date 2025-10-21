@@ -122,26 +122,32 @@ public class ComplexTypeHandler : ICompositeTypeHandler
                 {
                     // Handle Dictionary<string, double>
                     var dictVarName = memberName.ToLowerInvariant();
-                    return $"{recordVariableName}.TryGetMap(\"{memberName}\", out var {dictVarName}Map) && {dictVarName}Map != null ? " +
-                           $"{dictVarName}Map.ToDictionary(kvp => kvp.Key, kvp => kvp.Value.N != null ? double.Parse(kvp.Value.N) : 0.0) : " +
-                           GenerateEmptyDictionary(propertyInfo.Type, keyType, valueType);
+                    return GenerateDictionaryConversion(
+                        propertyInfo.Type,
+                        propertyInfo.IsNullable,
+                        $"{recordVariableName}.TryGetMap(\"{memberName}\", out var {dictVarName}Map) && {dictVarName}Map != null ? " +
+                        $"{dictVarName}Map.ToDictionary(kvp => kvp.Key, kvp => kvp.Value.N != null ? double.Parse(kvp.Value.N, System.Globalization.CultureInfo.InvariantCulture) : 0.0) : null");
                 }
                 else if (valueType.SpecialType == SpecialType.System_DateTime)
                 {
                     // Handle Dictionary<string, DateTime>
                     var dictVarName = memberName.ToLowerInvariant();
-                    return $"{recordVariableName}.TryGetMap(\"{memberName}\", out var {dictVarName}Map) && {dictVarName}Map != null ? " +
-                           $"{dictVarName}Map.ToDictionary(kvp => kvp.Key, kvp => kvp.Value.S != null ? DateTime.Parse(kvp.Value.S) : default(DateTime)) : " +
-                           GenerateEmptyDictionary(propertyInfo.Type, keyType, valueType);
+                    return GenerateDictionaryConversion(
+                        propertyInfo.Type,
+                        propertyInfo.IsNullable,
+                        $"{recordVariableName}.TryGetMap(\"{memberName}\", out var {dictVarName}Map) && {dictVarName}Map != null ? " +
+                        $"{dictVarName}Map.ToDictionary(kvp => kvp.Key, kvp => kvp.Value.S != null ? DateTime.ParseExact(kvp.Value.S, \"o\", System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.RoundtripKind) : default(DateTime)) : null");
                 }
                 else if (valueType.TypeKind == TypeKind.Enum)
                 {
                     // Handle Dictionary<string, TEnum>
                     var dictVarName = memberName.ToLowerInvariant();
                     var enumTypeName = valueType.ToDisplayString();
-                    return $"{recordVariableName}.TryGetMap(\"{memberName}\", out var {dictVarName}Map) && {dictVarName}Map != null ? " +
-                           $"{dictVarName}Map.ToDictionary(kvp => kvp.Key, kvp => kvp.Value.S != null ? Enum.Parse<{enumTypeName}>(kvp.Value.S) : default({enumTypeName})) : " +
-                           GenerateEmptyDictionary(propertyInfo.Type, keyType, valueType);
+                    return GenerateDictionaryConversion(
+                        propertyInfo.Type,
+                        propertyInfo.IsNullable,
+                        $"{recordVariableName}.TryGetMap(\"{memberName}\", out var {dictVarName}Map) && {dictVarName}Map != null ? " +
+                        $"{dictVarName}Map.ToDictionary(kvp => kvp.Key, kvp => kvp.Value.S != null ? Enum.Parse<{enumTypeName}>(kvp.Value.S) : default({enumTypeName})) : null");
                 }
                 else
                 {
@@ -149,30 +155,34 @@ public class ComplexTypeHandler : ICompositeTypeHandler
                     var dictVarName = memberName.ToLowerInvariant();
                     
                     // Special case: Dictionary<string, List<string>>
-                    if (valueType is INamedTypeSymbol namedValueType && 
-                        namedValueType.Name == "List" && 
+                    if (valueType is INamedTypeSymbol namedValueType &&
+                        namedValueType.Name == "List" &&
                         namedValueType.TypeArguments.Length == 1 &&
                         namedValueType.TypeArguments[0].SpecialType == SpecialType.System_String)
                     {
-                        return $"{recordVariableName}.TryGetMap(\"{memberName}\", out var {dictVarName}Map) && {dictVarName}Map != null ? " +
-                               $"{dictVarName}Map.ToDictionary(kvp => kvp.Key, kvp => kvp.Value.SS?.ToList() ?? new List<string>()) : " +
-                               GenerateEmptyDictionary(propertyInfo.Type, keyType, valueType);
+                        return GenerateDictionaryConversion(
+                            propertyInfo.Type,
+                            propertyInfo.IsNullable,
+                            $"{recordVariableName}.TryGetMap(\"{memberName}\", out var {dictVarName}Map) && {dictVarName}Map != null ? " +
+                            $"{dictVarName}Map.ToDictionary(kvp => kvp.Key, kvp => kvp.Value.SS?.ToList() ?? new List<string>()) : null");
                     }
                     
-                    // Special case: Dictionary<string, Dictionary<string, string>>  
-                    if (valueType is INamedTypeSymbol namedValueType2 && 
-                        namedValueType2.Name == "Dictionary" && 
+                    // Special case: Dictionary<string, Dictionary<string, string>>
+                    if (valueType is INamedTypeSymbol namedValueType2 &&
+                        namedValueType2.Name == "Dictionary" &&
                         namedValueType2.TypeArguments.Length == 2 &&
                         namedValueType2.TypeArguments[0].SpecialType == SpecialType.System_String &&
                         namedValueType2.TypeArguments[1].SpecialType == SpecialType.System_String)
                     {
-                        return $"{recordVariableName}.TryGetMap(\"{memberName}\", out var {dictVarName}Map) && {dictVarName}Map != null ? " +
-                               $"{dictVarName}Map.ToDictionary(kvp => kvp.Key, kvp => kvp.Value.M?.ToDictionary(innerKvp => innerKvp.Key, innerKvp => innerKvp.Value.S ?? string.Empty) ?? new Dictionary<string, string>()) : " +
-                               GenerateEmptyDictionary(propertyInfo.Type, keyType, valueType);
+                        return GenerateDictionaryConversion(
+                            propertyInfo.Type,
+                            propertyInfo.IsNullable,
+                            $"{recordVariableName}.TryGetMap(\"{memberName}\", out var {dictVarName}Map) && {dictVarName}Map != null ? " +
+                            $"{dictVarName}Map.ToDictionary(kvp => kvp.Key, kvp => kvp.Value.M?.ToDictionary(innerKvp => innerKvp.Key, innerKvp => innerKvp.Value.S ?? string.Empty) ?? new Dictionary<string, string>()) : null");
                     }
-                    
-                    // Fallback: return empty dictionary for unsupported complex value types
-                    return GenerateEmptyDictionary(propertyInfo.Type, keyType, valueType);
+
+                    // Fallback: respect nullability
+                    return GenerateDictionaryConversion(propertyInfo.Type, propertyInfo.IsNullable, "null");
                 }
             }
             
@@ -278,7 +288,7 @@ public class ComplexTypeHandler : ICompositeTypeHandler
             var valueType = namedType.TypeArguments[1].ToDisplayString();
 
             // For nullable dictionaries, just return the source expression (which is already "... ? value : null")
-            // For non-nullable dictionaries, add a null coalescing operator
+            // For non-nullable dictionaries, replace ": null" with the empty dictionary
             if (isNullable)
             {
                 return $"({sourceExpression})";
@@ -286,13 +296,17 @@ public class ComplexTypeHandler : ICompositeTypeHandler
             else
             {
                 var typeName = namedType.Name;
-                return typeName switch
+                var emptyDict = typeName switch
                 {
-                    "Dictionary" => $"({sourceExpression} ?? new Dictionary<{keyType}, {valueType}>())",
-                    "IDictionary" => $"({sourceExpression} ?? new Dictionary<{keyType}, {valueType}>())",
-                    "IReadOnlyDictionary" => $"({sourceExpression} ?? new Dictionary<{keyType}, {valueType}>())",
-                    _ => $"({sourceExpression} ?? new Dictionary<{keyType}, {valueType}>())"
+                    "Dictionary" => $"new Dictionary<{keyType}, {valueType}>()",
+                    "IDictionary" => $"new Dictionary<{keyType}, {valueType}>()",
+                    "IReadOnlyDictionary" => $"new Dictionary<{keyType}, {valueType}>()",
+                    _ => $"new Dictionary<{keyType}, {valueType}>()"
                 };
+
+                // Replace ": null" with the empty dictionary to avoid null in the generated code
+                var adjustedExpression = sourceExpression.Replace(": null", $": {emptyDict}");
+                return $"({adjustedExpression})";
             }
         }
 

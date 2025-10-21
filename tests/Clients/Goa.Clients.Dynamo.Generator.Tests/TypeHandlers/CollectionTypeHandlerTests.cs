@@ -215,8 +215,8 @@ public class CollectionTypeHandlerTests
         var property = TestModelBuilders.CreateCollectionPropertyInfo("StringArray", stringArrayType, MockSymbolFactory.PrimitiveTypes.String);
         
         var result = _handler.GenerateFromDynamoRecord(property, "record", "pkValue", "skValue");
-        
-        var expected = "((record.TryGetStringSet(\"StringArray\", out var stringarray) ? stringarray : null)?.ToArray() ?? Array.Empty<string>())";
+
+        var expected = "(((record.TryGetStringSet(\"StringArray\", out var stringarray) ? stringarray : null))?.ToArray() ?? Array.Empty<string>())";
         await Assert.That(result)
             .IsEqualTo(expected)
             .Because("String arrays should deserialize from SS using ToArray()");
@@ -229,8 +229,8 @@ public class CollectionTypeHandlerTests
         var property = TestModelBuilders.CreateCollectionPropertyInfo("StringList", stringListType, MockSymbolFactory.PrimitiveTypes.String);
         
         var result = _handler.GenerateFromDynamoRecord(property, "record", "pkValue", "skValue");
-        
-        var expected = "((record.TryGetStringSet(\"StringList\", out var stringlist) ? stringlist : null)?.ToList() ?? new List<string>())";
+
+        var expected = "(((record.TryGetStringSet(\"StringList\", out var stringlist) ? stringlist : null))?.ToList() ?? new List<string>())";
         await Assert.That(result)
             .IsEqualTo(expected)
             .Because("String lists should deserialize from SS using ToList()");
@@ -257,8 +257,8 @@ public class CollectionTypeHandlerTests
         var property = TestModelBuilders.CreateCollectionPropertyInfo("BoolList", boolListType, MockSymbolFactory.PrimitiveTypes.Boolean);
         
         var result = _handler.GenerateFromDynamoRecord(property, "record", "pkValue", "skValue");
-        
-        var expected = "((record.TryGetStringSet(\"BoolList\", out var boollistStrs) ? boollistStrs.Select(bool.Parse) : null)?.ToList() ?? new List<bool>())";
+
+        var expected = "(((record.TryGetStringSet(\"BoolList\", out var boollistStrs) ? boollistStrs.Select(bool.Parse) : null))?.ToList() ?? new List<bool>())";
         await Assert.That(result)
             .IsEqualTo(expected)
             .Because("Boolean collections should deserialize from SS with bool.Parse");
@@ -271,8 +271,8 @@ public class CollectionTypeHandlerTests
         var property = TestModelBuilders.CreateCollectionPropertyInfo("GuidList", guidListType, MockSymbolFactory.PrimitiveTypes.Guid);
         
         var result = _handler.GenerateFromDynamoRecord(property, "record", "pkValue", "skValue");
-        
-        var expected = "((record.TryGetStringSet(\"GuidList\", out var guidlistStrs) ? guidlistStrs.Select(Guid.Parse) : null)?.ToList() ?? new List<System.Guid>())";
+
+        var expected = "(((record.TryGetStringSet(\"GuidList\", out var guidlistStrs) ? guidlistStrs.Select(Guid.Parse) : null))?.ToList() ?? new List<System.Guid>())";
         await Assert.That(result)
             .IsEqualTo(expected)
             .Because("Guid collections should deserialize from SS with Guid.Parse");
@@ -290,8 +290,8 @@ public class CollectionTypeHandlerTests
         var property = TestModelBuilders.CreateCollectionPropertyInfo("PriorityList", enumListType, enumType);
         
         var result = _handler.GenerateFromDynamoRecord(property, "record", "pkValue", "skValue");
-        
-        var expected = "((record.TryGetEnumSet<TestNamespace.Priority>(\"PriorityList\", out var prioritylist) ? prioritylist : null)?.ToList() ?? new List<TestNamespace.Priority>())";
+
+        var expected = "(((record.TryGetEnumSet<TestNamespace.Priority>(\"PriorityList\", out var prioritylist) ? prioritylist : null))?.ToList() ?? new List<TestNamespace.Priority>())";
         await Assert.That(result)
             .IsEqualTo(expected)
             .Because("Enum collections should deserialize using TryGetEnumSet with proper type");
@@ -419,13 +419,252 @@ public class CollectionTypeHandlerTests
     {
         var collectionType = MockSymbolFactory.CreateGenericType("Collection", "System.Collections.ObjectModel", MockSymbolFactory.PrimitiveTypes.String).Object;
         var property = TestModelBuilders.CreateCollectionPropertyInfo("StringCollection", collectionType, MockSymbolFactory.PrimitiveTypes.String);
-        
+
         var result = _handler.GenerateFromDynamoRecord(property, "record", "pkValue", "skValue");
-        
+
         await Assert.That(result)
             .Contains("System.Collections.ObjectModel.Collection<string>")
             .Because("Collection<T> should use the full type name for construction");
     }
+
+    #region Null Element and Nested Collection Tests
+
+    [Test]
+    public async Task GenerateToAttributeValue_ComplexCollectionWithNullElements_ShouldGenerateNullCheck()
+    {
+        // Arrange
+        var customType = MockSymbolFactory.CreateNamedTypeSymbol("CustomClass", "TestNamespace.CustomClass", "TestNamespace").Object;
+        var customCollectionType = MockSymbolFactory.CreateGenericType("List", "System.Collections.Generic", customType).Object;
+        var property = TestModelBuilders.CreateCollectionPropertyInfo("CustomList", customCollectionType, customType);
+
+        // Act
+        var result = _handler.GenerateToAttributeValue(property);
+
+        // Assert
+        await Assert.That(result)
+            .Contains("item != null")
+            .Because("Complex type collections should check for null items before converting");
+
+        await Assert.That(result)
+            .Contains("new AttributeValue { NULL = true }")
+            .Because("Null items should be represented as DynamoDB NULL attribute");
+    }
+
+    [Test]
+    public async Task GenerateToAttributeValue_NestedStringCollection_TwoLevels_ShouldGenerateCorrectCode()
+    {
+        // Arrange
+        var innerCollectionType = MockSymbolFactory.CreateGenericType(
+            "List",
+            "System.Collections.Generic",
+            MockSymbolFactory.PrimitiveTypes.String).Object;
+
+        var nestedCollectionType = MockSymbolFactory.CreateGenericType(
+            "List",
+            "System.Collections.Generic",
+            innerCollectionType).Object;
+
+        var property = TestModelBuilders.CreateCollectionPropertyInfo("NestedStrings", nestedCollectionType, innerCollectionType);
+
+        // Act
+        var result = _handler.GenerateToAttributeValue(property);
+
+        // Assert
+        await Assert.That(result)
+            .Contains("L =")
+            .Because("Nested collections should use L (List) attribute type");
+
+        await Assert.That(result)
+            .IsNotNull()
+            .Because("Nested collections should be supported");
+    }
+
+    [Test]
+    public async Task GenerateToAttributeValue_NestedIntCollection_TwoLevels_ShouldGenerateCorrectCode()
+    {
+        // Arrange
+        var innerCollectionType = MockSymbolFactory.CreateGenericType(
+            "List",
+            "System.Collections.Generic",
+            MockSymbolFactory.PrimitiveTypes.Int32).Object;
+
+        var nestedCollectionType = MockSymbolFactory.CreateGenericType(
+            "IEnumerable",
+            "System.Collections.Generic",
+            innerCollectionType).Object;
+
+        var property = TestModelBuilders.CreateCollectionPropertyInfo("NestedInts", nestedCollectionType, innerCollectionType);
+
+        // Act
+        var result = _handler.GenerateToAttributeValue(property);
+
+        // Assert
+        await Assert.That(result)
+            .Contains("L =")
+            .Because("Nested numeric collections should use L (List) attribute type");
+
+        await Assert.That(result)
+            .IsNotNull()
+            .Because("Nested collections should be supported");
+    }
+
+    [Test]
+    public async Task GenerateToAttributeValue_NestedCollection_WithNullInnerCollection_ShouldHandleNulls()
+    {
+        // Arrange
+        var innerCollectionType = MockSymbolFactory.CreateGenericType(
+            "List",
+            "System.Collections.Generic",
+            MockSymbolFactory.PrimitiveTypes.String).Object;
+
+        var nestedCollectionType = MockSymbolFactory.CreateGenericType(
+            "List",
+            "System.Collections.Generic",
+            innerCollectionType).Object;
+
+        var property = TestModelBuilders.CreateCollectionPropertyInfo("NestedStrings", nestedCollectionType, innerCollectionType);
+
+        // Act
+        var result = _handler.GenerateToAttributeValue(property);
+
+        // Assert
+        await Assert.That(result)
+            .Contains("item != null")
+            .Because("Nested collections should check for null inner collections");
+
+        await Assert.That(result)
+            .Contains("NULL = true")
+            .Because("Null inner collections should be represented as DynamoDB NULL");
+    }
+
+    [Test]
+    public async Task GenerateFromDynamoRecord_NestedStringCollection_ShouldDeserializeCorrectly()
+    {
+        // Arrange
+        var innerCollectionType = MockSymbolFactory.CreateGenericType(
+            "List",
+            "System.Collections.Generic",
+            MockSymbolFactory.PrimitiveTypes.String).Object;
+
+        var nestedCollectionType = MockSymbolFactory.CreateGenericType(
+            "List",
+            "System.Collections.Generic",
+            innerCollectionType).Object;
+
+        var property = TestModelBuilders.CreateCollectionPropertyInfo("NestedStrings", nestedCollectionType, innerCollectionType);
+
+        // Act
+        var result = _handler.GenerateFromDynamoRecord(property, "record", "pkValue", "skValue");
+
+        // Assert
+        await Assert.That(result)
+            .IsNotNull()
+            .Because("Nested collections should generate deserialization code");
+
+        await Assert.That(result)
+            .Contains("record.TryGetList")
+            .Because("Nested collections should use TryGetList for retrieval");
+    }
+
+    [Test]
+    public async Task GenerateFromDynamoRecord_ComplexNestedCollection_ShouldHandleMapTypes()
+    {
+        // Arrange - IEnumerable<ProductInfo> where ProductInfo is a complex type
+        var complexType = MockSymbolFactory.CreateNamedTypeSymbol("ProductInfo", "TestNamespace.ProductInfo", "TestNamespace").Object;
+        var complexCollectionType = MockSymbolFactory.CreateGenericType("IEnumerable", "System.Collections.Generic", complexType).Object;
+        var property = TestModelBuilders.CreateCollectionPropertyInfo("Products", complexCollectionType, complexType);
+
+        // Act
+        var result = _handler.GenerateFromDynamoRecord(property, "record", "pkValue", "skValue");
+
+        // Assert
+        await Assert.That(result)
+            .Contains("DynamoMapper.ProductInfo.FromDynamoRecord")
+            .Because("Complex type collections should deserialize elements using DynamoMapper");
+
+        await Assert.That(result)
+            .IsNotNull()
+            .Because("Complex type collections should be supported");
+    }
+
+    [Test]
+    public async Task GenerateFromDynamoRecord_ComplexCollection_ShouldPreserveNullElements()
+    {
+        // Arrange
+        var complexType = MockSymbolFactory.CreateNamedTypeSymbol("CustomClass", "TestNamespace.CustomClass", "TestNamespace").Object;
+        var complexCollectionType = MockSymbolFactory.CreateGenericType("List", "System.Collections.Generic", complexType).Object;
+        var property = TestModelBuilders.CreateCollectionPropertyInfo("CustomList", complexCollectionType, complexType);
+
+        // Act
+        var result = _handler.GenerateFromDynamoRecord(property, "record", "pkValue", "skValue");
+
+        // Assert
+        await Assert.That(result)
+            .IsNotNull()
+            .Because("Complex type collections should deserialize correctly");
+
+        // The generated code should handle nulls in the list properly
+        await Assert.That(result)
+            .DoesNotContain("default(")
+            .Because("Should not use default values for missing elements");
+    }
+
+    [Test]
+    public async Task GenerateToAttributeValue_ThreeLevelNestedCollection_ShouldBeSupported()
+    {
+        // Arrange - List<List<List<string>>>
+        var level1Type = MockSymbolFactory.CreateGenericType(
+            "List",
+            "System.Collections.Generic",
+            MockSymbolFactory.PrimitiveTypes.String).Object;
+
+        var level2Type = MockSymbolFactory.CreateGenericType(
+            "List",
+            "System.Collections.Generic",
+            level1Type).Object;
+
+        var level3Type = MockSymbolFactory.CreateGenericType(
+            "List",
+            "System.Collections.Generic",
+            level2Type).Object;
+
+        var property = TestModelBuilders.CreateCollectionPropertyInfo("DeepNested", level3Type, level2Type);
+
+        // Act
+        var result = _handler.GenerateToAttributeValue(property);
+
+        // Assert
+        await Assert.That(result)
+            .IsNotNull()
+            .Because("Three-level nested collections should be supported");
+
+        await Assert.That(result)
+            .Contains("L =")
+            .Because("Deep nested collections should use List attribute type");
+    }
+
+    [Test]
+    public async Task GenerateToAttributeValue_CollectionOfNullableElements_ShouldNotFilterNulls()
+    {
+        // Arrange - Collection elements can be null, they should be preserved as NULL attributes
+        var customType = MockSymbolFactory.CreateNamedTypeSymbol("Address", "TestNamespace.Address", "TestNamespace").Object;
+        var collectionType = MockSymbolFactory.CreateGenericType("List", "System.Collections.Generic", customType).Object;
+        var property = TestModelBuilders.CreateCollectionPropertyInfo("Addresses", collectionType, customType);
+
+        // Act
+        var result = _handler.GenerateToAttributeValue(property);
+
+        // Assert
+        await Assert.That(result)
+            .Contains("item != null ? new AttributeValue { M =")
+            .Because("Should check each item for null");
+
+        await Assert.That(result)
+            .Contains(": new AttributeValue { NULL = true }")
+            .Because("Null items should be preserved as NULL attributes, not filtered out");
+    }
+
+    #endregion
 
     private TypeHandlerRegistry CreateTypeHandlerRegistry()
     {

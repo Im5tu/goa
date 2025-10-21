@@ -85,7 +85,7 @@ public class CollectionTypeHandler : ICompositeTypeHandler
                 var nestedElementMapping = GenerateElementToAttributeValue(nestedElementType);
                 if (nestedElementMapping != null)
                 {
-                    return $"new AttributeValue {{ L = (item?.Select(nested => {nestedElementMapping.Replace("item", "nested")}).ToList() ?? new List<AttributeValue>()) }}";
+                    return $"(item != null ? new AttributeValue {{ L = item.Select(nested => {nestedElementMapping.Replace("item", "nested")}).ToList() }} : new AttributeValue {{ NULL = true }})";
                 }
             }
         }
@@ -100,16 +100,16 @@ public class CollectionTypeHandler : ICompositeTypeHandler
     {
         return elementType.SpecialType switch
         {
-            SpecialType.System_String => "new AttributeValue { SS = item?.ToList() ?? new List<string>() }",
+            SpecialType.System_String => "(item != null ? new AttributeValue { SS = item.ToList() } : new AttributeValue { NULL = true })",
             SpecialType.System_Byte or SpecialType.System_SByte or SpecialType.System_Int16 or SpecialType.System_UInt16 or
             SpecialType.System_Int32 or SpecialType.System_UInt32 or SpecialType.System_Int64 or SpecialType.System_UInt64 or
-            SpecialType.System_Decimal or SpecialType.System_Single or SpecialType.System_Double => "new AttributeValue { NS = item?.Select(x => x.ToString()).ToList() ?? new List<string>() }",
-            SpecialType.System_Boolean => "new AttributeValue { SS = item?.Select(x => x.ToString()).ToList() ?? new List<string>() }",
-            SpecialType.System_DateTime => "new AttributeValue { SS = item?.Select(x => x.ToString(\"o\")).ToList() ?? new List<string>() }",
-            _ when elementType.Name == nameof(Guid) => "new AttributeValue { SS = item?.Select(x => x.ToString()).ToList() ?? new List<string>() }",
-            _ when elementType.Name == nameof(TimeSpan) => "new AttributeValue { SS = item?.Select(x => x.ToString()).ToList() ?? new List<string>() }",
-            _ when elementType.Name == nameof(DateTimeOffset) => "new AttributeValue { SS = item?.Select(x => x.ToString(\"o\")).ToList() ?? new List<string>() }",
-            _ when elementType.TypeKind == TypeKind.Enum => "new AttributeValue { SS = item?.Select(x => x.ToString()).ToList() ?? new List<string>() }",
+            SpecialType.System_Decimal or SpecialType.System_Single or SpecialType.System_Double => "(item != null ? new AttributeValue { NS = item.Select(x => x.ToString()).ToList() } : new AttributeValue { NULL = true })",
+            SpecialType.System_Boolean => "(item != null ? new AttributeValue { SS = item.Select(x => x.ToString()).ToList() } : new AttributeValue { NULL = true })",
+            SpecialType.System_DateTime => "(item != null ? new AttributeValue { SS = item.Select(x => x.ToString(\"o\")).ToList() } : new AttributeValue { NULL = true })",
+            _ when elementType.Name == nameof(Guid) => "(item != null ? new AttributeValue { SS = item.Select(x => x.ToString()).ToList() } : new AttributeValue { NULL = true })",
+            _ when elementType.Name == nameof(TimeSpan) => "(item != null ? new AttributeValue { SS = item.Select(x => x.ToString()).ToList() } : new AttributeValue { NULL = true })",
+            _ when elementType.Name == nameof(DateTimeOffset) => "(item != null ? new AttributeValue { SS = item.Select(x => x.ToString(\"o\")).ToList() } : new AttributeValue { NULL = true })",
+            _ when elementType.TypeKind == TypeKind.Enum => "(item != null ? new AttributeValue { SS = item.Select(x => x.ToString()).ToList() } : new AttributeValue { NULL = true })",
             _ => null
         };
     }
@@ -213,6 +213,20 @@ public class CollectionTypeHandler : ICompositeTypeHandler
             return ConvertToTargetCollectionType(propertyInfo.Type, elementType, sourceExpression);
         }
 
+        // Handle nested collections (List<List<T>>, etc.)
+        if (IsCollectionType(elementType))
+        {
+            var nestedElementType = GetCollectionElementType(elementType);
+            if (nestedElementType != null)
+            {
+                var varName = memberName.ToLowerInvariant();
+                var nestedParsing = GenerateNestedCollectionDeserialization(nestedElementType, "item", recordVariableName, pkVariable, skVariable);
+                // Don't include ': null' in sourceExpression - ConvertToTargetCollectionType handles null case
+                var sourceExpression = $"{recordVariableName}.TryGetList(\"{memberName}\", out var {varName}List) && {varName}List != null ? {varName}List.Select(item => {nestedParsing}) : Enumerable.Empty<{elementType.ToDisplayString()}>()";
+                return ConvertToTargetCollectionType(propertyInfo.Type, elementType, sourceExpression);
+            }
+        }
+
         // For unsupported types, use default empty collection
         return GenerateDefaultCollection(propertyInfo.Type, elementType);
     }
@@ -245,14 +259,91 @@ public class CollectionTypeHandler : ICompositeTypeHandler
             _ => null // Return null for unsupported element types
         };
     }
-    
+
+    /// <summary>
+    /// Recursively generates deserialization code for nested collections.
+    /// </summary>
+    private string GenerateNestedCollectionDeserialization(ITypeSymbol elementType, string itemVar, string recordVar, string pkVar, string skVar, int depth = 0)
+    {
+        // Handle primitive collections (List<string>, etc.)
+        var primitiveResult = TryGeneratePrimitiveCollectionDeserialization(elementType, itemVar);
+        if (primitiveResult != null)
+            return primitiveResult;
+
+        // Handle recursively nested collections (List<List<T>>)
+        if (IsCollectionType(elementType))
+        {
+            var nestedElementType = GetCollectionElementType(elementType);
+            if (nestedElementType != null)
+            {
+                var nestedVar = GenerateNestedVariableName(depth + 1);
+                var nestedParsing = GenerateNestedCollectionDeserialization(nestedElementType, nestedVar, recordVar, pkVar, skVar, depth + 1);
+                var elementTypeName = nestedElementType.ToDisplayString();
+                return $"{itemVar}.L?.Select({nestedVar} => {nestedParsing}).ToList() ?? new List<{elementTypeName}>()";
+            }
+        }
+
+        // Handle complex types
+        if (IsComplexType(elementType))
+        {
+            var normalizedTypeName = elementType.Name.Replace(".", "_").Replace("`", "_");
+            return $"{itemVar}.M != null ? DynamoMapper.{normalizedTypeName}.FromDynamoRecord(new DynamoRecord({itemVar}.M!), {pkVar}, {skVar}) : default({elementType.ToDisplayString()})";
+        }
+
+        return $"default({elementType.ToDisplayString()})";
+    }
+
+    /// <summary>
+    /// Generates deserialization code for primitive collection elements.
+    /// </summary>
+    private string? TryGeneratePrimitiveCollectionDeserialization(ITypeSymbol elementType, string itemVar)
+    {
+        return elementType.SpecialType switch
+        {
+            SpecialType.System_String => $"{itemVar}.SS?.ToList() ?? new List<string>()",
+            SpecialType.System_Byte => $"{itemVar}.NS?.Select(s => byte.Parse(s)).ToList() ?? new List<byte>()",
+            SpecialType.System_SByte => $"{itemVar}.NS?.Select(s => sbyte.Parse(s)).ToList() ?? new List<sbyte>()",
+            SpecialType.System_Int16 => $"{itemVar}.NS?.Select(s => short.Parse(s)).ToList() ?? new List<short>()",
+            SpecialType.System_UInt16 => $"{itemVar}.NS?.Select(s => ushort.Parse(s)).ToList() ?? new List<ushort>()",
+            SpecialType.System_Int32 => $"{itemVar}.NS?.Select(s => int.Parse(s)).ToList() ?? new List<int>()",
+            SpecialType.System_UInt32 => $"{itemVar}.NS?.Select(s => uint.Parse(s)).ToList() ?? new List<uint>()",
+            SpecialType.System_Int64 => $"{itemVar}.NS?.Select(s => long.Parse(s)).ToList() ?? new List<long>()",
+            SpecialType.System_UInt64 => $"{itemVar}.NS?.Select(s => ulong.Parse(s)).ToList() ?? new List<ulong>()",
+            SpecialType.System_Decimal => $"{itemVar}.NS?.Select(s => decimal.Parse(s)).ToList() ?? new List<decimal>()",
+            SpecialType.System_Single => $"{itemVar}.NS?.Select(s => float.Parse(s)).ToList() ?? new List<float>()",
+            SpecialType.System_Double => $"{itemVar}.NS?.Select(s => double.Parse(s)).ToList() ?? new List<double>()",
+            SpecialType.System_Boolean => $"{itemVar}.SS?.Select(s => bool.Parse(s)).ToList() ?? new List<bool>()",
+            SpecialType.System_DateTime => $"{itemVar}.SS?.Select(s => DateTime.ParseExact(s, \"o\", System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.RoundtripKind)).ToList() ?? new List<DateTime>()",
+            _ when elementType.Name == nameof(Guid) => $"{itemVar}.SS?.Select(s => Guid.Parse(s)).ToList() ?? new List<Guid>()",
+            _ when elementType.Name == nameof(TimeSpan) => $"{itemVar}.SS?.Select(s => TimeSpan.Parse(s)).ToList() ?? new List<TimeSpan>()",
+            _ when elementType.Name == nameof(DateTimeOffset) => $"{itemVar}.SS?.Select(s => DateTimeOffset.ParseExact(s, \"o\", System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.RoundtripKind)).ToList() ?? new List<DateTimeOffset>()",
+            _ when elementType.TypeKind == TypeKind.Enum => $"{itemVar}.SS?.Select(s => Enum.Parse<{elementType.ToDisplayString()}>(s)).ToList() ?? new List<{elementType.ToDisplayString()}>()",
+            _ => null
+        };
+    }
+
+    /// <summary>
+    /// Generates unique variable names for nested lambda parameters based on nesting depth.
+    /// </summary>
+    private static string GenerateNestedVariableName(int depth)
+    {
+        return depth switch
+        {
+            0 => "item",
+            1 => "nested",
+            2 => "nested2",
+            3 => "nested3",
+            _ => $"nested{depth}"
+        };
+    }
+
     private string ConvertToTargetCollectionType(ITypeSymbol targetType, ITypeSymbol elementType, string sourceExpression)
     {
         var elementTypeName = elementType.ToDisplayString();
-        
+
         if (targetType is IArrayTypeSymbol)
         {
-            return $"({sourceExpression}?.ToArray() ?? Array.Empty<{elementTypeName}>())";
+            return $"(({sourceExpression})?.ToArray() ?? Array.Empty<{elementTypeName}>())";
         }
         
         if (targetType is INamedTypeSymbol namedType)
@@ -263,17 +354,17 @@ public class CollectionTypeHandler : ICompositeTypeHandler
             // Handle interfaces and concrete types
             return typeName switch
             {
-                "List" => $"({sourceExpression}?.ToList() ?? new List<{elementTypeName}>())",
-                "IList" => $"({sourceExpression}?.ToList() ?? new List<{elementTypeName}>())",
-                "ICollection" => $"({sourceExpression}?.ToList() ?? new List<{elementTypeName}>())",
+                "List" => $"(({sourceExpression})?.ToList() ?? new List<{elementTypeName}>())",
+                "IList" => $"(({sourceExpression})?.ToList() ?? new List<{elementTypeName}>())",
+                "ICollection" => $"(({sourceExpression})?.ToList() ?? new List<{elementTypeName}>())",
                 "HashSet" => $"new HashSet<{elementTypeName}>({sourceExpression} ?? Enumerable.Empty<{elementTypeName}>())",
                 "ISet" => $"new HashSet<{elementTypeName}>({sourceExpression} ?? Enumerable.Empty<{elementTypeName}>())",
-                "IReadOnlyCollection" => $"({sourceExpression}?.ToList() ?? new List<{elementTypeName}>())",
-                "IReadOnlyList" => $"({sourceExpression}?.ToList() ?? new List<{elementTypeName}>())",
+                "IReadOnlyCollection" => $"(({sourceExpression})?.ToList() ?? new List<{elementTypeName}>())",
+                "IReadOnlyList" => $"(({sourceExpression})?.ToList() ?? new List<{elementTypeName}>())",
                 "IReadOnlySet" => $"new HashSet<{elementTypeName}>({sourceExpression} ?? Enumerable.Empty<{elementTypeName}>())",
-                "Collection" => $"new System.Collections.ObjectModel.Collection<{elementTypeName}>({sourceExpression}?.ToList() ?? new List<{elementTypeName}>())",
+                "Collection" => $"new System.Collections.ObjectModel.Collection<{elementTypeName}>(({sourceExpression})?.ToList() ?? new List<{elementTypeName}>())",
                 "IEnumerable" => $"({sourceExpression} ?? Enumerable.Empty<{elementTypeName}>())",
-                _ => $"({sourceExpression}?.ToList() ?? new List<{elementTypeName}>())"
+                _ => $"(({sourceExpression})?.ToList() ?? new List<{elementTypeName}>())"
             };
         }
         

@@ -38,10 +38,8 @@ public class PrimitiveTypeHandler : ITypeHandler
         
         return underlyingType.SpecialType switch
         {
-            SpecialType.System_String when isNullable =>
-                null, // Use conditional assignment instead
             SpecialType.System_String =>
-                $"new AttributeValue {{ S = model.{propertyName} }}",
+                null, // Use conditional assignment to skip empty strings
             SpecialType.System_Byte or SpecialType.System_SByte or
             SpecialType.System_Int16 or SpecialType.System_UInt16 or
             SpecialType.System_Int32 or SpecialType.System_UInt32 or
@@ -150,10 +148,13 @@ public class PrimitiveTypeHandler : ITypeHandler
         var dynamoAttributeName = propertyInfo.GetDynamoAttributeName();
         var underlyingType = propertyInfo.UnderlyingType;
         var isNullable = propertyInfo.IsNullable;
-        
-        if (!isNullable)
+
+        // String types (both nullable and non-nullable) need conditional assignment to skip empty strings
+        var isString = underlyingType.SpecialType == SpecialType.System_String;
+
+        if (!isNullable && !isString)
         {
-            return null; // Non-nullable properties don't need conditional assignment
+            return null; // Non-nullable non-string properties don't need conditional assignment
         }
         
         var attributeValue = underlyingType.SpecialType switch
@@ -188,9 +189,9 @@ public class PrimitiveTypeHandler : ITypeHandler
             return null;
         }
 
-        // For nullable strings, check if not null; for other nullable types, check HasValue
+        // For strings (nullable or non-nullable), check if not null or empty; for other nullable types, check HasValue
         var condition = underlyingType.SpecialType == SpecialType.System_String
-            ? $"model.{propertyName} != null"
+            ? $"!string.IsNullOrEmpty(model.{propertyName})"
             : $"model.{propertyName}.HasValue";
 
         return $@"if ({condition})

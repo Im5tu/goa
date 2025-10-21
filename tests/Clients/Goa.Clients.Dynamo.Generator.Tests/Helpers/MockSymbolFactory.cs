@@ -355,22 +355,34 @@ public static class MockSymbolFactory
     /// </summary>
     public static Mock<INamedTypeSymbol> CreateGenericType(string typeName, string namespaceName, params ITypeSymbol[] typeArguments)
     {
-        var fullTypeName = typeArguments.Length > 0 
-            ? $"{namespaceName}.{typeName}<{string.Join(", ", typeArguments.Select(t => t.Name))}>"
+        var fullTypeName = typeArguments.Length > 0
+            ? $"{namespaceName}.{typeName}<{string.Join(", ", typeArguments.Select(t => t.ToDisplayString()))}>"
             : $"{namespaceName}.{typeName}";
-            
+
         var mock = CreateNamedTypeSymbol(typeName, fullTypeName, namespaceName);
         mock.Setup(x => x.IsGenericType).Returns(true);
         mock.Setup(x => x.TypeArguments).Returns(ImmutableArray.Create(typeArguments));
 
-        // For nullable types, set up OriginalDefinition to have System_Nullable_T
+        // Create open generic definition for all generic types
+        var openGenericMock = new Mock<INamedTypeSymbol>();
+        var openGenericTypeName = typeArguments.Length > 0
+            ? $"{namespaceName}.{typeName}<{string.Join(", ", typeArguments.Select((_, i) => $"T{(i > 0 ? (i + 1).ToString() : "")}"))}>"
+            : $"{namespaceName}.{typeName}";
+
+        openGenericMock.Setup(x => x.Name).Returns(typeName);
+        openGenericMock.Setup(x => x.ToDisplayString(It.IsAny<SymbolDisplayFormat?>())).Returns(openGenericTypeName);
+        openGenericMock.Setup(x => x.ToDisplayString(It.IsAny<SymbolDisplayFormat>())).Returns(openGenericTypeName);
+        openGenericMock.Setup(x => x.IsGenericType).Returns(true);
+        openGenericMock.Setup(x => x.TypeArguments).Returns(ImmutableArray<ITypeSymbol>.Empty);
+        openGenericMock.Setup(x => x.OriginalDefinition).Returns(openGenericMock.Object);
+
+        // For nullable types, also set up SpecialType
         if (typeName == "Nullable" && namespaceName == "System" && typeArguments.Length == 1)
         {
-            var originalDef = new Mock<INamedTypeSymbol>();
-            originalDef.Setup(x => x.SpecialType).Returns(SpecialType.System_Nullable_T);
-            originalDef.Setup(x => x.Name).Returns("Nullable");
-            mock.Setup(x => x.OriginalDefinition).Returns(originalDef.Object);
+            openGenericMock.Setup(x => x.SpecialType).Returns(SpecialType.System_Nullable_T);
         }
+
+        mock.Setup(x => x.OriginalDefinition).Returns(openGenericMock.Object);
 
         // For collection types, set up AllInterfaces to include IEnumerable<T>
         if (namespaceName == "System.Collections.Generic" && typeArguments.Length > 0)
@@ -427,15 +439,33 @@ public static class MockSymbolFactory
     /// </summary>
     private static Mock<INamedTypeSymbol> CreateGenericTypeForInterface(string typeName, string namespaceName, ITypeSymbol typeArgument)
     {
-        var fullTypeName = $"{namespaceName}.{typeName}<{typeArgument.Name}>";
+        var fullTypeName = $"{namespaceName}.{typeName}<{typeArgument.ToDisplayString()}>";
         var mock = new Mock<INamedTypeSymbol>();
 
+        // Create open generic definition (e.g., IEnumerable`1)
+        var openGenericMock = new Mock<INamedTypeSymbol>();
+        var openGenericTypeName = $"{namespaceName}.{typeName}<T>";
+
+        var openNamespaceMock = new Mock<INamespaceSymbol>();
+        openNamespaceMock.Setup(x => x.ToDisplayString(It.IsAny<SymbolDisplayFormat?>())).Returns(namespaceName);
+
+        openGenericMock.Setup(x => x.Name).Returns(typeName);
+        openGenericMock.Setup(x => x.ToDisplayString(It.IsAny<SymbolDisplayFormat?>())).Returns(openGenericTypeName);
+        openGenericMock.Setup(x => x.ToDisplayString(It.IsAny<SymbolDisplayFormat>())).Returns(openGenericTypeName);
+        openGenericMock.Setup(x => x.IsGenericType).Returns(true);
+        openGenericMock.Setup(x => x.TypeArguments).Returns(ImmutableArray<ITypeSymbol>.Empty);
+        openGenericMock.Setup(x => x.OriginalDefinition).Returns(openGenericMock.Object);
+        openGenericMock.Setup(x => x.AllInterfaces).Returns(ImmutableArray<INamedTypeSymbol>.Empty);
+        openGenericMock.Setup(x => x.TypeKind).Returns(TypeKind.Interface);
+        openGenericMock.Setup(x => x.ContainingNamespace).Returns(openNamespaceMock.Object);
+
+        // Set up the constructed type
         mock.Setup(x => x.Name).Returns(typeName);
         mock.Setup(x => x.ToDisplayString(It.IsAny<SymbolDisplayFormat?>())).Returns(fullTypeName);
         mock.Setup(x => x.ToDisplayString(It.IsAny<SymbolDisplayFormat>())).Returns(fullTypeName);
         mock.Setup(x => x.IsGenericType).Returns(true);
         mock.Setup(x => x.TypeArguments).Returns(ImmutableArray.Create(typeArgument));
-        mock.Setup(x => x.OriginalDefinition).Returns(mock.Object);
+        mock.Setup(x => x.OriginalDefinition).Returns(openGenericMock.Object);
         mock.Setup(x => x.AllInterfaces).Returns(ImmutableArray<INamedTypeSymbol>.Empty);
         mock.Setup(x => x.TypeKind).Returns(TypeKind.Interface);
 
