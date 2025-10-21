@@ -34,6 +34,7 @@ public class MapperGenerator : ICodeGenerator
         builder.AppendLine("#nullable enable");
         builder.AppendLine("using System;");
         builder.AppendLine("using System.Collections.Generic;");
+        builder.AppendLine("using System.Globalization;");
         builder.AppendLine("using System.Linq;");
         builder.AppendLine("using Goa.Clients.Dynamo;");
         builder.AppendLine("using Goa.Clients.Dynamo.Models;");
@@ -145,9 +146,19 @@ public class MapperGenerator : ICodeGenerator
         }
         
         // Add type discriminator for inheritance
-        if (type.IsAbstract || HasConcreteSubtypes(type, context))
+        // Set discriminator if:
+        // 1. Type is abstract, OR
+        // 2. Type has concrete subtypes, OR
+        // 3. Type inherits from an abstract type
+        var needsDiscriminator = type.IsAbstract || HasConcreteSubtypes(type, context) || InheritsFromAbstractType(type);
+        if (needsDiscriminator)
         {
-            builder.AppendLine($"record[\"Type\"] = new AttributeValue {{ S = \"{type.FullName}\" }};");
+            // Use TypeName from the attribute (or inherited attribute)
+            // If the type has its own DynamoModel but uses the default TypeName, check inherited
+            var typeNameField = (dynamoModelAttr?.TypeName != "Type" ? dynamoModelAttr?.TypeName : null)
+                             ?? GetInheritedDynamoModelAttribute(type)?.TypeName
+                             ?? "Type";
+            builder.AppendLine($"record[\"{typeNameField}\"] = new AttributeValue {{ S = \"{type.FullName}\" }};");
         }
         
         // Add property mappings
@@ -299,8 +310,13 @@ public class MapperGenerator : ICodeGenerator
     
     private void GenerateAbstractTypeDispatch(CodeBuilder builder, DynamoTypeInfo type, GenerationContext context)
     {
-        builder.AppendLine("if (!record.TryGetNullableString(\"Type\", out var typeValue) || typeValue == null)");
-        builder.Indent().AppendLine($"throw new InvalidOperationException(\"Missing Type discriminator for abstract type {type.FullName}\");").Unindent();
+        // Get the TypeName field from the DynamoModel attribute, including inherited
+        var dynamoModelAttr = type.Attributes.OfType<DynamoModelAttributeInfo>().FirstOrDefault()
+                             ?? GetInheritedDynamoModelAttribute(type);
+        var typeNameField = dynamoModelAttr?.TypeName ?? "Type";
+
+        builder.AppendLine($"if (!record.TryGetNullableString(\"{typeNameField}\", out var typeValue) || typeValue == null)");
+        builder.Indent().AppendLine($"throw new InvalidOperationException(\"Missing {typeNameField} discriminator for abstract type {type.FullName}\");").Unindent();
         builder.AppendLine();
         builder.OpenBraceWithLine("return typeValue switch");
         
@@ -612,14 +628,29 @@ public class MapperGenerator : ICodeGenerator
         var current = type;
         while (current != null)
         {
-            var property = current.Properties.FirstOrDefault(p => 
+            var property = current.Properties.FirstOrDefault(p =>
                 string.Equals(p.Name, propertyName, StringComparison.OrdinalIgnoreCase));
             if (property != null)
                 return property;
-                
+
             current = current.BaseType;
         }
-        
+
         return null;
+    }
+
+    private bool InheritsFromAbstractType(DynamoTypeInfo type)
+    {
+        // Check if any base class is abstract
+        var current = type.BaseType;
+        while (current != null)
+        {
+            if (current.IsAbstract)
+            {
+                return true;
+            }
+            current = current.BaseType;
+        }
+        return false;
     }
 }
