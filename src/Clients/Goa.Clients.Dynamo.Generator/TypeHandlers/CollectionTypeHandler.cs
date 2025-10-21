@@ -1,6 +1,7 @@
 using Microsoft.CodeAnalysis;
 using Goa.Clients.Dynamo.Generator.CodeGeneration;
 using Goa.Clients.Dynamo.Generator.Models;
+using System.Globalization;
 
 namespace Goa.Clients.Dynamo.Generator.TypeHandlers;
 
@@ -100,16 +101,16 @@ public class CollectionTypeHandler : ICompositeTypeHandler
     {
         return elementType.SpecialType switch
         {
-            SpecialType.System_String => "(item != null ? new AttributeValue { SS = item.ToList() } : new AttributeValue { NULL = true })",
+            SpecialType.System_String => "(item != null && item.Any() ? new AttributeValue { SS = item.ToList() } : new AttributeValue { NULL = true })",
             SpecialType.System_Byte or SpecialType.System_SByte or SpecialType.System_Int16 or SpecialType.System_UInt16 or
             SpecialType.System_Int32 or SpecialType.System_UInt32 or SpecialType.System_Int64 or SpecialType.System_UInt64 or
-            SpecialType.System_Decimal or SpecialType.System_Single or SpecialType.System_Double => "(item != null ? new AttributeValue { NS = item.Select(x => x.ToString()).ToList() } : new AttributeValue { NULL = true })",
-            SpecialType.System_Boolean => "(item != null ? new AttributeValue { SS = item.Select(x => x.ToString()).ToList() } : new AttributeValue { NULL = true })",
-            SpecialType.System_DateTime => "(item != null ? new AttributeValue { SS = item.Select(x => x.ToString(\"o\")).ToList() } : new AttributeValue { NULL = true })",
-            _ when elementType.Name == nameof(Guid) => "(item != null ? new AttributeValue { SS = item.Select(x => x.ToString()).ToList() } : new AttributeValue { NULL = true })",
-            _ when elementType.Name == nameof(TimeSpan) => "(item != null ? new AttributeValue { SS = item.Select(x => x.ToString()).ToList() } : new AttributeValue { NULL = true })",
-            _ when elementType.Name == nameof(DateTimeOffset) => "(item != null ? new AttributeValue { SS = item.Select(x => x.ToString(\"o\")).ToList() } : new AttributeValue { NULL = true })",
-            _ when elementType.TypeKind == TypeKind.Enum => "(item != null ? new AttributeValue { SS = item.Select(x => x.ToString()).ToList() } : new AttributeValue { NULL = true })",
+            SpecialType.System_Decimal or SpecialType.System_Single or SpecialType.System_Double => "(item != null && item.Any() ? new AttributeValue { NS = item.Select(x => x.ToString(CultureInfo.InvariantCulture)).ToList() } : new AttributeValue { NULL = true })",
+            SpecialType.System_Boolean => "(item != null && item.Any() ? new AttributeValue { SS = item.Select(x => x.ToString()).ToList() } : new AttributeValue { NULL = true })",
+            SpecialType.System_DateTime => "(item != null && item.Any() ? new AttributeValue { SS = item.Select(x => x.ToString(\"o\")).ToList() } : new AttributeValue { NULL = true })",
+            _ when elementType.Name == nameof(Guid) => "(item != null && item.Any() ? new AttributeValue { SS = item.Select(x => x.ToString()).ToList() } : new AttributeValue { NULL = true })",
+            _ when elementType.Name == nameof(TimeSpan) => "(item != null && item.Any() ? new AttributeValue { SS = item.Select(x => x.ToString()).ToList() } : new AttributeValue { NULL = true })",
+            _ when elementType.Name == nameof(DateTimeOffset) => "(item != null && item.Any() ? new AttributeValue { SS = item.Select(x => x.ToString(\"o\")).ToList() } : new AttributeValue { NULL = true })",
+            _ when elementType.TypeKind == TypeKind.Enum => "(item != null && item.Any() ? new AttributeValue { SS = item.Select(x => x.ToString()).ToList() } : new AttributeValue { NULL = true })",
             _ => null
         };
     }

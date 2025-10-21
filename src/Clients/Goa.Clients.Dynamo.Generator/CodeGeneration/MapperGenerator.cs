@@ -34,6 +34,7 @@ public class MapperGenerator : ICodeGenerator
         builder.AppendLine("#nullable enable");
         builder.AppendLine("using System;");
         builder.AppendLine("using System.Collections.Generic;");
+        builder.AppendLine("using System.Globalization;");
         builder.AppendLine("using System.Linq;");
         builder.AppendLine("using Goa.Clients.Dynamo;");
         builder.AppendLine("using Goa.Clients.Dynamo.Models;");
