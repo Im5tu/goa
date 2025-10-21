@@ -108,7 +108,25 @@ public class DynamoModelAttributeHandler : IAttributeHandler
                 category: "DynamoDB",
                 DiagnosticSeverity.Error,
                 isEnabledByDefault: true);
-            
+
+            var location = attributeInfo.AttributeData.ApplicationSyntaxReference?.GetSyntax().GetLocation() ?? Location.None;
+            var diagnostic = Diagnostic.Create(descriptor, location, symbol.Name);
+            reportDiagnostic(diagnostic);
+        }
+
+        // Validate TypeName
+        if (string.IsNullOrWhiteSpace(dynamoAttr.TypeName) ||
+            string.Equals(dynamoAttr.TypeName, dynamoAttr.PKName, StringComparison.Ordinal) ||
+            string.Equals(dynamoAttr.TypeName, dynamoAttr.SKName, StringComparison.Ordinal))
+        {
+            var descriptor = new DiagnosticDescriptor(
+                id: "DYNAMO004",
+                title: "Invalid TypeName",
+                messageFormat: "TypeName must be non-empty and distinct from PKName/SKName on type '{0}'.",
+                category: "DynamoDB",
+                DiagnosticSeverity.Error,
+                isEnabledByDefault: true);
+
             var location = attributeInfo.AttributeData.ApplicationSyntaxReference?.GetSyntax().GetLocation() ?? Location.None;
             var diagnostic = Diagnostic.Create(descriptor, location, symbol.Name);
             reportDiagnostic(diagnostic);

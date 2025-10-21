@@ -153,7 +153,10 @@ public class MapperGenerator : ICodeGenerator
         if (needsDiscriminator)
         {
             // Use TypeName from the attribute (or inherited attribute)
-            var typeNameField = dynamoModelAttr?.TypeName ?? GetInheritedDynamoModelAttribute(type)?.TypeName ?? "Type";
+            // If the type has its own DynamoModel but uses the default TypeName, check inherited
+            var typeNameField = (dynamoModelAttr?.TypeName != "Type" ? dynamoModelAttr?.TypeName : null)
+                             ?? GetInheritedDynamoModelAttribute(type)?.TypeName
+                             ?? "Type";
             builder.AppendLine($"record[\"{typeNameField}\"] = new AttributeValue {{ S = \"{type.FullName}\" }};");
         }
         
@@ -306,8 +309,9 @@ public class MapperGenerator : ICodeGenerator
     
     private void GenerateAbstractTypeDispatch(CodeBuilder builder, DynamoTypeInfo type, GenerationContext context)
     {
-        // Get the TypeName field from the DynamoModel attribute
-        var dynamoModelAttr = type.Attributes.OfType<DynamoModelAttributeInfo>().FirstOrDefault();
+        // Get the TypeName field from the DynamoModel attribute, including inherited
+        var dynamoModelAttr = type.Attributes.OfType<DynamoModelAttributeInfo>().FirstOrDefault()
+                             ?? GetInheritedDynamoModelAttribute(type);
         var typeNameField = dynamoModelAttr?.TypeName ?? "Type";
 
         builder.AppendLine($"if (!record.TryGetNullableString(\"{typeNameField}\", out var typeValue) || typeValue == null)");

@@ -65,7 +65,7 @@ public class CollectionTypeHandler : ICompositeTypeHandler
         {
             // Use just the type name (not the full namespace) to match the mapper naming convention
             var normalizedTypeName = NamingHelpers.NormalizeTypeName(elementType.Name);
-            return $"new AttributeValue {{ M = DynamoMapper.{normalizedTypeName}.ToDynamoRecord(item) }}";
+            return $"(item != null ? new AttributeValue {{ M = DynamoMapper.{normalizedTypeName}.ToDynamoRecord(item) }} : new AttributeValue {{ NULL = true }})";
         }
 
         // Check if it's a nested collection
@@ -85,7 +85,7 @@ public class CollectionTypeHandler : ICompositeTypeHandler
                 var nestedElementMapping = GenerateElementToAttributeValue(nestedElementType);
                 if (nestedElementMapping != null)
                 {
-                    return $"new AttributeValue {{ L = item.Select(nested => {nestedElementMapping.Replace("item", "nested")}).ToList() }}";
+                    return $"new AttributeValue {{ L = (item?.Select(nested => {nestedElementMapping.Replace("item", "nested")}).ToList() ?? new List<AttributeValue>()) }}";
                 }
             }
         }
@@ -122,8 +122,18 @@ public class CollectionTypeHandler : ICompositeTypeHandler
         if (type is IArrayTypeSymbol)
             return true;
 
-        if (type is INamedTypeSymbol namedType)
+        if (type is INamedTypeSymbol namedType && namedType.IsGenericType)
         {
+            // Check common collection type names directly
+            var name = namedType.Name;
+            if (name == "List" || name == "IList" || name == "ICollection" || name == "IEnumerable" ||
+                name == "HashSet" || name == "ISet" || name == "IReadOnlyCollection" ||
+                name == "IReadOnlyList" || name == "IReadOnlySet" || name == "Collection")
+            {
+                return true;
+            }
+
+            // Fallback via interfaces for custom collection types
             return namedType.AllInterfaces.Any(i =>
                 i.OriginalDefinition?.ToDisplayString() == "System.Collections.Generic.IEnumerable<T>");
         }
@@ -139,15 +149,17 @@ public class CollectionTypeHandler : ICompositeTypeHandler
         if (type is IArrayTypeSymbol arrayType)
             return arrayType.ElementType;
 
-        if (type is INamedTypeSymbol namedType)
+        if (type is INamedTypeSymbol namedType && namedType.IsGenericType)
         {
-            var enumerableInterface = namedType.AllInterfaces.FirstOrDefault(i =>
-                i.OriginalDefinition?.ToDisplayString() == "System.Collections.Generic.IEnumerable<T>");
+            // Direct generic (e.g., IEnumerable<T>, List<T>, etc.)
+            if (namedType.TypeArguments.Length == 1)
+                return namedType.TypeArguments[0];
 
-            if (enumerableInterface is INamedTypeSymbol genericInterface && genericInterface.TypeArguments.Length > 0)
-            {
-                return genericInterface.TypeArguments[0];
-            }
+            // Fallback via interfaces for custom collection types
+            var enumerableInterface = namedType.AllInterfaces.FirstOrDefault(i =>
+                i.OriginalDefinition?.ToDisplayString() == "System.Collections.Generic.IEnumerable<T>") as INamedTypeSymbol;
+
+            return enumerableInterface?.TypeArguments.FirstOrDefault();
         }
 
         return null;

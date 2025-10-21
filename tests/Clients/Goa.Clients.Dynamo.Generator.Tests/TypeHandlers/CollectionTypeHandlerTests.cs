@@ -383,10 +383,10 @@ public class CollectionTypeHandlerTests
 
         var result = _handler.GenerateToAttributeValue(property);
 
-        var expected = "model.CustomList != null ? new AttributeValue { L = model.CustomList.Select(item => new AttributeValue { M = DynamoMapper.CustomClass.ToDynamoRecord(item) }).ToList() } : new AttributeValue { NULL = true }";
+        var expected = "model.CustomList != null ? new AttributeValue { L = model.CustomList.Select(item => (item != null ? new AttributeValue { M = DynamoMapper.CustomClass.ToDynamoRecord(item) } : new AttributeValue { NULL = true })).ToList() } : new AttributeValue { NULL = true }";
         await Assert.That(result)
             .IsEqualTo(expected)
-            .Because("Complex type collections should generate L (List) attribute with M (Map) elements");
+            .Because("Complex type collections should generate L (List) attribute with M (Map) elements and handle null items");
     }
 
     [Test]
