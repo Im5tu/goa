@@ -1,5 +1,6 @@
 using Microsoft.CodeAnalysis;
 using Goa.Clients.Dynamo.Generator.Models;
+using System.Globalization;
 
 namespace Goa.Clients.Dynamo.Generator.TypeHandlers;
 
@@ -70,14 +71,14 @@ public class ComplexTypeHandler : ICompositeTypeHandler
                     return $"model.{propertyName} != null ? new AttributeValue {{ M = model.{propertyName}.ToDictionary(kvp => kvp.Key, kvp => new AttributeValue {{ SS = kvp.Value ?? new List<string>() }}) }} : new AttributeValue {{ NULL = true }}";
                 }
                 
-                // Special case: Dictionary<string, Dictionary<string, string>>  
-                if (valueType is INamedTypeSymbol namedValueType2 && 
-                    namedValueType2.Name == "Dictionary" && 
+                // Special case: Dictionary<string, Dictionary<string, string>>
+                if (valueType is INamedTypeSymbol namedValueType2 &&
+                    namedValueType2.Name == "Dictionary" &&
                     namedValueType2.TypeArguments.Length == 2 &&
                     namedValueType2.TypeArguments[0].SpecialType == SpecialType.System_String &&
                     namedValueType2.TypeArguments[1].SpecialType == SpecialType.System_String)
                 {
-                    return $"model.{propertyName} != null ? new AttributeValue {{ M = model.{propertyName}.ToDictionary(kvp => kvp.Key, kvp => new AttributeValue {{ M = (kvp.Value ?? new Dictionary<string, string>()).ToDictionary(innerKvp => innerKvp.Key, innerKvp => new AttributeValue {{ S = innerKvp.Value }}) }}) }} : new AttributeValue {{ NULL = true }}";
+                    return $"model.{propertyName} != null ? new AttributeValue {{ M = model.{propertyName}.ToDictionary(kvp => kvp.Key, kvp => new AttributeValue {{ M = (kvp.Value ?? new Dictionary<string, string>()).ToDictionary(innerKvp => innerKvp.Key, innerKvp => innerKvp.Value != null ? new AttributeValue {{ S = innerKvp.Value }} : new AttributeValue {{ NULL = true }}) }}) }} : new AttributeValue {{ NULL = true }}";
                 }
                 
                 // Fallback to primitive handling for other types
@@ -229,19 +230,7 @@ public class ComplexTypeHandler : ICompositeTypeHandler
             _ => false
         };
     }
-    
-    private string GetDictionaryValueParseLogic(ITypeSymbol valueType)
-    {
-        return valueType.SpecialType switch
-        {
-            SpecialType.System_Double => "kvp.Value.N != null ? double.Parse(kvp.Value.N) : 0.0",
-            SpecialType.System_Int64 => "kvp.Value.N != null ? long.Parse(kvp.Value.N) : 0L",
-            SpecialType.System_DateTime => "kvp.Value.S != null ? DateTime.Parse(kvp.Value.S) : default(DateTime)",
-            _ when valueType.TypeKind == TypeKind.Enum => $"kvp.Value.S != null ? Enum.Parse<{valueType.ToDisplayString()}>(kvp.Value.S) : default({valueType.ToDisplayString()})",
-            _ => GetComplexValueDefault(valueType)
-        };
-    }
-    
+
     private string GetComplexValueDefault(ITypeSymbol valueType)
     {
         var typeDisplayString = valueType.ToDisplayString();
@@ -341,7 +330,7 @@ public class ComplexTypeHandler : ICompositeTypeHandler
         }
         else if (IsNumericType(valueType))
         {
-            return $"model.{propertyName} != null ? new AttributeValue {{ M = model.{propertyName}.ToDictionary(kvp => kvp.Key, kvp => new AttributeValue {{ N = kvp.Value.ToString() }}) }} : new AttributeValue {{ NULL = true }}";
+            return $"model.{propertyName} != null ? new AttributeValue {{ M = model.{propertyName}.ToDictionary(kvp => kvp.Key, kvp => new AttributeValue {{ N = kvp.Value.ToString(CultureInfo.InvariantCulture) }}) }} : new AttributeValue {{ NULL = true }}";
         }
         else if (valueType.SpecialType == SpecialType.System_DateTime)
         {

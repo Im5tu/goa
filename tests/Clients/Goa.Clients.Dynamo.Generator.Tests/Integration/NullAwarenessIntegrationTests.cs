@@ -72,7 +72,7 @@ public class NullAwarenessIntegrationTests
 
         var result = _typeHandlerRegistry.GenerateToAttributeValue(property);
 
-        var expected = "new AttributeValue { N = model.Id.ToString() }";
+        var expected = "new AttributeValue { N = model.Id.ToString(CultureInfo.InvariantCulture) }";
         await Assert.That(result).IsEqualTo(expected);
     }
 
@@ -150,7 +150,7 @@ public class NullAwarenessIntegrationTests
         await Assert.That(generatedCode).Contains("record[\"OptionalDescription\"] = new AttributeValue { S = model.OptionalDescription };");
         // Nullable properties use conditional assignment for sparse GSI compatibility
         await Assert.That(generatedCode).Contains("if (model.OptionalCount.HasValue)");
-        await Assert.That(generatedCode).Contains("new AttributeValue { N = model.OptionalCount.Value.ToString() }");
+        await Assert.That(generatedCode).Contains("new AttributeValue { N = model.OptionalCount.Value.ToString(CultureInfo.InvariantCulture) }");
 
         // Verify MissingAttributeException for non-nullable types
         await Assert.That(generatedCode).Contains("MissingAttributeException.Throw<string>(\"RequiredName\"");

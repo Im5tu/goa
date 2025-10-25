@@ -223,7 +223,7 @@ public class MapperGeneratorTests
         await Assert.That(result)
             .Contains("record[\"Name\"] = new AttributeValue { S = model.Name };");
         await Assert.That(result)
-            .Contains("record[\"Age\"] = new AttributeValue { N = model.Age.ToString() };");
+            .Contains("record[\"Age\"] = new AttributeValue { N = model.Age.ToString(CultureInfo.InvariantCulture) };");
     }
 
     [Test]
@@ -301,7 +301,7 @@ public class MapperGeneratorTests
 
         // Assert - Based on actual CollectionTypeHandler output
         await Assert.That(result)
-            .Contains("record[\"Tags\"] = new AttributeValue { SS = model.Tags?.ToList() ?? new List<string>() };");
+            .Contains("record[\"Tags\"] = (model.Tags != null && model.Tags.Any() ? new AttributeValue { SS = model.Tags.ToList() } : new AttributeValue { NULL = true });");
     }
 
     [Test]

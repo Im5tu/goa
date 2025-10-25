@@ -263,7 +263,7 @@ public class ComplexTypeHandlerTests
         var result = _handler.GenerateToAttributeValue(propertyInfo);
 
         // Assert
-        var expected = "model.Scores != null ? new AttributeValue { M = model.Scores.ToDictionary(kvp => kvp.Key, kvp => new AttributeValue { N = kvp.Value.ToString() }) } : new AttributeValue { NULL = true }";
+        var expected = "model.Scores != null ? new AttributeValue { M = model.Scores.ToDictionary(kvp => kvp.Key, kvp => new AttributeValue { N = kvp.Value.ToString(CultureInfo.InvariantCulture) }) } : new AttributeValue { NULL = true }";
         await Assert.That(result)
             .IsEqualTo(expected);
     }

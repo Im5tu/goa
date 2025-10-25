@@ -170,16 +170,16 @@ public class CollectionTypeHandler : ICompositeTypeHandler
     {
         return elementType.SpecialType switch
         {
-            SpecialType.System_String => $"new AttributeValue {{ SS = model.{propertyName}?.ToList() ?? new List<string>() }}",
+            SpecialType.System_String => $"(model.{propertyName} != null && model.{propertyName}.Any() ? new AttributeValue {{ SS = model.{propertyName}.ToList() }} : new AttributeValue {{ NULL = true }})",
             SpecialType.System_Byte or SpecialType.System_SByte or SpecialType.System_Int16 or SpecialType.System_UInt16 or
             SpecialType.System_Int32 or SpecialType.System_UInt32 or SpecialType.System_Int64 or SpecialType.System_UInt64 or
-            SpecialType.System_Decimal or SpecialType.System_Single or SpecialType.System_Double => $"new AttributeValue {{ NS = model.{propertyName}?.Select(x => x.ToString()).ToList() ?? new List<string>() }}",
-            SpecialType.System_Boolean => $"new AttributeValue {{ SS = model.{propertyName}?.Select(x => x.ToString()).ToList() ?? new List<string>() }}",
-            SpecialType.System_DateTime => $"new AttributeValue {{ SS = model.{propertyName}?.Select(x => x.ToString(\"o\")).ToList() ?? new List<string>() }}",
-            _ when elementType.Name == nameof(Guid) => $"new AttributeValue {{ SS = model.{propertyName}?.Select(x => x.ToString()).ToList() ?? new List<string>() }}",
-            _ when elementType.Name == nameof(TimeSpan) => $"new AttributeValue {{ SS = model.{propertyName}?.Select(x => x.ToString()).ToList() ?? new List<string>() }}",
-            _ when elementType.Name == nameof(DateTimeOffset) => $"new AttributeValue {{ SS = model.{propertyName}?.Select(x => x.ToString(\"o\")).ToList() ?? new List<string>() }}",
-            _ when elementType.TypeKind == TypeKind.Enum => $"new AttributeValue {{ SS = model.{propertyName}?.Select(x => x.ToString()).ToList() ?? new List<string>() }}",
+            SpecialType.System_Decimal or SpecialType.System_Single or SpecialType.System_Double => $"(model.{propertyName} != null && model.{propertyName}.Any() ? new AttributeValue {{ NS = model.{propertyName}.Select(x => x.ToString(CultureInfo.InvariantCulture)).ToList() }} : new AttributeValue {{ NULL = true }})",
+            SpecialType.System_Boolean => $"(model.{propertyName} != null && model.{propertyName}.Any() ? new AttributeValue {{ SS = model.{propertyName}.Select(x => x.ToString()).ToList() }} : new AttributeValue {{ NULL = true }})",
+            SpecialType.System_DateTime => $"(model.{propertyName} != null && model.{propertyName}.Any() ? new AttributeValue {{ SS = model.{propertyName}.Select(x => x.ToString(\"o\")).ToList() }} : new AttributeValue {{ NULL = true }})",
+            _ when elementType.Name == nameof(Guid) => $"(model.{propertyName} != null && model.{propertyName}.Any() ? new AttributeValue {{ SS = model.{propertyName}.Select(x => x.ToString()).ToList() }} : new AttributeValue {{ NULL = true }})",
+            _ when elementType.Name == nameof(TimeSpan) => $"(model.{propertyName} != null && model.{propertyName}.Any() ? new AttributeValue {{ SS = model.{propertyName}.Select(x => x.ToString()).ToList() }} : new AttributeValue {{ NULL = true }})",
+            _ when elementType.Name == nameof(DateTimeOffset) => $"(model.{propertyName} != null && model.{propertyName}.Any() ? new AttributeValue {{ SS = model.{propertyName}.Select(x => x.ToString(\"o\")).ToList() }} : new AttributeValue {{ NULL = true }})",
+            _ when elementType.TypeKind == TypeKind.Enum => $"(model.{propertyName} != null && model.{propertyName}.Any() ? new AttributeValue {{ SS = model.{propertyName}.Select(x => x.ToString()).ToList() }} : new AttributeValue {{ NULL = true }})",
             _ => null // Use composition for complex types
         };
     }

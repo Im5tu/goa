@@ -1,5 +1,6 @@
 using Microsoft.CodeAnalysis;
 using Goa.Clients.Dynamo.Generator.Models;
+using System.Globalization;
 
 namespace Goa.Clients.Dynamo.Generator.TypeHandlers;
 
@@ -50,8 +51,8 @@ public class PrimitiveTypeHandler : ITypeHandler
             SpecialType.System_Int16 or SpecialType.System_UInt16 or
             SpecialType.System_Int32 or SpecialType.System_UInt32 or
             SpecialType.System_Int64 or SpecialType.System_UInt64 or
-            SpecialType.System_Decimal or SpecialType.System_Single or SpecialType.System_Double => 
-                $"new AttributeValue {{ N = model.{propertyName}.ToString() }}",
+            SpecialType.System_Decimal or SpecialType.System_Single or SpecialType.System_Double =>
+                $"new AttributeValue {{ N = model.{propertyName}.ToString(CultureInfo.InvariantCulture) }}",
             SpecialType.System_Boolean when isNullable => 
                 null, // Use conditional assignment instead
             SpecialType.System_Boolean => 
@@ -166,7 +167,7 @@ public class PrimitiveTypeHandler : ITypeHandler
             SpecialType.System_Int32 or SpecialType.System_UInt32 or
             SpecialType.System_Int64 or SpecialType.System_UInt64 or
             SpecialType.System_Decimal or SpecialType.System_Single or SpecialType.System_Double =>
-                $"new AttributeValue {{ N = model.{propertyName}.Value.ToString() }}",
+                $"new AttributeValue {{ N = model.{propertyName}.Value.ToString(CultureInfo.InvariantCulture) }}",
             SpecialType.System_Boolean =>
                 $"new AttributeValue {{ BOOL = model.{propertyName}.Value }}",
             SpecialType.System_Char =>

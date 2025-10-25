@@ -118,10 +118,10 @@ public class CollectionTypeHandlerTests
             var property = TestModelBuilders.CreateCollectionPropertyInfo(propName, collectionType, MockSymbolFactory.PrimitiveTypes.String);
             var result = _handler.GenerateToAttributeValue(property);
             
-            var expected = $"new AttributeValue {{ SS = model.{propName}?.ToList() ?? new List<string>() }}";
+            var expected = $"(model.{propName} != null && model.{propName}.Any() ? new AttributeValue {{ SS = model.{propName}.ToList() }} : new AttributeValue {{ NULL = true }})";
             await Assert.That(result)
                 .IsEqualTo(expected)
-                .Because($"String collections should generate SS (String Set) attribute value");
+                .Because($"String collections should generate SS (String Set) attribute value only when non-empty");
         }
     }
 
@@ -140,10 +140,10 @@ public class CollectionTypeHandlerTests
             var property = TestModelBuilders.CreateCollectionPropertyInfo(propName, collectionType, elementType);
             var result = _handler.GenerateToAttributeValue(property);
             
-            var expected = $"new AttributeValue {{ NS = model.{propName}?.Select(x => x.ToString()).ToList() ?? new List<string>() }}";
+            var expected = $"(model.{propName} != null && model.{propName}.Any() ? new AttributeValue {{ NS = model.{propName}.Select(x => x.ToString(CultureInfo.InvariantCulture)).ToList() }} : new AttributeValue {{ NULL = true }})";
             await Assert.That(result)
                 .IsEqualTo(expected)
-                .Because($"Numeric collections should generate NS (Number Set) attribute value");
+                .Because($"Numeric collections should generate NS (Number Set) attribute value only when non-empty, with invariant culture");
         }
     }
 
@@ -155,10 +155,10 @@ public class CollectionTypeHandlerTests
         
         var result = _handler.GenerateToAttributeValue(property);
         
-        var expected = "new AttributeValue { SS = model.BoolArray?.Select(x => x.ToString()).ToList() ?? new List<string>() }";
+        var expected = "(model.BoolArray != null && model.BoolArray.Any() ? new AttributeValue { SS = model.BoolArray.Select(x => x.ToString()).ToList() } : new AttributeValue { NULL = true })";
         await Assert.That(result)
             .IsEqualTo(expected)
-            .Because("Boolean collections should generate SS with ToString() conversion");
+            .Because("Boolean collections should generate SS with ToString() conversion only when non-empty");
     }
 
     [Test]
@@ -169,10 +169,10 @@ public class CollectionTypeHandlerTests
         
         var result = _handler.GenerateToAttributeValue(property);
         
-        var expected = "new AttributeValue { SS = model.GuidArray?.Select(x => x.ToString()).ToList() ?? new List<string>() }";
+        var expected = "(model.GuidArray != null && model.GuidArray.Any() ? new AttributeValue { SS = model.GuidArray.Select(x => x.ToString()).ToList() } : new AttributeValue { NULL = true })";
         await Assert.That(result)
             .IsEqualTo(expected)
-            .Because("Guid collections should generate SS with ToString() conversion");
+            .Because("Guid collections should generate SS with ToString() conversion only when non-empty");
     }
 
     [Test]
@@ -183,10 +183,10 @@ public class CollectionTypeHandlerTests
         
         var result = _handler.GenerateToAttributeValue(property);
         
-        var expected = "new AttributeValue { SS = model.DateTimeArray?.Select(x => x.ToString(\"o\")).ToList() ?? new List<string>() }";
+        var expected = "(model.DateTimeArray != null && model.DateTimeArray.Any() ? new AttributeValue { SS = model.DateTimeArray.Select(x => x.ToString(\"o\")).ToList() } : new AttributeValue { NULL = true })";
         await Assert.That(result)
             .IsEqualTo(expected)
-            .Because("DateTime collections should generate SS with ISO format");
+            .Because("DateTime collections should generate SS with ISO format only when non-empty");
     }
 
     [Test]
@@ -202,10 +202,10 @@ public class CollectionTypeHandlerTests
         
         var result = _handler.GenerateToAttributeValue(property);
         
-        var expected = "new AttributeValue { SS = model.PriorityArray?.Select(x => x.ToString()).ToList() ?? new List<string>() }";
+        var expected = "(model.PriorityArray != null && model.PriorityArray.Any() ? new AttributeValue { SS = model.PriorityArray.Select(x => x.ToString()).ToList() } : new AttributeValue { NULL = true })";
         await Assert.That(result)
             .IsEqualTo(expected)
-            .Because("Enum collections should generate SS with ToString() conversion");
+            .Because("Enum collections should generate SS with ToString() conversion only when non-empty");
     }
 
     [Test]
