@@ -1,0 +1,32 @@
+{
+    "$schema": "http://json.schemastore.org/template",
+    "author": "Goa",
+    "classifications": [ "AWS", "Lambda", "Serverless", "Goa", "Security" ],
+    "identity": "Goa.Templates.Authorizer",
+    "name": "Lambda - API Gateway Authorizer",
+    "shortName": "goa.authorizer",
+    "sourceName": "AwsAuthorizer",
+    "tags": {
+        "language": "C#",
+        "type": "project"
+    },
+    "symbols": {
+        "authorizerType": {
+            "type": "parameter",
+            "description": "The type of API Gateway authorizer to use.",
+            "datatype": "choice",
+            "choices": [
+                {
+                    "choice": "token",
+                    "description": "TOKEN authorizer - validates using an authorization token (Default)"
+                },
+                {
+                    "choice": "request",
+                    "description": "REQUEST authorizer - validates using request parameters"
+                }
+            ],
+            "replaces": "authorizerType",
+            "defaultValue": "token"
+        }
+    }
+}

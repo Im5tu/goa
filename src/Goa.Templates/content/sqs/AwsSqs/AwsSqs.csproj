@@ -19,11 +19,7 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="Goa.Functions.Kinesis" Version="0.0.3-preview.4" />
-        <PackageReference Include="DotNet.ReproducibleBuilds" Version="1.2.39">
-            <PrivateAssets>all</PrivateAssets>
-            <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-        </PackageReference>
+        <PackageReference Include="Goa.Functions.Sqs" Version="0.0.3-preview.4" />
     </ItemGroup>
 
 </Project>
