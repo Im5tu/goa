@@ -15,7 +15,7 @@ dotnet new goa.apigw -n MyApiFunction
 **Options:**
 - `--functionType` - Choose API Gateway type:
   - `httpv2` (default) - HTTP API with V2 payload format
-  - `httpv1` - HTTP API with V1 payload format  
+  - `httpv1` - HTTP API with V1 payload format
   - `restapi` - REST API
 - `--includeOpenApi` - Include OpenAPI documentation with Scalar UI (default: false)
 
@@ -24,6 +24,26 @@ dotnet new goa.apigw -n MyApiFunction
 - JSON source generation for optimal performance
 - AOT compilation ready
 - Sample `/ping` endpoint included
+
+### API Gateway Authorizer (`goa.authorizer`)
+Creates a Lambda function for API Gateway custom authorization.
+
+**Usage:**
+```bash
+dotnet new goa.authorizer -n MyAuthorizer
+```
+
+**Options:**
+- `--authorizerType` - Choose authorizer type:
+  - `token` (default) - TOKEN authorizer validates using authorization token
+  - `request` - REQUEST authorizer validates using request parameters
+
+**Features:**
+- TOKEN and REQUEST authorizer support
+- PolicyBuilder fluent API for IAM policies
+- Support for authorization context data
+- Usage plan integration support
+- AOT compilation ready
 
 ### DynamoDB Lambda (`goa.dynamodb`)
 Creates a Lambda function for processing DynamoDB streams.
@@ -59,6 +79,56 @@ dotnet new goa.s3 -n MyS3Function
 - Dependency injection support
 - AOT compilation ready
 
+### Kinesis Lambda (`goa.kinesis`)
+Creates a Lambda function for processing Kinesis stream events.
+
+**Usage:**
+```bash
+dotnet new goa.kinesis -n MyKinesisFunction
+```
+
+**Features:**
+- Batch processing of Kinesis stream records
+- Base64 data decoding support
+- Record failure handling
+- Dependency injection support
+- AOT compilation ready
+
+### EventBridge Lambda (`goa.eventbridge`)
+Creates a Lambda function for processing EventBridge events.
+
+**Usage:**
+```bash
+dotnet new goa.eventbridge -n MyEventBridgeFunction
+```
+
+**Features:**
+- Single event processing
+- Access to event source, detail type, and custom detail data
+- Event failure handling
+- Dependency injection support
+- AOT compilation ready
+
+### SQS Lambda (`goa.sqs`)
+Creates a Lambda function for processing SQS messages.
+
+**Usage:**
+```bash
+dotnet new goa.sqs -n MySqsFunction
+```
+
+**Options:**
+- `--processingType` - Choose processing mode:
+  - `batch` (default) - Process SQS messages as a batch
+  - `single` - Process SQS messages one at a time
+
+**Features:**
+- Single or batch processing of SQS messages
+- Access to message body, attributes, and metadata
+- Message failure handling for retry/DLQ
+- Dependency injection support
+- AOT compilation ready
+
 ## Getting Started
 
 1. Install the template package:
@@ -70,19 +140,37 @@ dotnet new goa.s3 -n MyS3Function
    ```bash
    # Basic API Gateway function
    dotnet new goa.apigw -n MyFunction
-   
+
    # With OpenAPI documentation
    dotnet new goa.apigw -n MyFunction --includeOpenApi true
-   
+
+   # API Gateway authorizer (TOKEN type)
+   dotnet new goa.authorizer -n MyAuthorizer
+
+   # API Gateway authorizer (REQUEST type)
+   dotnet new goa.authorizer -n MyAuthorizer --authorizerType request
+
    # DynamoDB stream function
    dotnet new goa.dynamodb -n MyDynamoFunction
-   
+
    # S3 event function (batch processing)
    dotnet new goa.s3 -n MyS3Function
-   
+
    # S3 event function (single processing)
    dotnet new goa.s3 -n MyS3Function --processingType single
-   
+
+   # Kinesis stream function
+   dotnet new goa.kinesis -n MyKinesisFunction
+
+   # EventBridge event function
+   dotnet new goa.eventbridge -n MyEventBridgeFunction
+
+   # SQS message function (batch processing)
+   dotnet new goa.sqs -n MySqsFunction
+
+   # SQS message function (single processing)
+   dotnet new goa.sqs -n MySqsFunction --processingType single
+
    cd MyFunction
    ```
 
