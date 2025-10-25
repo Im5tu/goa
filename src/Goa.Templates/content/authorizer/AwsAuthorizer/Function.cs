@@ -7,7 +7,7 @@ using Microsoft.Extensions.Logging;
 await Host.CreateDefaultBuilder()
     .UseLambdaLifecycle()
     .ForAPIGatewayAuthorizer()
-//#if (authorizerType == "token")
+#if (authorizerType == "token")
     .ForTokenAuthorizer()
     .HandleWith<ILoggerFactory>((handler, evt) =>
     {
@@ -29,7 +29,7 @@ await Host.CreateDefaultBuilder()
             // Return a deny policy
             return Task.FromResult(
                 new PolicyBuilder("user")
-                    .DenyAll(methodArn ?? "*")
+                    .Deny(methodArn is null ? "*" : $"{PolicyBuilder.GetBaseArn(methodArn)}/*/*")
                     .Build()
             );
         }
@@ -39,14 +39,14 @@ await Host.CreateDefaultBuilder()
 
         // Return an allow policy with optional context
         var response = new PolicyBuilder(principalId)
-            .AllowAll(methodArn ?? "*")
+            .Allow(methodArn is null ? "*" : $"{PolicyBuilder.GetBaseArn(methodArn)}/*/*")
             .WithContext("userId", principalId)
             .WithContext("scope", "read:write")
             .Build();
 
         return Task.FromResult(response);
     })
-//#else
+#else
     .ForRequestAuthorizer()
     .HandleWith<ILoggerFactory>((handler, evt) =>
     {
@@ -71,7 +71,7 @@ await Host.CreateDefaultBuilder()
             // Return a deny policy
             return Task.FromResult(
                 new PolicyBuilder("user")
-                    .DenyAll(methodArn ?? "*")
+                    .Deny(methodArn is null ? "*" : $"{PolicyBuilder.GetBaseArn(methodArn)}/*/*")
                     .Build()
             );
         }
@@ -81,14 +81,14 @@ await Host.CreateDefaultBuilder()
 
         // Return an allow policy with optional context
         var response = new PolicyBuilder(principalId)
-            .AllowAll(methodArn ?? "*")
+            .Allow(methodArn is null ? "*" : $"{PolicyBuilder.GetBaseArn(methodArn)}/*/*")
             .WithContext("userId", principalId)
             .WithContext("ipAddress", evt.RequestContext?.Identity?.SourceIp ?? "unknown")
             .Build();
 
         return Task.FromResult(response);
     })
-//#endif
+#endif
     .RunAsync();
 
 // TODO :: Implement your validation logic

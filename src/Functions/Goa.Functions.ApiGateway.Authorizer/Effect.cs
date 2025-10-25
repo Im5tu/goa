@@ -5,7 +5,7 @@ namespace Goa.Functions.ApiGateway.Authorizer;
 /// <summary>
 /// Represents the effect of a policy statement (Allow or Deny)
 /// </summary>
-[JsonConverter(typeof(JsonStringEnumConverter))]
+[JsonConverter(typeof(JsonStringEnumConverter<Effect>))]
 public enum Effect
 {
     /// <summary>

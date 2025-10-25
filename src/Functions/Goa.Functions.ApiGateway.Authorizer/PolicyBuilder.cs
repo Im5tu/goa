@@ -86,7 +86,7 @@ public class PolicyBuilder
     /// <returns>The policy builder for method chaining</returns>
     public PolicyBuilder AllowAll(string methodArn)
     {
-        var resource = methodArn.Contains("/*") ? methodArn : $"{methodArn}/*";
+        var resource = methodArn.EndsWith("/*") ? methodArn : $"{methodArn}/*";
         return Allow(resource);
     }
 
@@ -97,7 +97,7 @@ public class PolicyBuilder
     /// <returns>The policy builder for method chaining</returns>
     public PolicyBuilder DenyAll(string methodArn)
     {
-        var resource = methodArn.Contains("/*") ? methodArn : $"{methodArn}/*";
+        var resource = methodArn.EndsWith("/*") ? methodArn : $"{methodArn}/*";
         return Deny(resource);
     }
 

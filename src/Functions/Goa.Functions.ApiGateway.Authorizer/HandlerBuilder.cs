@@ -7,15 +7,23 @@ using System.Text.Json.Serialization;
 
 namespace Goa.Functions.ApiGateway.Authorizer;
 
+/// <summary>
+/// Internal implementation of the authorizer handler builder
+/// </summary>
 internal sealed class HandlerBuilder : ITokenAuthorizerHandlerBuilder, IRequestAuthorizerHandlerBuilder
 {
     private readonly ILambdaBuilder _builder;
 
+    /// <summary>
+    /// Initializes a new instance of the HandlerBuilder class
+    /// </summary>
+    /// <param name="builder">The Lambda builder</param>
     public HandlerBuilder(ILambdaBuilder builder)
     {
         _builder = builder;
     }
 
+    /// <inheritdoc />
     public IRunnable HandleWith<THandler>(Func<THandler, TokenAuthorizerEvent, Task<AuthorizerResponse>> handler) where THandler : class
     {
         var context = (JsonSerializerContext)AuthorizerEventSerializationContext.Default;
@@ -45,6 +53,7 @@ internal sealed class HandlerBuilder : ITokenAuthorizerHandlerBuilder, IRequestA
         return new Runnable(_builder);
     }
 
+    /// <inheritdoc />
     public IRunnable HandleWith<THandler>(Func<THandler, RequestAuthorizerEvent, Task<AuthorizerResponse>> handler) where THandler : class
     {
         var context = (JsonSerializerContext)AuthorizerEventSerializationContext.Default;

@@ -20,9 +20,14 @@ public class AuthorizerResponse
     public PolicyDocument PolicyDocument { get; set; } = new();
 
     /// <summary>
-    /// Gets or sets additional context data to pass to the backend
-    /// All values must be strings, numbers, or booleans (as strings)
+    /// Gets or sets additional context data to pass to the backend Lambda function.
+    /// All values must be strings, numbers, or booleans. Complex objects are not supported.
+    /// It is the caller's responsibility to ensure only valid types are provided.
+    /// Invalid types will cause the authorizer to fail when API Gateway processes the response.
     /// </summary>
+    /// <remarks>
+    /// Use the <see cref="PolicyBuilder.WithContext"/> method to add context values safely.
+    /// </remarks>
     [JsonPropertyName("context")]
     public Dictionary<string, object>? Context { get; set; }
 
