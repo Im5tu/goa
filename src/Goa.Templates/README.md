@@ -15,7 +15,7 @@ dotnet new goa.apigw -n MyApiFunction
 **Options:**
 - `--functionType` - Choose API Gateway type:
   - `httpv2` (default) - HTTP API with V2 payload format
-  - `httpv1` - HTTP API with V1 payload format  
+  - `httpv1` - HTTP API with V1 payload format
   - `restapi` - REST API
 - `--includeOpenApi` - Include OpenAPI documentation with Scalar UI (default: false)
 
@@ -24,6 +24,26 @@ dotnet new goa.apigw -n MyApiFunction
 - JSON source generation for optimal performance
 - AOT compilation ready
 - Sample `/ping` endpoint included
+
+### API Gateway Authorizer (`goa.authorizer`)
+Creates a Lambda function for API Gateway custom authorization.
+
+**Usage:**
+```bash
+dotnet new goa.authorizer -n MyAuthorizer
+```
+
+**Options:**
+- `--authorizerType` - Choose authorizer type:
+  - `token` (default) - TOKEN authorizer validates using authorization token
+  - `request` - REQUEST authorizer validates using request parameters
+
+**Features:**
+- TOKEN and REQUEST authorizer support
+- PolicyBuilder fluent API for IAM policies
+- Support for authorization context data
+- Usage plan integration support
+- AOT compilation ready
 
 ### DynamoDB Lambda (`goa.dynamodb`)
 Creates a Lambda function for processing DynamoDB streams.
@@ -123,6 +143,12 @@ dotnet new goa.sqs -n MySqsFunction
 
    # With OpenAPI documentation
    dotnet new goa.apigw -n MyFunction --includeOpenApi true
+
+   # API Gateway authorizer (TOKEN type)
+   dotnet new goa.authorizer -n MyAuthorizer
+
+   # API Gateway authorizer (REQUEST type)
+   dotnet new goa.authorizer -n MyAuthorizer --authorizerType request
 
    # DynamoDB stream function
    dotnet new goa.dynamodb -n MyDynamoFunction
