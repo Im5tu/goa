@@ -19,7 +19,7 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="Goa.Functions.ApiGateway.Authorizer" Version="0.0.3-preview.4" />
+        <PackageReference Include="Goa.Functions.ApiGateway.Authorizer" Version="0.0.4-preview" />
     </ItemGroup>
 
 </Project>
