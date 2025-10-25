@@ -290,7 +290,7 @@ public class CollectionTypeHandler : ICompositeTypeHandler
         // Handle complex types
         if (IsComplexType(elementType))
         {
-            var normalizedTypeName = elementType.Name.Replace(".", "_").Replace("`", "_");
+            var normalizedTypeName = NamingHelpers.NormalizeTypeName(elementType.Name);
             return $"{itemVar}.M != null ? DynamoMapper.{normalizedTypeName}.FromDynamoRecord(new DynamoRecord({itemVar}.M!), {pkVar}, {skVar}) : default({elementType.ToDisplayString()})";
         }
 
@@ -305,17 +305,17 @@ public class CollectionTypeHandler : ICompositeTypeHandler
         return elementType.SpecialType switch
         {
             SpecialType.System_String => $"{itemVar}.SS?.ToList() ?? new List<string>()",
-            SpecialType.System_Byte => $"{itemVar}.NS?.Select(s => byte.Parse(s)).ToList() ?? new List<byte>()",
-            SpecialType.System_SByte => $"{itemVar}.NS?.Select(s => sbyte.Parse(s)).ToList() ?? new List<sbyte>()",
-            SpecialType.System_Int16 => $"{itemVar}.NS?.Select(s => short.Parse(s)).ToList() ?? new List<short>()",
-            SpecialType.System_UInt16 => $"{itemVar}.NS?.Select(s => ushort.Parse(s)).ToList() ?? new List<ushort>()",
-            SpecialType.System_Int32 => $"{itemVar}.NS?.Select(s => int.Parse(s)).ToList() ?? new List<int>()",
-            SpecialType.System_UInt32 => $"{itemVar}.NS?.Select(s => uint.Parse(s)).ToList() ?? new List<uint>()",
-            SpecialType.System_Int64 => $"{itemVar}.NS?.Select(s => long.Parse(s)).ToList() ?? new List<long>()",
-            SpecialType.System_UInt64 => $"{itemVar}.NS?.Select(s => ulong.Parse(s)).ToList() ?? new List<ulong>()",
-            SpecialType.System_Decimal => $"{itemVar}.NS?.Select(s => decimal.Parse(s)).ToList() ?? new List<decimal>()",
-            SpecialType.System_Single => $"{itemVar}.NS?.Select(s => float.Parse(s)).ToList() ?? new List<float>()",
-            SpecialType.System_Double => $"{itemVar}.NS?.Select(s => double.Parse(s)).ToList() ?? new List<double>()",
+            SpecialType.System_Byte => $"{itemVar}.NS?.Select(s => byte.Parse(s, System.Globalization.CultureInfo.InvariantCulture)).ToList() ?? new List<byte>()",
+            SpecialType.System_SByte => $"{itemVar}.NS?.Select(s => sbyte.Parse(s, System.Globalization.CultureInfo.InvariantCulture)).ToList() ?? new List<sbyte>()",
+            SpecialType.System_Int16 => $"{itemVar}.NS?.Select(s => short.Parse(s, System.Globalization.CultureInfo.InvariantCulture)).ToList() ?? new List<short>()",
+            SpecialType.System_UInt16 => $"{itemVar}.NS?.Select(s => ushort.Parse(s, System.Globalization.CultureInfo.InvariantCulture)).ToList() ?? new List<ushort>()",
+            SpecialType.System_Int32 => $"{itemVar}.NS?.Select(s => int.Parse(s, System.Globalization.CultureInfo.InvariantCulture)).ToList() ?? new List<int>()",
+            SpecialType.System_UInt32 => $"{itemVar}.NS?.Select(s => uint.Parse(s, System.Globalization.CultureInfo.InvariantCulture)).ToList() ?? new List<uint>()",
+            SpecialType.System_Int64 => $"{itemVar}.NS?.Select(s => long.Parse(s, System.Globalization.CultureInfo.InvariantCulture)).ToList() ?? new List<long>()",
+            SpecialType.System_UInt64 => $"{itemVar}.NS?.Select(s => ulong.Parse(s, System.Globalization.CultureInfo.InvariantCulture)).ToList() ?? new List<ulong>()",
+            SpecialType.System_Decimal => $"{itemVar}.NS?.Select(s => decimal.Parse(s, System.Globalization.CultureInfo.InvariantCulture)).ToList() ?? new List<decimal>()",
+            SpecialType.System_Single => $"{itemVar}.NS?.Select(s => float.Parse(s, System.Globalization.CultureInfo.InvariantCulture)).ToList() ?? new List<float>()",
+            SpecialType.System_Double => $"{itemVar}.NS?.Select(s => double.Parse(s, System.Globalization.CultureInfo.InvariantCulture)).ToList() ?? new List<double>()",
             SpecialType.System_Boolean => $"{itemVar}.SS?.Select(s => bool.Parse(s)).ToList() ?? new List<bool>()",
             SpecialType.System_DateTime => $"{itemVar}.SS?.Select(s => DateTime.ParseExact(s, \"o\", System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.RoundtripKind)).ToList() ?? new List<DateTime>()",
             _ when elementType.Name == nameof(Guid) => $"{itemVar}.SS?.Select(s => Guid.Parse(s)).ToList() ?? new List<Guid>()",
