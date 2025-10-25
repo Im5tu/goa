@@ -19,7 +19,7 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <ProjectReference Include="..\..\..\..\Functions\Goa.Functions.EventBridge\Goa.Functions.EventBridge.csproj" />
+        <PackageReference Include="Goa.Functions.EventBridge" Version="0.0.3-preview.4" />
     </ItemGroup>
 
 </Project>

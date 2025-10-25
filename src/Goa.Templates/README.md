@@ -59,6 +59,56 @@ dotnet new goa.s3 -n MyS3Function
 - Dependency injection support
 - AOT compilation ready
 
+### Kinesis Lambda (`goa.kinesis`)
+Creates a Lambda function for processing Kinesis stream events.
+
+**Usage:**
+```bash
+dotnet new goa.kinesis -n MyKinesisFunction
+```
+
+**Features:**
+- Batch processing of Kinesis stream records
+- Base64 data decoding support
+- Record failure handling
+- Dependency injection support
+- AOT compilation ready
+
+### EventBridge Lambda (`goa.eventbridge`)
+Creates a Lambda function for processing EventBridge events.
+
+**Usage:**
+```bash
+dotnet new goa.eventbridge -n MyEventBridgeFunction
+```
+
+**Features:**
+- Single event processing
+- Access to event source, detail type, and custom detail data
+- Event failure handling
+- Dependency injection support
+- AOT compilation ready
+
+### SQS Lambda (`goa.sqs`)
+Creates a Lambda function for processing SQS messages.
+
+**Usage:**
+```bash
+dotnet new goa.sqs -n MySqsFunction
+```
+
+**Options:**
+- `--processingType` - Choose processing mode:
+  - `batch` (default) - Process SQS messages as a batch
+  - `single` - Process SQS messages one at a time
+
+**Features:**
+- Single or batch processing of SQS messages
+- Access to message body, attributes, and metadata
+- Message failure handling for retry/DLQ
+- Dependency injection support
+- AOT compilation ready
+
 ## Getting Started
 
 1. Install the template package:
@@ -70,19 +120,31 @@ dotnet new goa.s3 -n MyS3Function
    ```bash
    # Basic API Gateway function
    dotnet new goa.apigw -n MyFunction
-   
+
    # With OpenAPI documentation
    dotnet new goa.apigw -n MyFunction --includeOpenApi true
-   
+
    # DynamoDB stream function
    dotnet new goa.dynamodb -n MyDynamoFunction
-   
+
    # S3 event function (batch processing)
    dotnet new goa.s3 -n MyS3Function
-   
+
    # S3 event function (single processing)
    dotnet new goa.s3 -n MyS3Function --processingType single
-   
+
+   # Kinesis stream function
+   dotnet new goa.kinesis -n MyKinesisFunction
+
+   # EventBridge event function
+   dotnet new goa.eventbridge -n MyEventBridgeFunction
+
+   # SQS message function (batch processing)
+   dotnet new goa.sqs -n MySqsFunction
+
+   # SQS message function (single processing)
+   dotnet new goa.sqs -n MySqsFunction --processingType single
+
    cd MyFunction
    ```
 
