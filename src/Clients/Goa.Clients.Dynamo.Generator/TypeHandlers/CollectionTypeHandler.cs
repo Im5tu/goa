@@ -45,7 +45,7 @@ public class CollectionTypeHandler : ICompositeTypeHandler
 
         // For non-primitive types, we need to map to AttributeValue.L
         // This includes: complex types (classes/records/structs) AND nested collections
-        var elementMapping = GenerateElementToAttributeValue(elementType);
+        var elementMapping = GenerateElementToAttributeValue(elementType, "item");
         if (elementMapping != null)
         {
             return $"model.{propertyName} != null ? new AttributeValue {{ L = model.{propertyName}.Select(item => {elementMapping}).ToList() }} : new AttributeValue {{ NULL = true }}";
@@ -59,14 +59,16 @@ public class CollectionTypeHandler : ICompositeTypeHandler
     /// Generates code to convert a single element to an AttributeValue.
     /// Returns null if the type is not supported.
     /// </summary>
-    private string? GenerateElementToAttributeValue(ITypeSymbol elementType)
+    /// <param name="elementType">The type of the element to convert</param>
+    /// <param name="itemVarName">The variable name to use for the element in generated code</param>
+    private string? GenerateElementToAttributeValue(ITypeSymbol elementType, string itemVarName)
     {
         // Check if it's a complex type (user-defined class/record/struct)
         if (IsComplexType(elementType))
         {
             // Use just the type name (not the full namespace) to match the mapper naming convention
             var normalizedTypeName = NamingHelpers.NormalizeTypeName(elementType.Name);
-            return $"(item != null ? new AttributeValue {{ M = DynamoMapper.{normalizedTypeName}.ToDynamoRecord(item) }} : new AttributeValue {{ NULL = true }})";
+            return $"({itemVarName} != null ? new AttributeValue {{ M = DynamoMapper.{normalizedTypeName}.ToDynamoRecord({itemVarName}) }} : new AttributeValue {{ NULL = true }})";
         }
 
         // Check if it's a nested collection
@@ -83,10 +85,11 @@ public class CollectionTypeHandler : ICompositeTypeHandler
                 }
 
                 // Recursively handle nested collection elements
-                var nestedElementMapping = GenerateElementToAttributeValue(nestedElementType);
+                var nestedVarName = itemVarName == "item" ? "nested" : $"{itemVarName}_nested";
+                var nestedElementMapping = GenerateElementToAttributeValue(nestedElementType, nestedVarName);
                 if (nestedElementMapping != null)
                 {
-                    return $"(item != null ? new AttributeValue {{ L = item.Select(nested => {nestedElementMapping.Replace("item", "nested")}).ToList() }} : new AttributeValue {{ NULL = true }})";
+                    return $"({itemVarName} != null ? new AttributeValue {{ L = {itemVarName}.Select({nestedVarName} => {nestedElementMapping}).ToList() }} : new AttributeValue {{ NULL = true }})";
                 }
             }
         }
