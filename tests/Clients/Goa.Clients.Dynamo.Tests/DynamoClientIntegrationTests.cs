@@ -73,7 +73,7 @@ public class DynamoClientIntegrationTests
         var response = await _fixture.DynamoClient.GetItemAsync(getRequest);
 
         await Assert.That(response.IsError).IsFalse();
-        await Assert.That(response.Value.Item).IsNotNull();
+        await Assert.That(() => response.Value.Item).IsNotNull();
         var attribute = (response.Value.Item!)["data"];
         await Assert.That(attribute).IsNotNull();
         await Assert.That(attribute!.S).IsEqualTo("retrieved-data");
@@ -95,7 +95,7 @@ public class DynamoClientIntegrationTests
         var response = await _fixture.DynamoClient.GetItemAsync(getRequest);
 
         await Assert.That(response.IsError).IsFalse();
-        await Assert.That(response.Value.Item).IsNull();
+        await Assert.That(() => response.Value.Item).IsNull();
     }
 
     [Test]
@@ -142,7 +142,7 @@ public class DynamoClientIntegrationTests
         var response = await _fixture.DynamoClient.UpdateItemAsync(updateRequest);
 
         await Assert.That(response.IsError).IsFalse();
-        await Assert.That(response.Value.Attributes).IsNotNull();
+        await Assert.That(() => response.Value.Attributes).IsNotNull();
 
         var data = response.Value.Attributes!["data"];
         var counter = response.Value.Attributes!["counter"];
@@ -184,7 +184,7 @@ public class DynamoClientIntegrationTests
 
         await Assert.That(deleteResponse.IsError).IsFalse();
         var attributes = deleteResponse.Value.Attributes;
-        await Assert.That(attributes).IsNotNull();
+        await Assert.That(() => attributes).IsNotNull();
         await Assert.That(attributes!["data"]?.S).IsEqualTo("to-be-deleted");
 
         var getRequest = new GetItemRequest
@@ -198,7 +198,7 @@ public class DynamoClientIntegrationTests
         };
 
         var getResponse = await _fixture.DynamoClient.GetItemAsync(getRequest);
-        await Assert.That(getResponse.Value.Item).IsNull();
+        await Assert.That(() => getResponse.Value.Item).IsNull();
     }
 
     [Test]
@@ -425,7 +425,7 @@ public class DynamoClientIntegrationTests
         };
 
         var getResponse = await _fixture.DynamoClient.GetItemAsync(getRequest);
-        await Assert.That(getResponse.Value.Item).IsNotNull();
+        await Assert.That(() => getResponse.Value.Item).IsNotNull();
 
         var getDeletedRequest = new GetItemRequest
         {
@@ -438,6 +438,6 @@ public class DynamoClientIntegrationTests
         };
 
         var getDeletedResponse = await _fixture.DynamoClient.GetItemAsync(getDeletedRequest);
-        await Assert.That(getDeletedResponse.Value.Item).IsNull();
+        await Assert.That(() => getDeletedResponse.Value.Item).IsNull();
     }
 }

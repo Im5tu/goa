@@ -122,7 +122,8 @@ public class SqsClientIntegrationTests
         await Assert.That(request.QueueUrl).IsEqualTo(queueUrl);
         await Assert.That(request.MessageBody).IsEqualTo("Test message");
         await Assert.That(request.DelaySeconds).IsEqualTo(30);
-        await Assert.That(request.MessageAttributes).HasCount().EqualTo(2);
+        await Assert.That(() => request.MessageAttributes).IsNotNull();
+        await Assert.That(request.MessageAttributes!).HasCount().EqualTo(2);
         await Assert.That(request.MessageAttributes!["attr1"].StringValue).IsEqualTo("value1");
         await Assert.That(request.MessageAttributes["attr2"].DataType).IsEqualTo("Number");
     }
