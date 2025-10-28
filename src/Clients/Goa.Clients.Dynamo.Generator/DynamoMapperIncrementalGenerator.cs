@@ -30,7 +30,7 @@ public class DynamoMapperIncrementalGenerator : IIncrementalGenerator
     
     private static bool IsCandidateType(SyntaxNode node)
     {
-        return node is TypeDeclarationSyntax typeDecl && typeDecl.AttributeLists.Count > 0;
+        return node is TypeDeclarationSyntax;
     }
     
     private static INamedTypeSymbol? GetSemanticTargetForGeneration(GeneratorSyntaxContext context)
