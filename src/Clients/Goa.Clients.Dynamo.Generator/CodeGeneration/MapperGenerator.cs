@@ -218,8 +218,6 @@ public class MapperGenerator : ICodeGenerator
             {
                 // Property not found - report diagnostic error
                 ReportMissingPropertyError(type, placeholder, keyName, pattern);
-                // Use empty string as fallback to generate valid (but likely incorrect) code
-                replacements[placeholder] = "\"\"";
             }
         }
 
@@ -373,7 +371,7 @@ public class MapperGenerator : ICodeGenerator
         }
 
         // Check if we need mixed construction (constructor + property setters)
-        var constructorParams = new HashSet<string>(constructor.Parameters.Select(p => p.Name));
+        var constructorParams = new HashSet<string>(constructor.Parameters.Select(p => p.Name), StringComparer.OrdinalIgnoreCase);
 
         // Get all properties including inherited ones, only supported ones that aren't ignored for reading
         var allProperties = GetAllProperties(type)
