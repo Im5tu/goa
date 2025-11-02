@@ -2,6 +2,8 @@ using Goa.Clients.Dynamo.Generator.CodeGeneration;
 using Goa.Clients.Dynamo.Generator.TypeHandlers;
 using Goa.Clients.Dynamo.Generator.Tests.Helpers;
 using Goa.Clients.Dynamo.Generator.Models;
+using Microsoft.CodeAnalysis;
+using Moq;
 
 namespace Goa.Clients.Dynamo.Generator.Tests.CodeGeneration;
 
@@ -124,7 +126,7 @@ public class MapperGeneratorTests
 
         var type = TestModelBuilders.CreateDynamoTypeInfo(
             "User",
-            "TestNamespace.User", 
+            "TestNamespace.User",
             "TestNamespace",
             properties: properties,
             attributes: new List<AttributeInfo> { dynamoModelAttr }
@@ -256,10 +258,10 @@ public class MapperGeneratorTests
         var result = _generator.GenerateCode(types, context);
 
         // Assert
-        // DateTime should use DateTimeTypeHandler  
+        // DateTime should use DateTimeTypeHandler
         await Assert.That(result)
             .Contains("record[\"CreatedAt\"] = new AttributeValue { S = model.CreatedAt.ToString(\"o\") };");
-        
+
         // UnixTimestamp should use UnixTimestampTypeHandler
         await Assert.That(result)
             .Contains("record[\"UpdatedAt\"] = new AttributeValue { N = ((DateTimeOffset)model.UpdatedAt).ToUnixTimeSeconds().ToString() };");
@@ -312,8 +314,8 @@ public class MapperGeneratorTests
             "User",
             "TestNamespace.User",
             "TestNamespace",
-            attributes: new List<AttributeInfo> { 
-                TestModelBuilders.CreateDynamoModelAttribute("USER#123", "METADATA") 
+            attributes: new List<AttributeInfo> {
+                TestModelBuilders.CreateDynamoModelAttribute("USER#123", "METADATA")
             }
         );
 
@@ -341,7 +343,7 @@ public class MapperGeneratorTests
         await Assert.That(result)
             .Contains("using Goa.Clients.Dynamo.Extensions;");
         await Assert.That(result)
-            .Contains("namespace TestNamespace;");
+            .Contains("namespace TestNamespace");
     }
 
     [Test]
@@ -399,8 +401,8 @@ public class MapperGeneratorTests
             "User",
             "User",
             "", // Empty namespace
-            attributes: new List<AttributeInfo> { 
-                TestModelBuilders.CreateDynamoModelAttribute("USER#123", "METADATA") 
+            attributes: new List<AttributeInfo> {
+                TestModelBuilders.CreateDynamoModelAttribute("USER#123", "METADATA")
             }
         );
 
@@ -412,7 +414,7 @@ public class MapperGeneratorTests
 
         // Assert
         await Assert.That(result)
-            .Contains("namespace Generated;");
+            .Contains("namespace Generated");
     }
 
     [Test]
@@ -423,8 +425,17 @@ public class MapperGeneratorTests
             "User",
             "TestNamespace.User",
             "TestNamespace",
-            attributes: new List<AttributeInfo> { 
-                TestModelBuilders.CreateDynamoModelAttribute("USER#<Id>", "METADATA") 
+            attributes: new List<AttributeInfo> {
+                TestModelBuilders.CreateDynamoModelAttribute("USER#<Id>", "METADATA")
+            },
+            properties: new List<PropertyInfo>
+            {
+                new PropertyInfo
+                {
+                    Name = "Id",
+                    Type = MockSymbolFactory.PrimitiveTypes.String,
+                    Symbol = new Mock<IPropertySymbol>().Object
+                }
             }
         );
 
@@ -432,8 +443,17 @@ public class MapperGeneratorTests
             "Product",
             "TestNamespace.Product",
             "TestNamespace",
-            attributes: new List<AttributeInfo> { 
-                TestModelBuilders.CreateDynamoModelAttribute("PRODUCT#<Id>", "METADATA") 
+            attributes: new List<AttributeInfo> {
+                TestModelBuilders.CreateDynamoModelAttribute("PRODUCT#<Id>", "METADATA")
+            },
+            properties: new List<PropertyInfo>
+            {
+                new PropertyInfo
+                {
+                    Name = "Id",
+                    Type = MockSymbolFactory.PrimitiveTypes.String,
+                    Symbol = new Mock<IPropertySymbol>().Object
+                }
             }
         );
 
@@ -556,7 +576,7 @@ public class MapperGeneratorTests
 
         var concreteType = TestModelBuilders.CreateDynamoTypeInfo(
             "ConcreteEntity",
-            "TestNamespace.ConcreteEntity", 
+            "TestNamespace.ConcreteEntity",
             "TestNamespace",
             properties: properties,
             attributes: new List<AttributeInfo> { dynamoModelAttr },

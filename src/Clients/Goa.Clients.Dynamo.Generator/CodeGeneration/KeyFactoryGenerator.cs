@@ -19,39 +19,40 @@ public class KeyFactoryGenerator : ICodeGenerator
     {
         // Group types by namespace to generate separate files
         // Include types that have DynamoModel either directly or inherited from base types
-        var typesWithDynamoModel = types.Where(t => HasDynamoModelAttribute(t)).ToList();
+        var typesWithDynamoModel = types.Where(HasDynamoModelAttribute).ToList();
         var typesByNamespace = typesWithDynamoModel.GroupBy(t => t.Namespace).ToList();
 
         if (!typesByNamespace.Any())
             return string.Empty;
 
-        // For now, generate for the first namespace. Later we can modify the generator
-        // to return multiple files or handle this differently
-        var firstNamespaceGroup = typesByNamespace.First();
-        var targetNamespace = string.IsNullOrEmpty(firstNamespaceGroup.Key) ? "Generated" : firstNamespaceGroup.Key;
-
         var builder = new CodeBuilder();
-
         builder.AppendLine("#nullable enable");
         builder.AppendLine("using System;");
         builder.AppendLine("using System.Collections.Generic;");
         builder.AppendLine("using Goa.Clients.Dynamo;");
-        builder.AppendLine();
-        builder.AppendLine($"namespace {targetNamespace};");
-        builder.AppendLine();
-        builder.OpenBraceWithLine("public static class DynamoKeyFactory");
 
-        foreach (var type in firstNamespaceGroup)
+        foreach (var ns in typesByNamespace)
         {
-            var dynamoModelAttr = GetDynamoModelAttribute(type);
-            if (dynamoModelAttr == null)
-                continue; // Skip types without DynamoModel attribute
+            var targetNamespace = string.IsNullOrEmpty(ns.Key) ? "Generated" : ns.Key;
+            builder.AppendLine();
+            builder.AppendLine($"namespace {targetNamespace}");
+            builder.OpenBrace();
+            {
+                builder.OpenBraceWithLine("public static class DynamoKeyFactory");
 
-            GenerateTypeKeyFactory(builder, type, dynamoModelAttr);
+                foreach (var type in ns)
+                {
+                    var dynamoModelAttr = GetDynamoModelAttribute(type);
+                    if (dynamoModelAttr == null)
+                        continue; // Skip types without DynamoModel attribute
+
+                    GenerateTypeKeyFactory(builder, type, dynamoModelAttr);
+                }
+
+                builder.CloseBrace();
+            }
+            builder.CloseBrace();
         }
-
-        builder.CloseBrace();
-
         return builder.ToString();
     }
 
@@ -113,7 +114,7 @@ public class KeyFactoryGenerator : ICodeGenerator
     {
         // Remove common GSI prefixes to avoid GSI_GSI_ pattern
         var normalized = indexName;
-        
+
         // Remove GSI prefix (case insensitive)
         if (normalized.StartsWith("GSI", StringComparison.OrdinalIgnoreCase))
         {
@@ -130,12 +131,12 @@ public class KeyFactoryGenerator : ICodeGenerator
 
         // Replace hyphens and spaces with underscores
         normalized = normalized.Replace("-", "_").Replace(" ", "_");
-        
+
         // Convert to PascalCase for each segment
         var segments = normalized.Split(new char[] { '_' }, StringSplitOptions.RemoveEmptyEntries);
-        var result = string.Join("_", segments.Select(segment => 
+        var result = string.Join("_", segments.Select(segment =>
             char.ToUpper(segment[0]) + (segment.Length > 1 ? segment.Substring(1) : "")));
-        
+
         return string.IsNullOrEmpty(result) ? "Index" : result;
     }
 

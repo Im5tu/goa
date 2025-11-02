@@ -412,7 +412,7 @@ public class KeyFactoryGeneratorTests
         await Assert.That(result)
             .Contains("using Goa.Clients.Dynamo;");
         await Assert.That(result)
-            .Contains("namespace TestNamespace;");
+            .Contains("namespace TestNamespace");
     }
 
     [Test]
@@ -436,7 +436,7 @@ public class KeyFactoryGeneratorTests
 
         // Assert
         await Assert.That(result)
-            .Contains("namespace Generated;");
+            .Contains("namespace Generated");
     }
 
     [Test]
