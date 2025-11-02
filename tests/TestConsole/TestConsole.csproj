@@ -13,6 +13,7 @@
     </PropertyGroup>
 
     <ItemGroup>
+        <Content Include=".generated/**/*.cs" />
       <ProjectReference Include="..\..\src\Functions\Goa.Functions.ApiGateway.Authorizer\Goa.Functions.ApiGateway.Authorizer.csproj" />
       <ProjectReference Include="..\..\src\Functions\Goa.Functions.ApiGateway\Goa.Functions.ApiGateway.csproj" />
       <ProjectReference Include="..\..\src\Clients\Goa.Clients.Dynamo\Goa.Clients.Dynamo.csproj" />

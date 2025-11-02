@@ -22,18 +22,12 @@ public class MapperGenerator : ICodeGenerator
         _context = context; // Store context for diagnostic reporting
 
         // Group types by namespace to generate separate files
-        var typesByNamespace = types.GroupBy(t => t.Namespace).ToList();
+        var typesByNamespace = types.GroupBy(t => t.Namespace).Where(x => x.Any()).ToList();
 
         if (!typesByNamespace.Any())
             return string.Empty;
 
-        // For now, generate for the first namespace. Later we can modify the generator
-        // to return multiple files or handle this differently
-        var firstNamespaceGroup = typesByNamespace.First();
-        var targetNamespace = string.IsNullOrEmpty(firstNamespaceGroup.Key) ? "Generated" : firstNamespaceGroup.Key;
-
         var builder = new CodeBuilder();
-
         builder.AppendLine("#nullable enable");
         builder.AppendLine("using System;");
         builder.AppendLine("using System.Collections.Generic;");
@@ -43,17 +37,26 @@ public class MapperGenerator : ICodeGenerator
         builder.AppendLine("using Goa.Clients.Dynamo.Models;");
         builder.AppendLine("using Goa.Clients.Dynamo.Exceptions;");
         builder.AppendLine("using Goa.Clients.Dynamo.Extensions;");
+
+        foreach (var ns in typesByNamespace)
+        {
+            var targetNamespace = string.IsNullOrEmpty(ns.Key) ? "Generated" : ns.Key;
         builder.AppendLine();
-        builder.AppendLine($"namespace {targetNamespace};");
-        builder.AppendLine();
+            builder.AppendLine($"namespace {targetNamespace}");
+            builder.OpenBrace();
+            {
         builder.OpenBraceWithLine("public static class DynamoMapper");
 
-        foreach (var type in firstNamespaceGroup)
+                foreach (var type in ns)
         {
+                    builder.AppendLine($"// {type.FullName}");
             GenerateTypeMapper(builder, type, context);
         }
 
         builder.CloseBrace();
+            }
+            builder.CloseBrace();
+        }
 
         return builder.ToString();
     }
@@ -238,7 +241,13 @@ public class MapperGenerator : ICodeGenerator
             DiagnosticSeverity.Error,
             isEnabledByDefault: true);
 
-        var location = type.Symbol?.Locations.FirstOrDefault() ?? Location.None;
+        // Safely get location, handling both null symbol and default/empty ImmutableArray
+        var location = Location.None;
+        if (type.Symbol?.Locations is { } locations && !locations.IsDefaultOrEmpty)
+        {
+            location = locations[0];
+        }
+
         var diagnostic = Diagnostic.Create(descriptor, location, propertyName, keyName, pattern, type.FullName);
         _context.ReportDiagnostic?.Invoke(diagnostic);
     }

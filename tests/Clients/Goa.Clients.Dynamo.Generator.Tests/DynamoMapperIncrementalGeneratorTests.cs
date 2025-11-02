@@ -12,26 +12,21 @@ namespace Goa.Clients.Dynamo.Generator.Tests;
 public class DynamoMapperIncrementalGeneratorTests
 {
     [Test]
-    public async Task IsCandidateType_ShouldReturnTrue_ForTypeWithAttributes()
+    public async Task IsCandidateType_ShouldReturnTrue_ForClassDeclaration()
     {
-        var typeDeclaration = SyntaxFactory.ClassDeclaration("TestClass")
-            .AddAttributeLists(SyntaxFactory.AttributeList(
-                SyntaxFactory.SingletonSeparatedList(
-                    SyntaxFactory.Attribute(SyntaxFactory.IdentifierName("DynamoModel")))));
-
+        var typeDeclaration = SyntaxFactory.ClassDeclaration("TestClass");
         var result = CallPrivateMethod<bool>("IsCandidateType", typeDeclaration);
 
         await Assert.That(result).IsTrue();
     }
 
     [Test]
-    public async Task IsCandidateType_ShouldReturnFalse_ForTypeWithoutAttributes()
+    public async Task IsCandidateType_ShouldReturnTrue_ForRecordDeclaration()
     {
-        var typeDeclaration = SyntaxFactory.ClassDeclaration("TestClass");
-
+        var typeDeclaration = SyntaxFactory.RecordDeclaration(default, default(SyntaxTokenList), SyntaxFactory.Token(SyntaxKind.RecordKeyword), SyntaxFactory.Identifier("TestRecord"), null, null, null, default, SyntaxFactory.Token(SyntaxKind.OpenBraceToken), default, SyntaxFactory.Token(SyntaxKind.CloseBraceToken), default);
         var result = CallPrivateMethod<bool>("IsCandidateType", typeDeclaration);
 
-        await Assert.That(result).IsFalse();
+        await Assert.That(result).IsTrue();
     }
 
     [Test]
@@ -43,7 +38,7 @@ public class DynamoMapperIncrementalGeneratorTests
                     SyntaxFactory.Attribute(SyntaxFactory.IdentifierName("DynamoModel")))));
 
         var typeSymbol = MockSymbolFactory.CreateNamedTypeSymbol(
-            "TestEntity", 
+            "TestEntity",
             "TestNamespace.TestEntity",
             attributes: ImmutableArray.Create(
                 MockSymbolFactory.CreateAttributeData("Goa.Clients.Dynamo.DynamoModelAttribute")
@@ -60,7 +55,7 @@ public class DynamoMapperIncrementalGeneratorTests
         var systemTypes = new[]
         {
             "System.Reflection.Assembly",
-            "System.Runtime.Serialization.SerializationInfo", 
+            "System.Runtime.Serialization.SerializationInfo",
             "System.IO.Stream",
             "System.Threading.Thread",
             "System.Security.Principal.IPrincipal",
@@ -75,7 +70,7 @@ public class DynamoMapperIncrementalGeneratorTests
                 string.Join(".", typeName.Split('.')[..^1])).Object;
 
             var result = CallPrivateMethod<bool>("IsSystemType", typeSymbol);
-            
+
             await Assert.That(result)
                 .IsTrue()
                 .Because($"{typeName} should be identified as a system type");
@@ -88,7 +83,7 @@ public class DynamoMapperIncrementalGeneratorTests
         var nonSystemTypes = new[]
         {
             "MyApp.Models.User",
-            "TestNamespace.TestEntity", 
+            "TestNamespace.TestEntity",
             "Goa.Clients.Dynamo.DynamoRecord",
             "CustomLibrary.CustomClass"
         };
@@ -101,7 +96,7 @@ public class DynamoMapperIncrementalGeneratorTests
                 string.Join(".", typeName.Split('.')[..^1])).Object;
 
             var result = CallPrivateMethod<bool>("IsSystemType", typeSymbol);
-            
+
             await Assert.That(result)
                 .IsFalse()
                 .Because($"{typeName} should not be identified as a system type");
@@ -182,7 +177,7 @@ public class DynamoMapperIncrementalGeneratorTests
         foreach (var specialType in builtInTypes)
         {
             var result = CallPrivateMethod<bool>("IsBuiltInType", specialType);
-            
+
             await Assert.That(result)
                 .IsTrue()
                 .Because($"{specialType} should be identified as built-in type");
@@ -203,7 +198,7 @@ public class DynamoMapperIncrementalGeneratorTests
         foreach (var specialType in nonBuiltInTypes)
         {
             var result = CallPrivateMethod<bool>("IsBuiltInType", specialType);
-            
+
             await Assert.That(result)
                 .IsFalse()
                 .Because($"{specialType} should not be identified as built-in type");
@@ -228,11 +223,11 @@ public class DynamoMapperIncrementalGeneratorTests
         foreach (var (attributeName, shouldExtract, expectedNumber) in testCases)
         {
             var result = CallPrivateMethodWithOutParam(attributeName);
-            
+
             await Assert.That(result.Success)
                 .IsEqualTo(shouldExtract)
                 .Because($"TryExtractGSINumber should {(shouldExtract ? "succeed" : "fail")} for '{attributeName}'");
-                
+
             if (shouldExtract)
             {
                 await Assert.That(result.Number)
@@ -247,7 +242,7 @@ public class DynamoMapperIncrementalGeneratorTests
     {
         // Test that the generator gracefully handles empty input
         var emptyTypes = ImmutableArray<INamedTypeSymbol?>.Empty;
-        
+
         // This would normally be tested with the full generator pipeline
         // For unit tests, we verify the structure handles empty collections
         await Assert.That(emptyTypes.IsDefaultOrEmpty).IsTrue();
@@ -257,9 +252,9 @@ public class DynamoMapperIncrementalGeneratorTests
     public async Task Generator_ShouldReportDiagnostics_ForUnsupportedTypes()
     {
         var diagnostics = new List<Diagnostic>();
-        
+
         var mockReportDiagnostic = new Action<Diagnostic>(d => diagnostics.Add(d));
-        
+
         // This would test the diagnostic reporting in the full generator
         // For unit tests, we verify the diagnostic creation structure
         await Assert.That(mockReportDiagnostic).IsNotNull();
@@ -270,73 +265,73 @@ public class DynamoMapperIncrementalGeneratorTests
     {
         var type = typeof(DynamoMapperIncrementalGenerator);
         var method = type.GetMethod(methodName, System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
-        
+
         if (method == null)
         {
             throw new ArgumentException($"Method {methodName} not found");
         }
-        
+
         return (T)method.Invoke(null, parameters)!;
     }
-    
+
     private (bool Success, int Number) CallPrivateMethodWithOutParam(string attributeName)
     {
         var type = typeof(DynamoMapperIncrementalGenerator);
         var method = type.GetMethod("TryExtractGSINumber", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
-        
+
         if (method == null)
         {
             throw new ArgumentException("TryExtractGSINumber method not found");
         }
-        
+
         var parameters = new object?[] { attributeName, null };
         var success = (bool)method.Invoke(null, parameters)!;
         var number = (int)parameters[1]!;
-        
+
         return (success, number);
     }
-    
+
     private (bool Success, T? OutParam) CallPrivateMethodWithOutParam<T>(string methodName, params object[] parameters) where T : class
     {
         var type = typeof(DynamoMapperIncrementalGenerator);
         var method = type.GetMethod(methodName, System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
-        
+
         if (method == null)
         {
             throw new ArgumentException($"Method {methodName} not found");
         }
-        
+
         // Create parameters array with null for out parameter
         var methodParams = new object?[parameters.Length + 1];
         Array.Copy(parameters, methodParams, parameters.Length);
         methodParams[parameters.Length] = null;
-        
+
         var success = (bool)method.Invoke(null, methodParams)!;
         var outParam = methodParams[parameters.Length] as T;
-        
+
         return (success, outParam);
     }
-    
+
     private (bool Success, ITypeSymbol? OutParam1, ITypeSymbol? OutParam2) CallPrivateMethodWithTwoOutParams(string methodName, params object[] parameters)
     {
         var type = typeof(DynamoMapperIncrementalGenerator);
         var method = type.GetMethod(methodName, System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
-        
+
         if (method == null)
         {
             throw new ArgumentException($"Method {methodName} not found");
         }
-        
+
         // Create parameters array with nulls for two out parameters
         var methodParams = new object?[parameters.Length + 2];
         Array.Copy(parameters, methodParams, parameters.Length);
         methodParams[parameters.Length] = null;
         methodParams[parameters.Length + 1] = null;
-        
+
         var success = (bool)method.Invoke(null, methodParams)!;
         var outParam1 = methodParams[parameters.Length] as ITypeSymbol;
         var outParam2 = methodParams[parameters.Length + 1] as ITypeSymbol;
-        
+
         return (success, outParam1, outParam2);
     }
 

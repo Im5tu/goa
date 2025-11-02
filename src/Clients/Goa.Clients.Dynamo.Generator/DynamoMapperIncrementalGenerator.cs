@@ -86,7 +86,7 @@ public class DynamoMapperIncrementalGenerator : IIncrementalGenerator
             var typeHandlerRegistry = CreateTypeHandlerRegistry();
 
             // Analyze types
-            var analyzedTypes = AnalyzeTypes(validTypes, attributeRegistry, compilation).OrderBy(x => x.Name).ToList();
+            var analyzedTypes = AnalyzeTypes(validTypes, attributeRegistry, compilation);
             if (!analyzedTypes.Any())
                 return;
 
@@ -240,12 +240,9 @@ public class DynamoMapperIncrementalGenerator : IIncrementalGenerator
     private static bool IsSystemType(ITypeSymbol type)
     {
         var ns = type.ContainingNamespace?.ToDisplayString() ?? "";
-        return ns.StartsWith("System.Reflection") ||
-               ns.StartsWith("System.Runtime") ||
-               ns.StartsWith("System.IO") ||
-               ns.StartsWith("System.Threading") ||
-               ns.StartsWith("System.Security") ||
-               ns.StartsWith("System.Diagnostics");
+        return ns.Equals("System") ||
+               ns.StartsWith("System.") ||
+               ns.StartsWith("Microsoft.");
     }
 
     private static bool IsCollectionType(ITypeSymbol type, out ITypeSymbol elementType)
@@ -313,11 +310,14 @@ public class DynamoMapperIncrementalGenerator : IIncrementalGenerator
                 baseType = AnalyzeType(type.BaseType, attributeRegistry);
             }
 
+            // Use WithNullableAnnotation to get the non-nullable version for type references
+            var nonNullableType = type.WithNullableAnnotation(Microsoft.CodeAnalysis.NullableAnnotation.NotAnnotated);
+
             var dynamoTypeInfo = new DynamoTypeInfo
             {
                 Symbol = type,
                 Name = type.Name,
-                FullName = type.ToDisplayString(),
+                FullName = nonNullableType.ToDisplayString(),
                 Namespace = type.ContainingNamespace.ToDisplayString(),
                 IsAbstract = type.IsAbstract,
                 IsRecord = type.IsRecord,
