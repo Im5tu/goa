@@ -54,6 +54,35 @@ public class BatchGetTableBuilder
     }
 
     /// <summary>
+    /// Specifies which attributes to retrieve from the items using a params array for convenience.
+    /// </summary>
+    /// <param name="attributes">The attribute names to include in the projection.</param>
+    /// <returns>The BatchGetTableBuilder instance for method chaining.</returns>
+    public BatchGetTableBuilder WithProjection(params string[] attributes)
+    {
+        if (attributes?.Length > 0)
+        {
+            _request.ProjectionExpression = string.Join(", ", attributes);
+        }
+        else
+        {
+            _request.ProjectionExpression = null;
+        }
+        return this;
+    }
+
+    /// <summary>
+    /// Specifies whether to use consistent read for the batch get operation.
+    /// </summary>
+    /// <param name="consistentRead">True for consistent read, false for eventually consistent read.</param>
+    /// <returns>The BatchGetTableBuilder instance for method chaining.</returns>
+    public BatchGetTableBuilder WithConsistentRead(bool consistentRead = true)
+    {
+        _request.ConsistentRead = consistentRead;
+        return this;
+    }
+
+    /// <summary>
     /// Builds and returns the configured BatchGetRequestItem.
     /// </summary>
     /// <returns>The configured BatchGetRequestItem instance.</returns>

@@ -19,7 +19,7 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="Goa.Functions.ApiGateway" Version="0.0.4-preview" />
+        <PackageReference Include="Goa.Functions.ApiGateway" Version="0.0.6-preview" />
         <PackageReference Include="DotNet.ReproducibleBuilds" Version="1.2.39">
             <PrivateAssets>all</PrivateAssets>
             <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>

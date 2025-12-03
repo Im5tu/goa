@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
         <OutputType>Exe</OutputType>
@@ -19,7 +19,7 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="Goa.Functions.Dynamo" Version="0.0.6-preview" />
+        <PackageReference Include="Goa.Functions.CloudWatchLogs" Version="0.0.6-preview" />
     </ItemGroup>
 
 </Project>

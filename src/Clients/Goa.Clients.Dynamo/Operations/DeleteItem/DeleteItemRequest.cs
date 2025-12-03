@@ -38,4 +38,14 @@ public class DeleteItemRequest
     /// For DeleteItem operations, only NONE and ALL_OLD values are supported.
     /// </summary>
     public ReturnValues ReturnValues { get; set; } = ReturnValues.NONE;
+
+    /// <summary>
+    /// Determines the level of detail about provisioned throughput consumption that is returned in the response.
+    /// </summary>
+    public ReturnConsumedCapacity ReturnConsumedCapacity { get; set; } = ReturnConsumedCapacity.NONE;
+
+    /// <summary>
+    /// Determines whether item collection metrics are returned.
+    /// </summary>
+    public ReturnItemCollectionMetrics ReturnItemCollectionMetrics { get; set; } = ReturnItemCollectionMetrics.NONE;
 }

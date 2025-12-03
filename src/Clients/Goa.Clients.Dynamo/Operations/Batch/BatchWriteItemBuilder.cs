@@ -1,3 +1,5 @@
+using Goa.Clients.Dynamo.Enums;
+
 namespace Goa.Clients.Dynamo.Operations.Batch;
 
 /// <summary>
@@ -21,6 +23,28 @@ public class BatchWriteItemBuilder
         var tableBuilder = new BatchWriteTableBuilder();
         configure(tableBuilder);
         _request.RequestItems[tableName] = tableBuilder.Build();
+        return this;
+    }
+
+    /// <summary>
+    /// Determines the level of detail about consumed capacity to return.
+    /// </summary>
+    /// <param name="returnConsumedCapacity">The level of consumed capacity information to return.</param>
+    /// <returns>The BatchWriteItemBuilder instance for method chaining.</returns>
+    public BatchWriteItemBuilder WithReturnConsumedCapacity(ReturnConsumedCapacity returnConsumedCapacity)
+    {
+        _request.ReturnConsumedCapacity = returnConsumedCapacity;
+        return this;
+    }
+
+    /// <summary>
+    /// Determines whether item collection metrics are returned.
+    /// </summary>
+    /// <param name="returnItemCollectionMetrics">The item collection metrics option.</param>
+    /// <returns>The BatchWriteItemBuilder instance for method chaining.</returns>
+    public BatchWriteItemBuilder WithReturnItemCollectionMetrics(ReturnItemCollectionMetrics returnItemCollectionMetrics)
+    {
+        _request.ReturnItemCollectionMetrics = returnItemCollectionMetrics;
         return this;
     }
 

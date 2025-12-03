@@ -1,4 +1,5 @@
 using Goa.Clients.Dynamo.Enums;
+using Goa.Clients.Dynamo.Models;
 using Goa.Core;
 
 namespace Goa.Clients.Dynamo.Operations.Scan;
@@ -21,7 +22,15 @@ public class ScanBuilder(string tableName)
     /// <returns>The ScanBuilder instance for method chaining.</returns>
     public ScanBuilder WithFilter(Condition condition)
     {
-        _request.FilterExpression = condition.Expression;
+        if (string.IsNullOrEmpty(_request.FilterExpression))
+        {
+            _request.FilterExpression = condition.Expression;
+        }
+        else
+        {
+            _request.FilterExpression += " AND " + condition.Expression;
+        }
+
         _request.ExpressionAttributeNames ??= new(StringComparer.OrdinalIgnoreCase);
         _request.ExpressionAttributeValues ??= new(StringComparer.OrdinalIgnoreCase);
         _request.ExpressionAttributeNames.Merge(condition.ExpressionNames);
@@ -131,6 +140,17 @@ public class ScanBuilder(string tableName)
             _request.TotalSegments = totalSegments;
             _request.Segment = segment;
         }
+        return this;
+    }
+
+    /// <summary>
+    /// Sets the exclusive start key for pagination. Use the LastEvaluatedKey from a previous scan response.
+    /// </summary>
+    /// <param name="exclusiveStartKey">The primary key of the first item that this operation will evaluate.</param>
+    /// <returns>The ScanBuilder instance for method chaining.</returns>
+    public ScanBuilder WithExclusiveStartKey(Dictionary<string, AttributeValue>? exclusiveStartKey)
+    {
+        _request.ExclusiveStartKey = exclusiveStartKey;
         return this;
     }
 

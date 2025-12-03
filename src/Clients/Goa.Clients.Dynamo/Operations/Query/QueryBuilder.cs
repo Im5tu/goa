@@ -1,4 +1,5 @@
 using Goa.Clients.Dynamo.Enums;
+using Goa.Clients.Dynamo.Models;
 using Goa.Core;
 
 namespace Goa.Clients.Dynamo.Operations.Query;
@@ -21,7 +22,15 @@ public class QueryBuilder(string tableName)
     /// <returns>The QueryBuilder instance for method chaining.</returns>
     public QueryBuilder WithKey(Condition condition)
     {
-        _request.KeyConditionExpression = condition.Expression;
+        if (string.IsNullOrEmpty(_request.KeyConditionExpression))
+        {
+            _request.KeyConditionExpression = condition.Expression;
+        }
+        else
+        {
+            _request.KeyConditionExpression += " AND " + condition.Expression;
+        }
+
         _request.ExpressionAttributeNames ??= new(StringComparer.OrdinalIgnoreCase);
         _request.ExpressionAttributeValues ??= new(StringComparer.OrdinalIgnoreCase);
         _request.ExpressionAttributeNames.Merge(condition.ExpressionNames);
@@ -135,6 +144,41 @@ public class QueryBuilder(string tableName)
     public QueryBuilder WithSelectionMode(Select select)
     {
         _request.Select = select;
+        return this;
+    }
+
+    /// <summary>
+    /// Sets the exclusive start key for pagination. Use the LastEvaluatedKey from a previous query response.
+    /// </summary>
+    /// <param name="exclusiveStartKey">The primary key of the first item that this operation will evaluate.</param>
+    /// <returns>The QueryBuilder instance for method chaining.</returns>
+    public QueryBuilder WithExclusiveStartKey(Dictionary<string, AttributeValue>? exclusiveStartKey)
+    {
+        _request.ExclusiveStartKey = exclusiveStartKey;
+        return this;
+    }
+
+    /// <summary>
+    /// Sets the filter expression for the query. Filter expressions are applied after the key condition expression,
+    /// but before the data is returned to you.
+    /// </summary>
+    /// <param name="condition">The condition to apply as a filter.</param>
+    /// <returns>The QueryBuilder instance for method chaining.</returns>
+    public QueryBuilder WithFilter(Condition condition)
+    {
+        if (string.IsNullOrEmpty(_request.FilterExpression))
+        {
+            _request.FilterExpression = condition.Expression;
+        }
+        else
+        {
+            _request.FilterExpression += " AND " + condition.Expression;
+        }
+
+        _request.ExpressionAttributeNames ??= new(StringComparer.OrdinalIgnoreCase);
+        _request.ExpressionAttributeValues ??= new(StringComparer.OrdinalIgnoreCase);
+        _request.ExpressionAttributeNames.Merge(condition.ExpressionNames);
+        _request.ExpressionAttributeValues.Merge(condition.ExpressionValues);
         return this;
     }
 
