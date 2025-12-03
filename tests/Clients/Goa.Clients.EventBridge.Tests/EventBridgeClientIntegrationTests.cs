@@ -31,7 +31,7 @@ public class EventBridgeClientIntegrationTests
         // Assert
         await Assert.That(result.IsError).IsFalse();
         await Assert.That(result.Value.FailedEntryCount).IsEqualTo(0);
-        await Assert.That(result.Value.Entries).HasCount().EqualTo(1);
+        await Assert.That(result.Value.Entries).Count().EqualTo(1);
         await Assert.That(result.Value.Entries[0].EventId).IsNotNull();
         await Assert.That(result.Value.Entries[0].ErrorCode).IsNull();
     }
@@ -59,7 +59,7 @@ public class EventBridgeClientIntegrationTests
         // Assert
         await Assert.That(result.IsError).IsFalse();
         await Assert.That(result.Value.FailedEntryCount).IsEqualTo(0);
-        await Assert.That(result.Value.Entries).HasCount().EqualTo(2);
+        await Assert.That(result.Value.Entries).Count().EqualTo(2);
         await Assert.That(result.Value.Entries[0].EventId).IsNotNull();
         await Assert.That(result.Value.Entries[1].EventId).IsNotNull();
     }
@@ -120,7 +120,7 @@ public class EventBridgeClientIntegrationTests
             .Build();
 
         // Assert
-        await Assert.That(request.Entries).HasCount().EqualTo(1);
+        await Assert.That(request.Entries).Count().EqualTo(1);
         await Assert.That(request.Entries[0].Source).IsEqualTo("test.application");
         await Assert.That(request.Entries[0].DetailType).IsEqualTo("Test Event");
         await Assert.That(request.Entries[0].EventBusName).IsEqualTo(_fixture.TestEventBusName);

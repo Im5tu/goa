@@ -59,7 +59,7 @@ public class SqsClientIntegrationTests
 
         // Assert
         await Assert.That(result.IsError).IsFalse();
-        await Assert.That(result.Value.Messages).HasCount().GreaterThanOrEqualTo(1);
+        await Assert.That(result.Value.Messages).Count().IsGreaterThanOrEqualTo(1);
 
         var message = result.Value.Messages.First();
         await Assert.That(message.Body).IsEqualTo("Test message for receive");
@@ -123,7 +123,7 @@ public class SqsClientIntegrationTests
         await Assert.That(request.MessageBody).IsEqualTo("Test message");
         await Assert.That(request.DelaySeconds).IsEqualTo(30);
         await Assert.That(() => request.MessageAttributes).IsNotNull();
-        await Assert.That(request.MessageAttributes!).HasCount().EqualTo(2);
+        await Assert.That(request.MessageAttributes!).Count().EqualTo(2);
         await Assert.That(request.MessageAttributes!["attr1"].StringValue).IsEqualTo("value1");
         await Assert.That(request.MessageAttributes["attr2"].DataType).IsEqualTo("Number");
     }

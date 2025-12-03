@@ -21,6 +21,7 @@ namespace Goa.Functions.ApiGateway;
 [JsonSerializable(typeof(short))]
 [JsonSerializable(typeof(int))]
 [JsonSerializable(typeof(long))]
+[JsonSerializable(typeof(Guid))]
 [JsonSerializable(typeof(DateTime))]
 [JsonSerializable(typeof(HostString))]
 [JsonSerializable(typeof(PathString))]

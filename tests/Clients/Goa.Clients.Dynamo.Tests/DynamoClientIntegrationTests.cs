@@ -358,7 +358,7 @@ public class DynamoClientIntegrationTests
         var response = await _fixture.DynamoClient.BatchGetItemAsync(batchGetRequest);
 
         await Assert.That(response.IsError).IsFalse();
-        await Assert.That(response.Value.Responses[_fixture.TestTableName]).HasCount().EqualTo(2);
+        await Assert.That(response.Value.Responses[_fixture.TestTableName]).Count().IsEqualTo(2);
     }
 
     [Test]

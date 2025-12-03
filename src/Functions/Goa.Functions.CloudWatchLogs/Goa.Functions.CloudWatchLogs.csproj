@@ -1,0 +1,7 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <PackageTitle>Goa - CloudWatch Logs Functions</PackageTitle>
+    <Description>CloudWatch Logs subscription filter processing for high-performance AWS Lambda functions</Description>
+    <PackageTags>$(PackageBaseTags);function;cloudwatchlogs;logs;monitoring</PackageTags>
+  </PropertyGroup>
+</Project>

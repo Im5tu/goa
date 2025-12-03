@@ -127,7 +127,7 @@ public class MockSymbolFactoryTests
 
         // Assert
         await Assert.That(allInterfaces)
-            .HasCount().GreaterThanOrEqualTo(1)
+            .Count().IsGreaterThanOrEqualTo(1)
             .Because("IEnumerable<T> should include itself in AllInterfaces");
 
         var hasIEnumerableInterface = allInterfaces.Any(i =>
@@ -203,7 +203,7 @@ public class MockSymbolFactoryTests
 
         // Assert
         await Assert.That(dictionaryType.Object.TypeArguments)
-            .HasCount().EqualTo(2)
+            .Count().EqualTo(2)
             .Because("Dictionary<string, int> should have 2 type arguments");
 
         await Assert.That(dictionaryType.Object.IsGenericType)

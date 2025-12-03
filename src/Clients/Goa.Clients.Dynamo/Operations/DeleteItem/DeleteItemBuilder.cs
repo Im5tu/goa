@@ -35,7 +35,15 @@ public class DeleteItemBuilder(string tableName)
     /// <returns>The DeleteItemBuilder instance for method chaining.</returns>
     public DeleteItemBuilder WithCondition(Condition condition)
     {
-        _request.ConditionExpression = condition.Expression;
+        if (string.IsNullOrEmpty(_request.ConditionExpression))
+        {
+            _request.ConditionExpression = condition.Expression;
+        }
+        else
+        {
+            _request.ConditionExpression += " AND " + condition.Expression;
+        }
+
         _request.ExpressionAttributeNames ??= new(StringComparer.OrdinalIgnoreCase);
         _request.ExpressionAttributeValues ??= new(StringComparer.OrdinalIgnoreCase);
         _request.ExpressionAttributeNames.Merge(condition.ExpressionNames);
@@ -57,6 +65,28 @@ public class DeleteItemBuilder(string tableName)
         }
 
         _request.ReturnValues = returnValues;
+        return this;
+    }
+
+    /// <summary>
+    /// Determines the level of detail about consumed capacity to return.
+    /// </summary>
+    /// <param name="returnConsumedCapacity">The level of consumed capacity information to return.</param>
+    /// <returns>The DeleteItemBuilder instance for method chaining.</returns>
+    public DeleteItemBuilder WithReturnConsumedCapacity(ReturnConsumedCapacity returnConsumedCapacity)
+    {
+        _request.ReturnConsumedCapacity = returnConsumedCapacity;
+        return this;
+    }
+
+    /// <summary>
+    /// Determines whether item collection metrics are returned.
+    /// </summary>
+    /// <param name="returnItemCollectionMetrics">The item collection metrics option.</param>
+    /// <returns>The DeleteItemBuilder instance for method chaining.</returns>
+    public DeleteItemBuilder WithReturnItemCollectionMetrics(ReturnItemCollectionMetrics returnItemCollectionMetrics)
+    {
+        _request.ReturnItemCollectionMetrics = returnItemCollectionMetrics;
         return this;
     }
 
