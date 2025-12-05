@@ -18,7 +18,7 @@ public static class JsonLoggingProviderExtensions
         var logLevelEnv = Environment.GetEnvironmentVariable("LOGGING__LOGLEVEL__DEFAULT");
         var minimumLogLevel = LogLevel.Information; // Default value
 
-        if (!Enum.TryParse<LogLevel>(logLevelEnv, ignoreCase: true, out var parsedLogLevel))
+        if (Enum.TryParse<LogLevel>(logLevelEnv, ignoreCase: true, out var parsedLogLevel))
         {
             minimumLogLevel = parsedLogLevel;
         }
