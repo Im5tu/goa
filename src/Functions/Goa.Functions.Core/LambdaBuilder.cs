@@ -20,7 +20,7 @@ public class LambdaBuilder : ILambdaBuilder
 
     /// <inheritdoc />
     public IHostBuilder Host => _builder;
-    
+
     /// <inheritdoc />
     public ILambdaRuntimeClient LambdaRuntime { get; }
 
@@ -32,7 +32,17 @@ public class LambdaBuilder : ILambdaBuilder
     public LambdaBuilder(IHostBuilder builder, ILambdaRuntimeClient? lambdaRuntimeClient)
     {
         _builder = builder;
-        var logLevel = Enum.TryParse<LogLevel>(Environment.GetEnvironmentVariable("GOA__LOG__LEVEL"), out var level) ? level : LogLevel.Information;
+
+        var logLevel = LogLevel.Information;
+        if (Enum.TryParse<LogLevel>("GOA__LOG__LEVEL", ignoreCase: true, out var goaLogLevel))
+        {
+            logLevel = goaLogLevel;
+        }
+        else if (Enum.TryParse<LogLevel>("LOGGING__LOGLEVEL__DEFAULT", ignoreCase: true, out var parsedLogLevel))
+        {
+            logLevel = parsedLogLevel;
+        }
+
         LambdaRuntime = lambdaRuntimeClient ?? new LambdaRuntimeClient(logLevel);
     }
 

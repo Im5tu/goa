@@ -75,8 +75,9 @@ internal sealed class LambdaRuntimeClient : ILambdaRuntimeClient
             _logger.GetNextInvocationComplete();
             return Result<InvocationRequest>.Success(new InvocationRequest(requestId, payload, deadlineMs, functionArn));
         }
-        catch (TaskCanceledException)
+        catch (TaskCanceledException ex)
         {
+            _logger.GetNextInvocationCancelled(ex);
             return Result<InvocationRequest>.Failure("No pending invocation could be found.");
         }
         catch (HttpRequestException ex)
@@ -166,7 +167,13 @@ internal sealed class LambdaRuntimeClient : ILambdaRuntimeClient
         UseProxy = false,
         // HttpClient by default supports only ASCII characters in headers. Changing it to allow UTF8 characters.
         RequestHeaderEncodingSelector = delegate { return Encoding.UTF8; },
-        ResponseHeaderEncodingSelector = delegate { return Encoding.UTF8; }
+        ResponseHeaderEncodingSelector = delegate { return Encoding.UTF8; },
+        // Connection pool settings to prevent stale connections after Lambda freeze/thaw cycles
+        PooledConnectionLifetime = TimeSpan.FromMinutes(1),
+        PooledConnectionIdleTimeout = TimeSpan.FromSeconds(10),
+        KeepAlivePingPolicy = HttpKeepAlivePingPolicy.Always,
+        KeepAlivePingDelay = TimeSpan.FromSeconds(5),
+        KeepAlivePingTimeout = TimeSpan.FromSeconds(1)
     })
     {
         Timeout = string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("AWS_LAMBDA_RUNTIME_API")) ? TimeSpan.FromSeconds(2) : TimeSpan.FromSeconds(100),

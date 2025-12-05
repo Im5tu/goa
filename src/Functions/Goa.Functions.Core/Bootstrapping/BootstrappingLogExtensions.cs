@@ -13,6 +13,8 @@ internal static partial class BootstrappingLogExtensions
     internal static partial void BootstrapInvocationRequestDeserializationStart(this ILogger logger);
     [LoggerMessage(EventId = 5, Level = LogLevel.Error, Message = "Failed to deserialize request payload. Null payload returned")]
     internal static partial void BootstrapInvocationRequestDeserializationFailed(this ILogger logger);
+    [LoggerMessage(EventId = 6, Level = LogLevel.Warning, Message = "Failed to get next invocation: {ErrorMessage}")]
+    internal static partial void BootstrapGetNextInvocationFailed(this ILogger logger, string? errorMessage);
 
     // LambdaRuntimeClient.GetNextInvocationAsync
     [LoggerMessage(EventId = 1, Level = LogLevel.Trace, Message = "Requesting next invocation from Lambda Runtime API")]
@@ -23,6 +25,8 @@ internal static partial class BootstrappingLogExtensions
 
     [LoggerMessage(EventId = 3, Level = LogLevel.Error, Message = "Failed to get next invocation from Lambda Runtime API")]
     internal static partial void GetNextInvocationError(this ILogger logger, Exception exception);
+    [LoggerMessage(EventId = 7, Level = LogLevel.Warning, Message = "Get next invocation was cancelled")]
+    internal static partial void GetNextInvocationCancelled(this ILogger logger, Exception exception);
 
     // LambdaRuntimeClient.ReportInitializationError
     [LoggerMessage(EventId = 4, Level = LogLevel.Trace, Message = "Reporting initialization error")]

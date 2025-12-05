@@ -18,14 +18,16 @@ public static class JsonLoggingProviderExtensions
         var logLevelEnv = Environment.GetEnvironmentVariable("LOGGING__LOGLEVEL__DEFAULT");
         var minimumLogLevel = LogLevel.Information; // Default value
 
-        if (!string.IsNullOrEmpty(logLevelEnv) && Enum.TryParse<LogLevel>(logLevelEnv, ignoreCase: true, out var parsedLogLevel))
+        if (!Enum.TryParse<LogLevel>(logLevelEnv, ignoreCase: true, out var parsedLogLevel))
         {
             minimumLogLevel = parsedLogLevel;
         }
 
         builder.SetMinimumLevel(minimumLogLevel);
         builder.AddFilter("Microsoft.Hosting.Lifetime", LogLevel.Warning);
-        builder.AddFilter("Microsoft.AspNetCore.Routing.EndpointMiddleware", LogLevel.Warning);
+        builder.AddFilter("Microsoft.AspNetCore", LogLevel.Warning);
+        builder.AddFilter("Microsoft.AspNetCore.DataProtection", LogLevel.None);
+        builder.AddFilter("Microsoft.AspNetCore.Hosting.Diagnostics", LogLevel.Information);
 
         return builder.ClearProviders().AddProvider(new JsonLoggingProvider(minimumLogLevel, jsonSerializerContext));
     }

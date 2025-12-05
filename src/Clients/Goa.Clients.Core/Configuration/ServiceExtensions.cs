@@ -37,7 +37,8 @@ public static class ServiceExtensions
             .ConfigureHttpClient(client =>
             {
                 client.DefaultRequestVersion = HttpVersion.Version30;
-                client.DefaultVersionPolicy = HttpVersionPolicy.RequestVersionExact;
+                client.DefaultVersionPolicy = HttpVersionPolicy.RequestVersionOrLower;
+                client.Timeout = TimeSpan.FromSeconds(10);
             });
 
         services.TryAddTransient<RequestSigningHandler>();
