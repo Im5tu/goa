@@ -52,7 +52,7 @@ public class LambdaBootstrapper<TRequest, TResponse>
     ///     Runs the Lambda request loop
     /// </summary>
     /// <param name="cancellationToken">The cancellation token that stops the processing of a given Lambda invocation</param>
-    public async Task RunAsync(CancellationToken cancellationToken = default)
+    public virtual async Task RunAsync(CancellationToken cancellationToken = default)
     {
         // Work around for AspNetCore
         await Task.Yield();
@@ -68,7 +68,7 @@ public class LambdaBootstrapper<TRequest, TResponse>
             var invocationResult = await LambdaRuntimeClient.GetNextInvocationAsync(cancellationToken);
             if (!invocationResult.IsSuccess || invocationResult.Data is null)
             {
-                // Skip to the next invocation if fetching failed
+                _logger.BootstrapGetNextInvocationFailed(invocationResult.ErrorMessage);
                 continue;
             }
 
@@ -77,18 +77,16 @@ public class LambdaBootstrapper<TRequest, TResponse>
                 ? deadlineMsValue
                 : DateTimeOffset.UtcNow.AddMinutes(1).ToUnixTimeMilliseconds());
 
-            // Calculate the delay to the deadline
-            var delay = targetTime > DateTimeOffset.UtcNow
-                ? targetTime - DateTimeOffset.UtcNow
-                : TimeSpan.Zero;
+            // Calculate remaining time with 100ms buffer for cleanup
+            var remainingTime = targetTime - DateTimeOffset.UtcNow;
+            var adjustedDelay = remainingTime.TotalMilliseconds > 100
+                ? remainingTime.Add(TimeSpan.FromMilliseconds(-100))
+                : remainingTime;
 
-            // Adjust the delay to trigger the cancellation slightly before the deadline, with a guard against negative values
-            var adjustedDelay = (delay.TotalMilliseconds > 100)
-                ? delay.Add(TimeSpan.FromMilliseconds(-100))
-                : TimeSpan.Zero;
-
-            // Create the CancellationTokenSource with the adjusted delay
-            using var cts = new CancellationTokenSource(adjustedDelay);
+            // Create deadline CTS only if we have positive time remaining, otherwise no auto-cancel
+            using var cts = adjustedDelay > TimeSpan.Zero
+                ? new CancellationTokenSource(adjustedDelay)
+                : new CancellationTokenSource();
 
             // Combine the external cancellation token with the deadline-based token
             using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, cts.Token);
@@ -169,7 +167,7 @@ public sealed class LambdaBootstrapper<TFunction, TRequest, TResponse> : LambdaB
     ///     Runs the Lambda request loop with initialization error handling
     /// </summary>
     /// <param name="cancellationToken">The cancellation token that stops the processing of a given Lambda invocation</param>
-    public new async Task RunAsync(CancellationToken cancellationToken = default)
+    public override async Task RunAsync(CancellationToken cancellationToken = default)
     {
         if (_functionFactory is not null)
         {
