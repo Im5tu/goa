@@ -1,99 +1,83 @@
 using Goa.Core;
 using Goa.Functions.Core;
-using Goa.Functions.Core.Bootstrapping;
-using Microsoft.Extensions.DependencyInjection;
+using Goa.Functions.Core.Generic;
 using Microsoft.Extensions.Logging;
-using System.Text.Json.Serialization;
 
 namespace Goa.Functions.CloudWatchLogs;
 
-internal sealed class HandlerBuilder : ISingleLogEventHandlerBuilder, IMultipleLogEventHandlerBuilder
+/// <summary>
+/// Handler builder for CloudWatch Logs Lambda functions
+/// </summary>
+internal sealed class HandlerBuilder : TypedHandlerBuilder<CloudWatchLogsRawEvent, string>,
+    ISingleLogEventHandlerBuilder, IMultipleLogEventHandlerBuilder
 {
-    private readonly ILambdaBuilder _builder;
     private readonly bool _skipControlMessages;
 
     public HandlerBuilder(ILambdaBuilder builder, bool skipControlMessages)
+        : base(builder, CloudWatchLogsEventSerializationContext.Default)
     {
-        _builder = builder;
         _skipControlMessages = skipControlMessages;
     }
 
-    public IRunnable HandleWith<THandler>(Func<THandler, CloudWatchLogEvent, CloudWatchLogsEvent, Task> handler) where THandler : class
+    /// <inheritdoc />
+    protected override string GetLoggerName() => "CloudWatchLogsEventHandler";
+
+    /// <inheritdoc />
+    public IRunnable HandleWith<THandler>(Func<THandler, CloudWatchLogEvent, CloudWatchLogsEvent, CancellationToken, Task> handler)
+        where THandler : class
     {
-        var context = (JsonSerializerContext)CloudWatchLogsEventSerializationContext.Default;
-        _builder.WithServices(services =>
+        var skipControlMessages = _skipControlMessages;
+
+        return HandleWithLogger<THandler>(async (h, rawEvent, logger, ct) =>
         {
-            services.AddSingleton<Func<CloudWatchLogsRawEvent, InvocationRequest, CancellationToken, Task<object>>>(sp =>
+            var logsEvent = DecompressEvent(rawEvent, logger);
+            if (logsEvent == null || (skipControlMessages && logsEvent.IsControlMessage))
             {
-                var invocationHandler = sp.GetRequiredService<THandler>();
-                var logger = sp.GetRequiredService<ILoggerFactory>().CreateLogger("CloudWatchLogsEventHandler");
+                return "";
+            }
 
-                return async (rawEvent, _, _) =>
+            foreach (var logEvent in logsEvent.LogEvents ?? [])
+            {
+                try
                 {
-                    var logsEvent = DecompressEvent(rawEvent, logger);
-                    if (logsEvent == null || (_skipControlMessages && logsEvent.IsControlMessage))
-                    {
-                        return new { };
-                    }
+                    await handler(h, logEvent, logsEvent, ct);
+                }
+                catch (Exception e)
+                {
+                    logger.LogException(e);
+                    logEvent.MarkAsFailed();
+                    throw;
+                }
+            }
 
-                    foreach (var logEvent in logsEvent.LogEvents ?? [])
-                    {
-                        try
-                        {
-                            await handler(invocationHandler, logEvent, logsEvent);
-                        }
-                        catch (Exception e)
-                        {
-                            logger.LogException(e);
-                            logEvent.MarkAsFailed();
-                            throw;
-                        }
-                    }
-
-                    return new { };
-                };
-            });
-            services.AddHostedService(sp => ActivatorUtilities.CreateInstance<LambdaBootstrapService<CloudWatchLogsRawEvent, object>>(sp, context));
+            return "";
         });
-
-        return new Runnable(_builder);
     }
 
-    public IRunnable HandleWith<THandler>(Func<THandler, CloudWatchLogsEvent, Task> handler) where THandler : class
+    /// <inheritdoc />
+    public IRunnable HandleWith<THandler>(Func<THandler, CloudWatchLogsEvent, CancellationToken, Task> handler)
+        where THandler : class
     {
-        var context = (JsonSerializerContext)CloudWatchLogsEventSerializationContext.Default;
-        _builder.WithServices(services =>
+        return HandleWithLogger<THandler>(async (h, rawEvent, logger, ct) =>
         {
-            services.AddSingleton<Func<CloudWatchLogsRawEvent, InvocationRequest, CancellationToken, Task<object>>>(sp =>
+            var logsEvent = DecompressEvent(rawEvent, logger);
+            if (logsEvent == null)
             {
-                var invocationHandler = sp.GetRequiredService<THandler>();
-                var logger = sp.GetRequiredService<ILoggerFactory>().CreateLogger("CloudWatchLogsEventHandler");
+                return "";
+            }
 
-                return async (rawEvent, _, _) =>
-                {
-                    var logsEvent = DecompressEvent(rawEvent, logger);
-                    if (logsEvent == null)
-                    {
-                        return new { };
-                    }
+            try
+            {
+                await handler(h, logsEvent, ct);
+            }
+            catch (Exception e)
+            {
+                logger.LogException(e);
+                throw;
+            }
 
-                    try
-                    {
-                        await handler(invocationHandler, logsEvent);
-                    }
-                    catch (Exception e)
-                    {
-                        logger.LogException(e);
-                        throw;
-                    }
-
-                    return new { };
-                };
-            });
-            services.AddHostedService(sp => ActivatorUtilities.CreateInstance<LambdaBootstrapService<CloudWatchLogsRawEvent, object>>(sp, context));
+            return "";
         });
-
-        return new Runnable(_builder);
     }
 
     private static CloudWatchLogsEvent? DecompressEvent(CloudWatchLogsRawEvent rawEvent, ILogger logger)

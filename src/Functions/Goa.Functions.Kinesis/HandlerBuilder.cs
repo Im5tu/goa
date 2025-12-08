@@ -1,171 +1,73 @@
 using Goa.Core;
 using Goa.Functions.Core;
-using Goa.Functions.Core.Bootstrapping;
-using Microsoft.Extensions.DependencyInjection;
+using Goa.Functions.Core.Generic;
 using Microsoft.Extensions.Logging;
-using System.Text.Json.Serialization;
 
 namespace Goa.Functions.Kinesis;
 
-internal sealed class HandlerBuilder : ISingleRecordHandlerBuilder, IMultipleRecordHandlerBuilder
+/// <summary>
+/// Handler builder for Kinesis Lambda functions
+/// </summary>
+internal sealed class HandlerBuilder : TypedHandlerBuilder<KinesisEvent, BatchItemFailureResponse>,
+    ISingleRecordHandlerBuilder, IMultipleRecordHandlerBuilder
 {
-    private readonly ILambdaBuilder _builder;
-
     public HandlerBuilder(ILambdaBuilder builder)
+        : base(builder, KinesisEventSerializationContext.Default)
     {
-        _builder = builder;
     }
 
-    public IRunnable Using<THandler>() where THandler : class
-    {
-        throw new NotImplementedException("Handler-based processing not yet implemented for Kinesis");
-    }
+    /// <inheritdoc />
+    protected override string GetLoggerName() => "KinesisEventHandler";
 
-    public IRunnable Using(Func<KinesisRecord, CancellationToken, Task> handler)
+    /// <inheritdoc />
+    public IRunnable HandleWith<THandler>(Func<THandler, KinesisRecord, CancellationToken, Task> handler)
+        where THandler : class
     {
-        var context = (JsonSerializerContext)KinesisEventSerializationContext.Default;
-        _builder.WithServices(services =>
+        return HandleWithLogger<THandler>(async (h, kinesisEvent, logger, ct) =>
         {
-            services.AddSingleton<Func<KinesisEvent, InvocationRequest, CancellationToken, Task<object>>>(sp =>
+            var response = new BatchItemFailureResponse();
+
+            foreach (var record in kinesisEvent.Records ?? [])
             {
-                var logger = sp.GetRequiredService<ILoggerFactory>().CreateLogger("KinesisEventHandler");
-                Func<KinesisEvent, InvocationRequest, CancellationToken, Task<object>> result = async (kinesisEvent, _, cancellationToken) =>
+                try
                 {
-                    var failedRecords = new List<object>();
+                    await handler(h, record, ct);
+                }
+                catch (Exception e)
+                {
+                    logger.LogException(e);
+                    record.MarkAsFailed();
+                    response.BatchItemFailures.Add(new BatchItemFailure { ItemIdentifier = record.Kinesis?.SequenceNumber });
+                }
+            }
 
-                    foreach (var record in kinesisEvent.Records ?? Enumerable.Empty<KinesisRecord>())
-                    {
-                        try
-                        {
-                            await handler(record, cancellationToken);
-                        }
-                        catch (Exception e)
-                        {
-                            logger.LogException(e);
-                            record.MarkAsFailed();
-                            failedRecords.Add(new { itemIdentifier = record.Kinesis?.SequenceNumber });
-                        }
-                    }
-
-                    return new { batchItemFailures = failedRecords };
-                };
-                return result;
-            });
-            services.AddHostedService(sp => ActivatorUtilities.CreateInstance<LambdaBootstrapService<KinesisEvent, object>>(sp, context));
+            return response;
         });
-
-        return new Runnable(_builder);
     }
 
-    public IRunnable Using<TResult>(Func<KinesisRecord, CancellationToken, Task<TResult>> handler)
+    /// <inheritdoc />
+    public IRunnable HandleWith<THandler>(Func<THandler, IEnumerable<KinesisRecord>, CancellationToken, Task> handler)
+        where THandler : class
     {
-        var context = (JsonSerializerContext)KinesisEventSerializationContext.Default;
-        _builder.WithServices(services =>
+        return HandleWithLogger<THandler>(async (h, kinesisEvent, logger, ct) =>
         {
-            services.AddSingleton<Func<KinesisEvent, InvocationRequest, CancellationToken, Task<object>>>(sp =>
+            var response = new BatchItemFailureResponse();
+
+            try
             {
-                var logger = sp.GetRequiredService<ILoggerFactory>().CreateLogger("KinesisEventHandler");
-                Func<KinesisEvent, InvocationRequest, CancellationToken, Task<object>> result = async (kinesisEvent, _, cancellationToken) =>
-                {
-                    var failedRecords = new List<object>();
-                    var results = new List<TResult>();
-
-                    foreach (var record in kinesisEvent.Records ?? Enumerable.Empty<KinesisRecord>())
-                    {
-                        try
-                        {
-                            var recordResult = await handler(record, cancellationToken);
-                            results.Add(recordResult);
-                        }
-                        catch (Exception e)
-                        {
-                            logger.LogException(e);
-                            record.MarkAsFailed();
-                            failedRecords.Add(new { itemIdentifier = record.Kinesis?.SequenceNumber });
-                        }
-                    }
-
-                    return new { batchItemFailures = failedRecords, results };
-                };
-                return result;
-            });
-            services.AddHostedService(sp => ActivatorUtilities.CreateInstance<LambdaBootstrapService<KinesisEvent, object>>(sp, context));
-        });
-
-        return new Runnable(_builder);
-    }
-
-    public IRunnable Using(Func<KinesisEvent, CancellationToken, Task> handler)
-    {
-        var context = (JsonSerializerContext)KinesisEventSerializationContext.Default;
-        _builder.WithServices(services =>
-        {
-            services.AddSingleton<Func<KinesisEvent, InvocationRequest, CancellationToken, Task<object>>>(sp =>
+                await handler(h, kinesisEvent.Records ?? [], ct);
+            }
+            catch (Exception e)
             {
-                var logger = sp.GetRequiredService<ILoggerFactory>().CreateLogger("KinesisEventHandler");
-                Func<KinesisEvent, InvocationRequest, CancellationToken, Task<object>> result = async (kinesisEvent, _, cancellationToken) =>
+                logger.LogException(e);
+                foreach (var record in kinesisEvent.Records ?? [])
                 {
-                    var failedRecords = new List<object>();
+                    record.MarkAsFailed();
+                    response.BatchItemFailures.Add(new BatchItemFailure { ItemIdentifier = record.Kinesis?.SequenceNumber });
+                }
+            }
 
-                    try
-                    {
-                        await handler(kinesisEvent, cancellationToken);
-                    }
-                    catch (Exception e)
-                    {
-                        logger.LogException(e);
-                        foreach (var record in kinesisEvent.Records ?? Enumerable.Empty<KinesisRecord>())
-                        {
-                            record.MarkAsFailed();
-                            failedRecords.Add(new { itemIdentifier = record.Kinesis?.SequenceNumber });
-                        }
-                    }
-
-                    return new { batchItemFailures = failedRecords };
-                };
-                return result;
-            });
-
-            services.AddHostedService(sp => ActivatorUtilities.CreateInstance<LambdaBootstrapService<KinesisEvent, object>>(sp, context));
+            return response;
         });
-
-        return new Runnable(_builder);
-    }
-
-    public IRunnable Using<TResult>(Func<KinesisEvent, CancellationToken, Task<TResult>> handler)
-    {
-        var context = (JsonSerializerContext)KinesisEventSerializationContext.Default;
-        _builder.WithServices(services =>
-        {
-            services.AddSingleton<Func<KinesisEvent, InvocationRequest, CancellationToken, Task<object>>>(sp =>
-            {
-                var logger = sp.GetRequiredService<ILoggerFactory>().CreateLogger("KinesisEventHandler");
-                Func<KinesisEvent, InvocationRequest, CancellationToken, Task<object>> result = async (kinesisEvent, _, cancellationToken) =>
-                {
-                    var failedRecords = new List<object>();
-
-                    try
-                    {
-                        var batchResult = await handler(kinesisEvent, cancellationToken);
-                        return new { batchItemFailures = failedRecords, result = batchResult };
-                    }
-                    catch (Exception e)
-                    {
-                        logger.LogException(e);
-                        foreach (var record in kinesisEvent.Records ?? Enumerable.Empty<KinesisRecord>())
-                        {
-                            record.MarkAsFailed();
-                            failedRecords.Add(new { itemIdentifier = record.Kinesis?.SequenceNumber });
-                        }
-                        return new { batchItemFailures = failedRecords };
-                    }
-                };
-                return result;
-            });
-
-            services.AddHostedService(sp => ActivatorUtilities.CreateInstance<LambdaBootstrapService<KinesisEvent, object>>(sp, context));
-        });
-
-        return new Runnable(_builder);
     }
 }

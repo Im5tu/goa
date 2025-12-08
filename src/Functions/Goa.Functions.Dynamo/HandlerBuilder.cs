@@ -1,87 +1,67 @@
-﻿using Goa.Core;
+using Goa.Core;
 using Goa.Functions.Core;
-using Goa.Functions.Core.Bootstrapping;
-using Microsoft.Extensions.DependencyInjection;
+using Goa.Functions.Core.Generic;
 using Microsoft.Extensions.Logging;
-using System.Text.Json.Serialization;
 
 namespace Goa.Functions.Dynamo;
 
-internal sealed class HandlerBuilder : ISingleRecordHandlerBuilder, IMultipleRecordHandlerBuilder
+/// <summary>
+/// Handler builder for DynamoDB stream Lambda functions
+/// </summary>
+internal sealed class HandlerBuilder : TypedHandlerBuilder<DynamoDbEvent, string>,
+    ISingleRecordHandlerBuilder, IMultipleRecordHandlerBuilder
 {
-    private readonly ILambdaBuilder _builder;
-
     public HandlerBuilder(ILambdaBuilder builder)
+        : base(builder, DynamoDbEventSerializationContext.Default)
     {
-        _builder = builder;
     }
 
-    public IRunnable HandleWith<THandler>(Func<THandler, DynamoDbStreamRecord, Task> handler) where THandler : class
+    /// <inheritdoc />
+    protected override string GetLoggerName() => "DynamoDbEventHandler";
+
+    /// <inheritdoc />
+    public IRunnable HandleWith<THandler>(Func<THandler, DynamoDbStreamRecord, CancellationToken, Task> handler)
+        where THandler : class
     {
-        var context = (JsonSerializerContext)DynamoDbEventSerializationContext.Default;
-        _builder.WithServices(services =>
+        return HandleWithLogger<THandler>(async (h, ddbEvent, logger, ct) =>
         {
-            services.AddSingleton<Func<DynamoDbEvent, InvocationRequest, CancellationToken, Task<string>>>(sp =>
+            foreach (var record in ddbEvent.Records ?? [])
             {
-                var invocationHandler = sp.GetRequiredService<THandler>();
-                var logger =  sp.GetRequiredService<ILoggerFactory>().CreateLogger("DynamoDbEventHandler");
-                Func<DynamoDbEvent, InvocationRequest, CancellationToken, Task<string>> result = async (ddbEvent, _, _) =>
+                try
                 {
-                    foreach (var record in ddbEvent.Records ?? Enumerable.Empty<DynamoDbStreamRecord>())
-                    {
-                        try
-                        {
-                            await handler(invocationHandler, record);
-                        }
-                        catch (Exception e)
-                        {
-                            logger.LogException(e);
-                            record.MarkAsFailed();
-                        }
-                    }
+                    await handler(h, record, ct);
+                }
+                catch (Exception e)
+                {
+                    logger.LogException(e);
+                    record.MarkAsFailed();
+                }
+            }
 
-                    return "";
-                };
-                return result;
-            });
-            services.AddHostedService(sp => ActivatorUtilities.CreateInstance<LambdaBootstrapService<DynamoDbEvent, string>>(sp, context));
+            return "";
         });
-
-        return new Runnable(_builder);
     }
 
-    public IRunnable HandleWith<THandler>(Func<THandler, IEnumerable<DynamoDbStreamRecord>, Task> handler) where THandler : class
+    /// <inheritdoc />
+    public IRunnable HandleWith<THandler>(Func<THandler, IEnumerable<DynamoDbStreamRecord>, CancellationToken, Task> handler)
+        where THandler : class
     {
-        var context = (JsonSerializerContext)DynamoDbEventSerializationContext.Default;
-        _builder.WithServices(services =>
+        return HandleWithLogger<THandler>(async (h, ddbEvent, logger, ct) =>
         {
-            services.AddSingleton<Func<DynamoDbEvent, InvocationRequest, CancellationToken, Task<string>>>(sp =>
+            try
             {
-                var invocationHandler = sp.GetRequiredService<THandler>();
-                var logger =  sp.GetRequiredService<ILoggerFactory>().CreateLogger("DynamoDbEventHandler");
-                Func<DynamoDbEvent, InvocationRequest, CancellationToken, Task<string>> result = async (ddbEvent, _, _) =>
+                await handler(h, ddbEvent.Records ?? [], ct);
+            }
+            catch (Exception e)
+            {
+                logger.LogException(e);
+                foreach (var record in ddbEvent.Records ?? [])
                 {
-                    try
-                    {
-                        await handler(invocationHandler, ddbEvent.Records ?? Enumerable.Empty<DynamoDbStreamRecord>());
-                    }
-                    catch (Exception e)
-                    {
-                        logger.LogException(e);
-                        foreach (var record in ddbEvent.Records ?? Enumerable.Empty<DynamoDbStreamRecord>())
-                        {
-                            record.MarkAsFailed();
-                        }
-                    }
+                    record.MarkAsFailed();
+                }
+            }
 
-                    return "";
-                };
-                return result;
-            });
-
-            services.AddHostedService(sp => ActivatorUtilities.CreateInstance<LambdaBootstrapService<DynamoDbEvent, string>>(sp, context));
+            return "";
         });
-
-        return new Runnable(_builder);
     }
 }

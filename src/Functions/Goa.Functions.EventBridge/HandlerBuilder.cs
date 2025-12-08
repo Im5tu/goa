@@ -1,82 +1,62 @@
 using Goa.Core;
 using Goa.Functions.Core;
-using Goa.Functions.Core.Bootstrapping;
-using Microsoft.Extensions.DependencyInjection;
+using Goa.Functions.Core.Generic;
 using Microsoft.Extensions.Logging;
-using System.Text.Json.Serialization;
 
 namespace Goa.Functions.EventBridge;
 
-internal sealed class HandlerBuilder : ISingleEventHandlerBuilder, IMultipleEventHandlerBuilder
+/// <summary>
+/// Handler builder for EventBridge Lambda functions
+/// </summary>
+internal sealed class HandlerBuilder : TypedHandlerBuilder<EventbridgeEvent, string>,
+    ISingleEventHandlerBuilder, IMultipleEventHandlerBuilder
 {
-    private readonly ILambdaBuilder _builder;
-
     public HandlerBuilder(ILambdaBuilder builder)
+        : base(builder, EventbridgeEventSerializationContext.Default)
     {
-        _builder = builder;
     }
 
-    public IRunnable HandleWith<THandler>(Func<THandler, EventbridgeEvent, Task> handler) where THandler : class
+    /// <inheritdoc />
+    protected override string GetLoggerName() => "EventbridgeEventHandler";
+
+    /// <inheritdoc />
+    public IRunnable HandleWith<THandler>(Func<THandler, EventbridgeEvent, CancellationToken, Task> handler)
+        where THandler : class
     {
-        var context = (JsonSerializerContext)EventbridgeEventSerializationContext.Default;
-        _builder.WithServices(services =>
+        return HandleWithLogger<THandler>(async (h, eventbridgeEvent, logger, ct) =>
         {
-            services.AddSingleton<Func<EventbridgeEvent, InvocationRequest, CancellationToken, Task<string>>>(sp =>
+            try
             {
-                var invocationHandler = sp.GetRequiredService<THandler>();
-                var logger = sp.GetRequiredService<ILoggerFactory>().CreateLogger("EventbridgeEventHandler");
-                Func<EventbridgeEvent, InvocationRequest, CancellationToken, Task<string>> result = async (eventbridgeEvent, _, _) =>
-                {
-                    try
-                    {
-                        await handler(invocationHandler, eventbridgeEvent);
-                    }
-                    catch (Exception e)
-                    {
-                        logger.LogException(e);
-                        eventbridgeEvent.MarkAsFailed();
-                    }
+                await handler(h, eventbridgeEvent, ct);
+            }
+            catch (Exception e)
+            {
+                logger.LogException(e);
+                eventbridgeEvent.MarkAsFailed();
+            }
 
-                    return "";
-                };
-                return result;
-            });
-            services.AddHostedService(sp => ActivatorUtilities.CreateInstance<LambdaBootstrapService<EventbridgeEvent, string>>(sp, context));
+            return "";
         });
-
-        return new Runnable(_builder);
     }
 
-    public IRunnable HandleWith<THandler>(Func<THandler, IEnumerable<EventbridgeEvent>, Task> handler) where THandler : class
+    /// <inheritdoc />
+    public IRunnable HandleWith<THandler>(Func<THandler, IEnumerable<EventbridgeEvent>, CancellationToken, Task> handler)
+        where THandler : class
     {
-        var context = (JsonSerializerContext)EventbridgeEventSerializationContext.Default;
-        _builder.WithServices(services =>
+        return HandleWithLogger<THandler>(async (h, eventbridgeEvent, logger, ct) =>
         {
-            services.AddSingleton<Func<EventbridgeEvent, InvocationRequest, CancellationToken, Task<string>>>(sp =>
+            try
             {
-                var invocationHandler = sp.GetRequiredService<THandler>();
-                var logger = sp.GetRequiredService<ILoggerFactory>().CreateLogger("EventbridgeEventHandler");
-                Func<EventbridgeEvent, InvocationRequest, CancellationToken, Task<string>> result = async (eventbridgeEvent, _, _) =>
-                {
-                    try
-                    {
-                        // EventBridge typically sends single events, so we create a collection with one item
-                        await handler(invocationHandler, new[] { eventbridgeEvent });
-                    }
-                    catch (Exception e)
-                    {
-                        logger.LogException(e);
-                        eventbridgeEvent.MarkAsFailed();
-                    }
+                // EventBridge typically sends single events, so we create a collection with one item
+                await handler(h, [eventbridgeEvent], ct);
+            }
+            catch (Exception e)
+            {
+                logger.LogException(e);
+                eventbridgeEvent.MarkAsFailed();
+            }
 
-                    return "";
-                };
-                return result;
-            });
-
-            services.AddHostedService(sp => ActivatorUtilities.CreateInstance<LambdaBootstrapService<EventbridgeEvent, string>>(sp, context));
+            return "";
         });
-
-        return new Runnable(_builder);
     }
 }

@@ -1,4 +1,5 @@
 using System.Text.Json.Serialization;
+using Goa.Functions.Core;
 
 namespace Goa.Functions.Kinesis;
 
@@ -8,7 +9,9 @@ namespace Goa.Functions.Kinesis;
 [JsonSerializable(typeof(KinesisEvent))]
 [JsonSerializable(typeof(KinesisRecord))]
 [JsonSerializable(typeof(KinesisData))]
-[JsonSerializable(typeof(object))]
+[JsonSerializable(typeof(BatchItemFailureResponse))]
+[JsonSerializable(typeof(BatchItemFailure))]
+[JsonSerializable(typeof(List<BatchItemFailure>))]
 internal partial class KinesisEventSerializationContext : JsonSerializerContext
 {
 }

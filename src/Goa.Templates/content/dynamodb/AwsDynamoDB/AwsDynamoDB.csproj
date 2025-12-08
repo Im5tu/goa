@@ -19,7 +19,7 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="Goa.Functions.Dynamo" Version="0.0.6-preview" />
+        <PackageReference Include="Goa.Functions.Dynamo" Version="0.0.7-preview" />
     </ItemGroup>
 
 </Project>

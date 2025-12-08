@@ -1,0 +1,13 @@
+{
+    "$schema": "http://json.schemastore.org/template",
+    "author": "Goa",
+    "classifications": [ "AWS", "Lambda", "Serverless", "Goa" ],
+    "identity": "Goa.Templates.Lambda",
+    "name": "Lambda - Generic Function",
+    "shortName": "goa.lambda",
+    "sourceName": "AwsLambda",
+    "tags": {
+        "language": "C#",
+        "type": "project"
+    }
+}

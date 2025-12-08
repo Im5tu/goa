@@ -5,28 +5,24 @@ namespace Goa.Functions.Kinesis;
 /// <summary>
 /// Builder interface for configuring single Kinesis record handlers
 /// </summary>
-public interface ISingleRecordHandlerBuilder
+public interface ISingleRecordHandlerBuilder : ITypedHandlerBuilder<KinesisEvent, BatchItemFailureResponse>
 {
     /// <summary>
-    /// Configures the function to handle Kinesis records using the specified handler type
+    /// Specifies the handler function to process individual Kinesis records
     /// </summary>
-    /// <typeparam name="THandler">The type of handler that processes individual Kinesis records</typeparam>
+    /// <typeparam name="THandler">The type of the handler service</typeparam>
+    /// <param name="handler">Function that processes a single Kinesis record</param>
     /// <returns>A runnable instance to execute the Lambda function</returns>
-    IRunnable Using<THandler>()
+    IRunnable HandleWith<THandler>(Func<THandler, KinesisRecord, Task> handler)
+        where THandler : class
+        => HandleWith<THandler>((h, rec, _) => handler(h, rec));
+
+    /// <summary>
+    /// Specifies the handler function to process individual Kinesis records with cancellation support
+    /// </summary>
+    /// <typeparam name="THandler">The type of the handler service</typeparam>
+    /// <param name="handler">Function that processes a single Kinesis record with cancellation token</param>
+    /// <returns>A runnable instance to execute the Lambda function</returns>
+    IRunnable HandleWith<THandler>(Func<THandler, KinesisRecord, CancellationToken, Task> handler)
         where THandler : class;
-
-    /// <summary>
-    /// Configures the function to handle Kinesis records using the specified handler function
-    /// </summary>
-    /// <param name="handler">The function that processes individual Kinesis records</param>
-    /// <returns>A runnable instance to execute the Lambda function</returns>
-    IRunnable Using(Func<KinesisRecord, CancellationToken, Task> handler);
-
-    /// <summary>
-    /// Configures the function to handle Kinesis records using the specified handler function with return value
-    /// </summary>
-    /// <typeparam name="TResult">The type of result returned by the handler</typeparam>
-    /// <param name="handler">The function that processes individual Kinesis records and returns a result</param>
-    /// <returns>A runnable instance to execute the Lambda function</returns>
-    IRunnable Using<TResult>(Func<KinesisRecord, CancellationToken, Task<TResult>> handler);
 }

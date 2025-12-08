@@ -3,7 +3,6 @@ using Goa.Functions.ApiGateway.Payloads;
 using Goa.Functions.ApiGateway.Payloads.V2;
 using Goa.Functions.Core;
 using System.Diagnostics;
-using System.Text.Json.Serialization;
 using TestConsole;
 
 
@@ -211,11 +210,4 @@ Console.WriteLine($"Run: {sw.ElapsedMilliseconds:0.##}ms");
 
 namespace TestConsole
 {
-    [JsonSourceGenerationOptions(WriteIndented = false, PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase, DictionaryKeyPolicy = JsonKnownNamingPolicy.CamelCase, UseStringEnumConverter = true)]
-    [JsonSerializable(typeof(Pong))]
-    public partial class HttpSerializerContext : JsonSerializerContext
-    {
-    }
-
-    public record Pong(string Message);
 }

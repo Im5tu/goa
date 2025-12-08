@@ -1,87 +1,67 @@
 using Goa.Core;
 using Goa.Functions.Core;
-using Goa.Functions.Core.Bootstrapping;
-using Microsoft.Extensions.DependencyInjection;
+using Goa.Functions.Core.Generic;
 using Microsoft.Extensions.Logging;
-using System.Text.Json.Serialization;
 
 namespace Goa.Functions.S3;
 
-internal sealed class HandlerBuilder : ISingleRecordHandlerBuilder, IMultipleRecordHandlerBuilder
+/// <summary>
+/// Handler builder for S3 Lambda functions
+/// </summary>
+internal sealed class HandlerBuilder : TypedHandlerBuilder<S3Event, string>,
+    ISingleRecordHandlerBuilder, IMultipleRecordHandlerBuilder
 {
-    private readonly ILambdaBuilder _builder;
-
     public HandlerBuilder(ILambdaBuilder builder)
+        : base(builder, S3EventSerializationContext.Default)
     {
-        _builder = builder;
     }
 
-    public IRunnable HandleWith<THandler>(Func<THandler, S3EventRecord, Task> handler) where THandler : class
+    /// <inheritdoc />
+    protected override string GetLoggerName() => "S3EventHandler";
+
+    /// <inheritdoc />
+    public IRunnable HandleWith<THandler>(Func<THandler, S3EventRecord, CancellationToken, Task> handler)
+        where THandler : class
     {
-        var context = (JsonSerializerContext)S3EventSerializationContext.Default;
-        _builder.WithServices(services =>
+        return HandleWithLogger<THandler>(async (h, s3Event, logger, ct) =>
         {
-            services.AddSingleton<Func<S3Event, InvocationRequest, CancellationToken, Task<string>>>(sp =>
+            foreach (var record in s3Event.Records ?? [])
             {
-                var invocationHandler = sp.GetRequiredService<THandler>();
-                var logger = sp.GetRequiredService<ILoggerFactory>().CreateLogger("S3EventHandler");
-                Func<S3Event, InvocationRequest, CancellationToken, Task<string>> result = async (s3Event, _, _) =>
+                try
                 {
-                    foreach (var record in s3Event.Records ?? Enumerable.Empty<S3EventRecord>())
-                    {
-                        try
-                        {
-                            await handler(invocationHandler, record);
-                        }
-                        catch (Exception e)
-                        {
-                            logger.LogException(e);
-                            record.MarkAsFailed();
-                        }
-                    }
+                    await handler(h, record, ct);
+                }
+                catch (Exception e)
+                {
+                    logger.LogException(e);
+                    record.MarkAsFailed();
+                }
+            }
 
-                    return "";
-                };
-                return result;
-            });
-            services.AddHostedService(sp => ActivatorUtilities.CreateInstance<LambdaBootstrapService<S3Event, string>>(sp, context));
+            return "";
         });
-
-        return new Runnable(_builder);
     }
 
-    public IRunnable HandleWith<THandler>(Func<THandler, IEnumerable<S3EventRecord>, Task> handler) where THandler : class
+    /// <inheritdoc />
+    public IRunnable HandleWith<THandler>(Func<THandler, IEnumerable<S3EventRecord>, CancellationToken, Task> handler)
+        where THandler : class
     {
-        var context = (JsonSerializerContext)S3EventSerializationContext.Default;
-        _builder.WithServices(services =>
+        return HandleWithLogger<THandler>(async (h, s3Event, logger, ct) =>
         {
-            services.AddSingleton<Func<S3Event, InvocationRequest, CancellationToken, Task<string>>>(sp =>
+            try
             {
-                var invocationHandler = sp.GetRequiredService<THandler>();
-                var logger = sp.GetRequiredService<ILoggerFactory>().CreateLogger("S3EventHandler");
-                Func<S3Event, InvocationRequest, CancellationToken, Task<string>> result = async (s3Event, _, _) =>
+                await handler(h, s3Event.Records ?? [], ct);
+            }
+            catch (Exception e)
+            {
+                logger.LogException(e);
+                foreach (var record in s3Event.Records ?? [])
                 {
-                    try
-                    {
-                        await handler(invocationHandler, s3Event.Records ?? Enumerable.Empty<S3EventRecord>());
-                    }
-                    catch (Exception e)
-                    {
-                        logger.LogException(e);
-                        foreach (var record in s3Event.Records ?? Enumerable.Empty<S3EventRecord>())
-                        {
-                            record.MarkAsFailed();
-                        }
-                    }
+                    record.MarkAsFailed();
+                }
+            }
 
-                    return "";
-                };
-                return result;
-            });
-
-            services.AddHostedService(sp => ActivatorUtilities.CreateInstance<LambdaBootstrapService<S3Event, string>>(sp, context));
+            return "";
         });
-
-        return new Runnable(_builder);
     }
 }

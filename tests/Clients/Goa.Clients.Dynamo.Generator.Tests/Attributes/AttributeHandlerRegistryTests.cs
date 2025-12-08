@@ -261,10 +261,3 @@ public class AttributeHandlerRegistryTests
         mockHandler.Verify(h => h.ParseAttribute(mockAttributeData), Times.Once);
     }
 }
-
-/// <summary>
-/// Test implementation of AttributeInfo for testing purposes.
-/// </summary>
-public class TestAttributeInfo : AttributeInfo
-{
-}
