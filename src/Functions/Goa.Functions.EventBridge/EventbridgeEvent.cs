@@ -1,3 +1,4 @@
+using System.Text.Json;
 using System.Text.Json.Serialization;
 
 namespace Goa.Functions.EventBridge;
@@ -60,7 +61,7 @@ public class EventbridgeEvent
     /// Gets or sets the event-specific data
     /// </summary>
     [JsonPropertyName("detail")]
-    public object? Detail { get; set; }
+    public JsonElement Detail { get; set; }
 
     internal ProcessingType ProcessingType { get; private set; }
 
