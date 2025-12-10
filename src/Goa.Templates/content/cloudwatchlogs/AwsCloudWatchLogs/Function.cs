@@ -6,28 +6,33 @@ using Microsoft.Extensions.Logging;
 await Host.CreateDefaultBuilder()
     .UseLambdaLifecycle()
     .ForCloudWatchLogs()
-//#if (processingType == "single")
-    .ProcessOneAtATime()
-    .HandleWith<ILoggerFactory>((loggerFactory, logEvent, context) =>
+//#if (processingType == "withoutControlMessages")
+    .ProcessWithoutControlMessages()
+    .HandleWith<ILoggerFactory>((loggerFactory, logsEvent) =>
     {
         // TODO :: Replace ILoggerFactory with an interface that you want to handle the CloudWatch Logs events
         var logger = loggerFactory.CreateLogger("CloudWatchLogsHandler");
 
-        // Access log metadata from the context
-        var logGroup = context.LogGroup;
-        var logStream = context.LogStream;
-        var filters = context.SubscriptionFilters;
+        // Access log metadata
+        var logGroup = logsEvent.LogGroup;
+        var logStream = logsEvent.LogStream;
+        var filters = logsEvent.SubscriptionFilters;
 
-        logger.LogInformation("Processing log event from {LogGroup}/{LogStream}", logGroup, logStream);
-        logger.LogInformation("Event ID: {EventId}, Timestamp: {Timestamp}", logEvent.Id, logEvent.TimestampDateTime);
-        logger.LogInformation("Message: {Message}", logEvent.Message);
+        logger.LogInformation("Processing {Count} log events from {LogGroup}/{LogStream}",
+            logsEvent.LogEvents?.Count ?? 0, logGroup, logStream);
 
-        // Access extracted fields if your subscription filter has a pattern
-        if (logEvent.ExtractedFields?.Count > 0)
+        foreach (var logEvent in logsEvent.LogEvents ?? [])
         {
-            foreach (var field in logEvent.ExtractedFields)
+            logger.LogInformation("Event ID: {EventId}, Timestamp: {Timestamp}", logEvent.Id, logEvent.TimestampDateTime);
+            logger.LogInformation("Message: {Message}", logEvent.Message);
+
+            // Access extracted fields if your subscription filter has a pattern
+            if (logEvent.ExtractedFields?.Count > 0)
             {
-                logger.LogInformation("Extracted field: {Key} = {Value}", field.Key, field.Value);
+                foreach (var field in logEvent.ExtractedFields)
+                {
+                    logger.LogInformation("Extracted field: {Key} = {Value}", field.Key, field.Value);
+                }
             }
         }
 
@@ -44,7 +49,7 @@ await Host.CreateDefaultBuilder()
         return Task.CompletedTask;
     })
 //#else
-    .ProcessAsBatch()
+    .ProcessWithControlMessages()
     .HandleWith<ILoggerFactory>((loggerFactory, logsEvent) =>
     {
         // TODO :: Replace ILoggerFactory with an interface that you want to handle the CloudWatch Logs events

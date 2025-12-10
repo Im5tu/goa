@@ -9,7 +9,7 @@ namespace Goa.Functions.CloudWatchLogs;
 /// Handler builder for CloudWatch Logs Lambda functions
 /// </summary>
 internal sealed class HandlerBuilder : TypedHandlerBuilder<CloudWatchLogsRawEvent, string>,
-    ISingleLogEventHandlerBuilder, IMultipleLogEventHandlerBuilder
+    ICloudWatchLogsHandlerBuilder
 {
     private readonly bool _skipControlMessages;
 
@@ -23,7 +23,7 @@ internal sealed class HandlerBuilder : TypedHandlerBuilder<CloudWatchLogsRawEven
     protected override string GetLoggerName() => "CloudWatchLogsEventHandler";
 
     /// <inheritdoc />
-    public IRunnable HandleWith<THandler>(Func<THandler, CloudWatchLogEvent, CloudWatchLogsEvent, CancellationToken, Task> handler)
+    public IRunnable HandleWith<THandler>(Func<THandler, CloudWatchLogsEvent, CancellationToken, Task> handler)
         where THandler : class
     {
         var skipControlMessages = _skipControlMessages;
@@ -32,36 +32,6 @@ internal sealed class HandlerBuilder : TypedHandlerBuilder<CloudWatchLogsRawEven
         {
             var logsEvent = DecompressEvent(rawEvent, logger);
             if (logsEvent == null || (skipControlMessages && logsEvent.IsControlMessage))
-            {
-                return "";
-            }
-
-            foreach (var logEvent in logsEvent.LogEvents ?? [])
-            {
-                try
-                {
-                    await handler(h, logEvent, logsEvent, ct);
-                }
-                catch (Exception e)
-                {
-                    logger.LogException(e);
-                    logEvent.MarkAsFailed();
-                    throw;
-                }
-            }
-
-            return "";
-        });
-    }
-
-    /// <inheritdoc />
-    public IRunnable HandleWith<THandler>(Func<THandler, CloudWatchLogsEvent, CancellationToken, Task> handler)
-        where THandler : class
-    {
-        return HandleWithLogger<THandler>(async (h, rawEvent, logger, ct) =>
-        {
-            var logsEvent = DecompressEvent(rawEvent, logger);
-            if (logsEvent == null)
             {
                 return "";
             }

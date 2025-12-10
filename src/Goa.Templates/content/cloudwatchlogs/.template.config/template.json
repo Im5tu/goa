@@ -13,20 +13,20 @@
     "symbols": {
         "processingType": {
             "type": "parameter",
-            "description": "The type of log event processing to use.",
+            "description": "How to handle CloudWatch control messages.",
             "datatype": "choice",
             "choices": [
                 {
-                    "choice": "single",
-                    "description": "Process log events one at a time"
+                    "choice": "withoutControlMessages",
+                    "description": "Skip control messages (connectivity checks are filtered out)"
                 },
                 {
-                    "choice": "batch",
-                    "description": "Process log events as a batch (Default)"
+                    "choice": "withControlMessages",
+                    "description": "Include control messages (handler receives all messages) (Default)"
                 }
             ],
             "replaces": "processingType",
-            "defaultValue": "batch"
+            "defaultValue": "withoutControlMessages"
         }
     }
 }
