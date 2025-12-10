@@ -11,12 +11,12 @@ internal sealed class CloudWatchLogsFunctionBuilder : LambdaBuilder, ICloudWatch
     {
     }
 
-    public ISingleLogEventHandlerBuilder ProcessOneAtATime()
+    public ICloudWatchLogsHandlerBuilder ProcessWithoutControlMessages()
     {
         return new HandlerBuilder(this, skipControlMessages: true);
     }
 
-    public IMultipleLogEventHandlerBuilder ProcessAsBatch()
+    public ICloudWatchLogsHandlerBuilder ProcessWithControlMessages()
     {
         return new HandlerBuilder(this, skipControlMessages: false);
     }

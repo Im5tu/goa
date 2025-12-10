@@ -8,15 +8,16 @@ namespace Goa.Functions.CloudWatchLogs;
 public interface ICloudWatchLogsFunctionBuilder : ILambdaBuilder
 {
     /// <summary>
-    /// Configures the function to process log events one at a time.
-    /// Control messages are automatically filtered out.
+    /// Configures the function to skip control messages.
+    /// Control messages (connectivity checks from CloudWatch) are automatically filtered out.
     /// </summary>
-    /// <returns>A builder for configuring single log event handlers</returns>
-    ISingleLogEventHandlerBuilder ProcessOneAtATime();
+    /// <returns>A builder for configuring log event handlers</returns>
+    ICloudWatchLogsHandlerBuilder ProcessWithoutControlMessages();
 
     /// <summary>
-    /// Configures the function to process all log events as a batch
+    /// Configures the function to process all messages including control messages.
+    /// Your handler should check <see cref="CloudWatchLogsEvent.IsControlMessage"/> to handle them appropriately.
     /// </summary>
-    /// <returns>A builder for configuring batch log event handlers</returns>
-    IMultipleLogEventHandlerBuilder ProcessAsBatch();
+    /// <returns>A builder for configuring log event handlers</returns>
+    ICloudWatchLogsHandlerBuilder ProcessWithControlMessages();
 }
