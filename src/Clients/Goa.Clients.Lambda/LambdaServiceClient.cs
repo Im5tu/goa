@@ -47,10 +47,10 @@ internal sealed class LambdaServiceClient : JsonAwsServiceClient<LambdaServiceCl
             if (!string.IsNullOrWhiteSpace(request.Qualifier))
                 requestUri += $"?Qualifier={Uri.EscapeDataString(request.Qualifier)}";
 
-            var response = await SendAsync<InvokeRequest, string>(
+            var response = await SendAsync<string, string>(
                 HttpMethod.Post,
                 requestUri,
-                request,
+                request.Payload ?? "{}",
                 "Invoke",
                 cancellationToken,
                 headers);
@@ -97,10 +97,10 @@ internal sealed class LambdaServiceClient : JsonAwsServiceClient<LambdaServiceCl
             if (!string.IsNullOrWhiteSpace(request.Qualifier))
                 requestUri += $"?Qualifier={Uri.EscapeDataString(request.Qualifier)}";
 
-            var response = await SendAsync<InvokeAsyncRequest, string>(
+            var response = await SendAsync<string, string>(
                 HttpMethod.Post,
                 requestUri,
-                request,
+                request.Payload ?? "{}",
                 "Invoke",
                 cancellationToken,
                 headers);
