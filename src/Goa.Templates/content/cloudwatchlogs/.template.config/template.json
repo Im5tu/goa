@@ -22,7 +22,7 @@
                 },
                 {
                     "choice": "withControlMessages",
-                    "description": "Include control messages (handler receives all messages) (Default)"
+                    "description": "Include control messages (handler receives all messages)"
                 }
             ],
             "replaces": "processingType",
