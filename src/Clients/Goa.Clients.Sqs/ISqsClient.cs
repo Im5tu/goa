@@ -2,6 +2,7 @@ using ErrorOr;
 using Goa.Clients.Sqs.Operations.DeleteMessage;
 using Goa.Clients.Sqs.Operations.ReceiveMessage;
 using Goa.Clients.Sqs.Operations.SendMessage;
+using Goa.Clients.Sqs.Operations.SendMessageBatch;
 
 namespace Goa.Clients.Sqs;
 
@@ -18,6 +19,14 @@ public interface ISqsClient
     /// <param name="cancellationToken">A cancellation token to cancel the operation.</param>
     /// <returns>The send message response, or an error if the operation failed.</returns>
     Task<ErrorOr<SendMessageResponse>> SendMessageAsync(SendMessageRequest request, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Sends up to 10 messages to the specified queue in a single batch operation.
+    /// </summary>
+    /// <param name="request">The send message batch request.</param>
+    /// <param name="cancellationToken">A cancellation token to cancel the operation.</param>
+    /// <returns>The send message batch response, or an error if the operation failed.</returns>
+    Task<ErrorOr<SendMessageBatchResponse>> SendMessageBatchAsync(SendMessageBatchRequest request, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Retrieves one or more messages from the specified queue.

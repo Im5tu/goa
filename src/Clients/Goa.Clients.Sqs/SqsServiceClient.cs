@@ -4,6 +4,7 @@ using Goa.Clients.Core.Http;
 using Goa.Clients.Sqs.Operations.DeleteMessage;
 using Goa.Clients.Sqs.Operations.ReceiveMessage;
 using Goa.Clients.Sqs.Operations.SendMessage;
+using Goa.Clients.Sqs.Operations.SendMessageBatch;
 using Goa.Clients.Sqs.Serialization;
 using Microsoft.Extensions.Logging;
 
@@ -44,6 +45,46 @@ internal sealed class SqsServiceClient : JsonAwsServiceClient<SqsServiceClientCo
         {
             Logger.LogError(ex, "Failed to send message to SQS queue {QueueUrl}", request.QueueUrl);
             return Error.Failure("SQS.SendMessage.Failed", $"Failed to send message to SQS queue {request.QueueUrl}");
+        }
+    }
+
+    public async Task<ErrorOr<SendMessageBatchResponse>> SendMessageBatchAsync(SendMessageBatchRequest request, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+
+        if (string.IsNullOrWhiteSpace(request.QueueUrl))
+            return Error.Validation("SendMessageBatchRequest.QueueUrl", "Queue URL is required.");
+
+        if (request.Entries is null || request.Entries.Count == 0)
+            return Error.Validation("SendMessageBatchRequest.Entries", "At least one entry is required.");
+
+        if (request.Entries.Count > 10)
+            return Error.Validation("SendMessageBatchRequest.Entries", "Maximum 10 entries allowed per batch.");
+
+        var ids = new HashSet<string>();
+        foreach (var entry in request.Entries)
+        {
+            if (string.IsNullOrWhiteSpace(entry.Id))
+                return Error.Validation("SendMessageBatchRequestEntry.Id", "Entry ID is required for all entries.");
+            if (!ids.Add(entry.Id))
+                return Error.Validation("SendMessageBatchRequestEntry.Id", $"Duplicate entry ID: {entry.Id}");
+        }
+
+        try
+        {
+            var response = await SendAsync<SendMessageBatchRequest, SendMessageBatchResponse>(
+                HttpMethod.Post,
+                "/",
+                request,
+                "AmazonSQS.SendMessageBatch",
+                cancellationToken);
+
+            return ConvertApiResponse(response);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Failed to send message batch to SQS queue {QueueUrl}", request.QueueUrl);
+            return Error.Failure("SQS.SendMessageBatch.Failed", $"Failed to send message batch to SQS queue {request.QueueUrl}");
         }
     }
 

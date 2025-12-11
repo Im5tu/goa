@@ -4,6 +4,7 @@ using Goa.Clients.Sqs.Models;
 using Goa.Clients.Sqs.Operations.DeleteMessage;
 using Goa.Clients.Sqs.Operations.ReceiveMessage;
 using Goa.Clients.Sqs.Operations.SendMessage;
+using Goa.Clients.Sqs.Operations.SendMessageBatch;
 
 namespace Goa.Clients.Sqs.Serialization;
 
@@ -16,6 +17,14 @@ namespace Goa.Clients.Sqs.Serialization;
 [JsonSerializable(typeof(ReceiveMessageResponse))]
 [JsonSerializable(typeof(DeleteMessageRequest))]
 [JsonSerializable(typeof(DeleteMessageResponse))]
+[JsonSerializable(typeof(SendMessageBatchRequest))]
+[JsonSerializable(typeof(SendMessageBatchResponse))]
+[JsonSerializable(typeof(SendMessageBatchRequestEntry))]
+[JsonSerializable(typeof(SendMessageBatchResultEntry))]
+[JsonSerializable(typeof(BatchResultErrorEntry))]
+[JsonSerializable(typeof(List<SendMessageBatchRequestEntry>))]
+[JsonSerializable(typeof(List<SendMessageBatchResultEntry>))]
+[JsonSerializable(typeof(List<BatchResultErrorEntry>))]
 [JsonSerializable(typeof(SqsMessage))]
 [JsonSerializable(typeof(MessageAttributeValue))]
 [JsonSerializable(typeof(List<SqsMessage>))]
