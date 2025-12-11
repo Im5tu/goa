@@ -26,6 +26,7 @@ internal sealed class HandlerBuilder : TypedHandlerBuilder<KinesisEvent, BatchIt
         return HandleWithLogger<THandler>(async (h, kinesisEvent, logger, ct) =>
         {
             var response = new BatchItemFailureResponse();
+            var failedSequenceNumbers = new HashSet<string>();
 
             foreach (var record in kinesisEvent.Records ?? [])
             {
@@ -37,7 +38,24 @@ internal sealed class HandlerBuilder : TypedHandlerBuilder<KinesisEvent, BatchIt
                 {
                     logger.LogException(e);
                     record.MarkAsFailed();
-                    response.BatchItemFailures.Add(new BatchItemFailure { ItemIdentifier = record.Kinesis?.SequenceNumber });
+                    var sequenceNumber = record.Kinesis?.SequenceNumber;
+                    if (sequenceNumber is not null)
+                    {
+                        failedSequenceNumbers.Add(sequenceNumber);
+                        response.BatchItemFailures.Add(new BatchItemFailure { ItemIdentifier = sequenceNumber });
+                    }
+                }
+            }
+
+            // Check for records marked as failed without throwing an exception
+            foreach (var record in kinesisEvent.Records ?? [])
+            {
+                var sequenceNumber = record.Kinesis?.SequenceNumber;
+                if (record.ProcessingType == ProcessingType.Failure &&
+                    sequenceNumber is not null &&
+                    !failedSequenceNumbers.Contains(sequenceNumber))
+                {
+                    response.BatchItemFailures.Add(new BatchItemFailure { ItemIdentifier = sequenceNumber });
                 }
             }
 
@@ -63,7 +81,16 @@ internal sealed class HandlerBuilder : TypedHandlerBuilder<KinesisEvent, BatchIt
                 foreach (var record in kinesisEvent.Records ?? [])
                 {
                     record.MarkAsFailed();
-                    response.BatchItemFailures.Add(new BatchItemFailure { ItemIdentifier = record.Kinesis?.SequenceNumber });
+                }
+            }
+
+            // Collect all failed records (from exception or MarkAsFailed() calls)
+            foreach (var record in kinesisEvent.Records ?? [])
+            {
+                var sequenceNumber = record.Kinesis?.SequenceNumber;
+                if (record.ProcessingType == ProcessingType.Failure && sequenceNumber is not null)
+                {
+                    response.BatchItemFailures.Add(new BatchItemFailure { ItemIdentifier = sequenceNumber });
                 }
             }
 

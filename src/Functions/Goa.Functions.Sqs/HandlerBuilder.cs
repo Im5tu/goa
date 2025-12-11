@@ -26,6 +26,7 @@ internal sealed class HandlerBuilder : TypedHandlerBuilder<SqsEvent, BatchItemFa
         return HandleWithLogger<THandler>(async (h, sqsEvent, logger, ct) =>
         {
             var response = new BatchItemFailureResponse();
+            var failedMessageIds = new HashSet<string>();
 
             foreach (var message in sqsEvent.Records ?? [])
             {
@@ -37,6 +38,21 @@ internal sealed class HandlerBuilder : TypedHandlerBuilder<SqsEvent, BatchItemFa
                 {
                     logger.LogException(e);
                     message.MarkAsFailed();
+                    if (message.MessageId is not null)
+                    {
+                        failedMessageIds.Add(message.MessageId);
+                        response.BatchItemFailures.Add(new BatchItemFailure { ItemIdentifier = message.MessageId });
+                    }
+                }
+            }
+
+            // Check for messages marked as failed without throwing an exception
+            foreach (var message in sqsEvent.Records ?? [])
+            {
+                if (message.ProcessingType == ProcessingType.Failure &&
+                    message.MessageId is not null &&
+                    !failedMessageIds.Contains(message.MessageId))
+                {
                     response.BatchItemFailures.Add(new BatchItemFailure { ItemIdentifier = message.MessageId });
                 }
             }
@@ -63,6 +79,14 @@ internal sealed class HandlerBuilder : TypedHandlerBuilder<SqsEvent, BatchItemFa
                 foreach (var message in sqsEvent.Records ?? [])
                 {
                     message.MarkAsFailed();
+                }
+            }
+
+            // Collect all failed messages (from exception or MarkAsFailed() calls)
+            foreach (var message in sqsEvent.Records ?? [])
+            {
+                if (message.ProcessingType == ProcessingType.Failure && message.MessageId is not null)
+                {
                     response.BatchItemFailures.Add(new BatchItemFailure { ItemIdentifier = message.MessageId });
                 }
             }

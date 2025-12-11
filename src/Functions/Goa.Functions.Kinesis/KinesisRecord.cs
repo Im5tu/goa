@@ -66,7 +66,7 @@ public class KinesisRecord
     /// <summary>
     /// Marks this record as failed for batch failure reporting
     /// </summary>
-    internal void MarkAsFailed()
+    public void MarkAsFailed()
     {
         _processingType = ProcessingType.Failure;
     }

@@ -5,7 +5,7 @@ namespace Goa.Functions.Dynamo;
 /// <summary>
 /// Builder interface for configuring single record handlers
 /// </summary>
-public interface ISingleRecordHandlerBuilder : ITypedHandlerBuilder<DynamoDbEvent, string>
+public interface ISingleRecordHandlerBuilder : ITypedHandlerBuilder<DynamoDbEvent, BatchItemFailureResponse>
 {
     /// <summary>
     /// Specifies the handler function to process individual DynamoDB stream records

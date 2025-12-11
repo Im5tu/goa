@@ -5,7 +5,7 @@ namespace Goa.Functions.Dynamo;
 /// <summary>
 /// Builder interface for configuring batch record handlers
 /// </summary>
-public interface IMultipleRecordHandlerBuilder : ITypedHandlerBuilder<DynamoDbEvent, string>
+public interface IMultipleRecordHandlerBuilder : ITypedHandlerBuilder<DynamoDbEvent, BatchItemFailureResponse>
 {
     /// <summary>
     /// Specifies the handler function to process batches of DynamoDB stream records
