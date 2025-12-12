@@ -1,5 +1,6 @@
 ﻿using System.Text.Json;
 using System.Text.Json.Serialization;
+using Goa.Functions.Core;
 
 namespace Goa.Functions.Dynamo;
 
@@ -8,6 +9,9 @@ namespace Goa.Functions.Dynamo;
 /// </summary>
 [JsonSourceGenerationOptions(JsonSerializerDefaults.General, UseStringEnumConverter = true)]
 [JsonSerializable(typeof(DynamoDbEvent))]
+[JsonSerializable(typeof(BatchItemFailureResponse))]
+[JsonSerializable(typeof(BatchItemFailure))]
+[JsonSerializable(typeof(List<BatchItemFailure>))]
 public partial class DynamoDbEventSerializationContext : JsonSerializerContext
 {
 }
