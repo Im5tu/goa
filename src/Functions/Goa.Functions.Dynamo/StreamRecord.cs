@@ -1,4 +1,5 @@
 ﻿using Goa.Clients.Dynamo.Models;
+using Goa.Functions.Core.Serialization;
 using System.Text.Json.Serialization;
 
 namespace Goa.Functions.Dynamo;
@@ -12,6 +13,7 @@ public class StreamRecord
     /// Gets or sets the approximate date and time when the stream record was created
     /// </summary>
     [JsonPropertyName("ApproximateCreationDateTime")]
+    [JsonConverter(typeof(UnixSecondsDateTimeConverter))]
     public DateTime ApproximateCreationDateTime { get; set; }
 
     /// <summary>
