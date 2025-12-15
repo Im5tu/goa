@@ -5,6 +5,7 @@ namespace Goa.Functions.Core.Serialization;
 
 /// <summary>
 /// Converts Unix timestamps (seconds since epoch) to DateTime.
+/// Handles scientific notation (e.g., 1.765812273E9) and decimal values.
 /// </summary>
 public sealed class UnixSecondsDateTimeConverter : JsonConverter<DateTime>
 {
@@ -13,17 +14,19 @@ public sealed class UnixSecondsDateTimeConverter : JsonConverter<DateTime>
     {
         if (reader.TokenType == JsonTokenType.Number)
         {
-            var unixTimestamp = reader.GetInt64();
-            return DateTimeOffset.FromUnixTimeSeconds(unixTimestamp).UtcDateTime;
+            // Use GetDouble to handle scientific notation (e.g., 1.765812273E9)
+            var unixTimestamp = reader.GetDouble();
+            var milliseconds = (long)(unixTimestamp * 1000);
+            return DateTimeOffset.FromUnixTimeMilliseconds(milliseconds).UtcDateTime;
         }
 
-        // Fallback for string format (unlikely but safe)
         if (reader.TokenType == JsonTokenType.String)
         {
             var stringValue = reader.GetString();
-            if (long.TryParse(stringValue, out var timestamp))
+            if (double.TryParse(stringValue, out var timestamp))
             {
-                return DateTimeOffset.FromUnixTimeSeconds(timestamp).UtcDateTime;
+                var milliseconds = (long)(timestamp * 1000);
+                return DateTimeOffset.FromUnixTimeMilliseconds(milliseconds).UtcDateTime;
             }
             return DateTime.Parse(stringValue!);
         }
@@ -41,6 +44,7 @@ public sealed class UnixSecondsDateTimeConverter : JsonConverter<DateTime>
 
 /// <summary>
 /// Converts Unix timestamps (milliseconds since epoch) to DateTime.
+/// Handles scientific notation (e.g., 1.765812273E12).
 /// </summary>
 public sealed class UnixMillisecondsDateTimeConverter : JsonConverter<DateTime>
 {
@@ -49,17 +53,17 @@ public sealed class UnixMillisecondsDateTimeConverter : JsonConverter<DateTime>
     {
         if (reader.TokenType == JsonTokenType.Number)
         {
-            var unixTimestamp = reader.GetInt64();
-            return DateTimeOffset.FromUnixTimeMilliseconds(unixTimestamp).UtcDateTime;
+            // Use GetDouble to handle scientific notation
+            var unixTimestamp = reader.GetDouble();
+            return DateTimeOffset.FromUnixTimeMilliseconds((long)unixTimestamp).UtcDateTime;
         }
 
-        // Fallback for string format (unlikely but safe)
         if (reader.TokenType == JsonTokenType.String)
         {
             var stringValue = reader.GetString();
-            if (long.TryParse(stringValue, out var timestamp))
+            if (double.TryParse(stringValue, out var timestamp))
             {
-                return DateTimeOffset.FromUnixTimeMilliseconds(timestamp).UtcDateTime;
+                return DateTimeOffset.FromUnixTimeMilliseconds((long)timestamp).UtcDateTime;
             }
             return DateTime.Parse(stringValue!);
         }
