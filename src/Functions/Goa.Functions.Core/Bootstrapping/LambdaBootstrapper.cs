@@ -15,7 +15,6 @@ namespace Goa.Functions.Core.Bootstrapping;
 public class LambdaBootstrapper<TRequest, TResponse>
 {
     private readonly IResponseSerializer<TResponse> _responseSerializer;
-    private readonly ILogger _logger;
     private readonly JsonTypeInfo<TRequest> _requestTypeInfo;
     private Func<TRequest, InvocationRequest, CancellationToken, Task<TResponse>>? _onNext;
 
@@ -23,6 +22,11 @@ public class LambdaBootstrapper<TRequest, TResponse>
     ///     The current Lambda runtime client
     /// </summary>
     protected ILambdaRuntimeClient LambdaRuntimeClient { get; }
+
+    /// <summary>
+    ///     The logger for the bootstrapper
+    /// </summary>
+    protected ILogger Logger { get; }
 
     /// <summary>
     ///     Constructs a new LambdaBootstrapper
@@ -33,9 +37,17 @@ public class LambdaBootstrapper<TRequest, TResponse>
     /// <param name="lambdaRuntimeClient">The implementation of the lambda runtime client</param>
     public LambdaBootstrapper(JsonSerializerContext jsonSerializerContext, Func<TRequest, InvocationRequest, CancellationToken, Task<TResponse>>? onNext = null, IResponseSerializer<TResponse>? responseSerializer = null, ILambdaRuntimeClient? lambdaRuntimeClient = null)
     {
-        var logLevel = Enum.TryParse<LogLevel>(Environment.GetEnvironmentVariable("GOA__LOG__LEVEL"), out var level) ? level : LogLevel.Information;
+        var logLevel = LogLevel.Information;
+        if (Enum.TryParse<LogLevel>(Environment.GetEnvironmentVariable("GOA_LOG_LEVEL"), ignoreCase: true, out var goaLogLevel))
+        {
+            logLevel = goaLogLevel;
+        }
+        else if (Enum.TryParse<LogLevel>(Environment.GetEnvironmentVariable("LOGGING_LOGLEVEL__DEFAULT"), ignoreCase: true, out var parsedLogLevel))
+        {
+            logLevel = parsedLogLevel;
+        }
 
-        _logger = new JsonLogger("LambdaBootstrapper", logLevel, LogScopeProvider.Instance, LoggingSerializationContext.Default);
+        Logger = new JsonLogger("LambdaBootstrapper", logLevel, LogScopeProvider.Instance, LoggingSerializationContext.Default);
         LambdaRuntimeClient = lambdaRuntimeClient ?? new LambdaRuntimeClient(logLevel);
         _responseSerializer = responseSerializer ?? new JsonResponseSerializer<TResponse>(jsonSerializerContext);
         _requestTypeInfo = jsonSerializerContext.GetTypeInfo(typeof(TRequest)) as JsonTypeInfo<TRequest> ?? throw new Exception("Cannot find serialization information for the type: " + typeof(TRequest).FullName);
@@ -57,7 +69,7 @@ public class LambdaBootstrapper<TRequest, TResponse>
         // Work around for AspNetCore
         await Task.Yield();
 
-        _logger.BootstrapStarted();
+        Logger.BootstrapStarted();
 
         if (_onNext is null)
             throw new Exception("No callback has been configured for the lambda, so we're unable to process the request.");
@@ -68,7 +80,7 @@ public class LambdaBootstrapper<TRequest, TResponse>
             var invocationResult = await LambdaRuntimeClient.GetNextInvocationAsync(cancellationToken);
             if (!invocationResult.IsSuccess || invocationResult.Data is null)
             {
-                _logger.BootstrapGetNextInvocationFailed(invocationResult.ErrorMessage);
+                Logger.BootstrapGetNextInvocationFailed(invocationResult.ErrorMessage);
                 continue;
             }
 
@@ -93,17 +105,17 @@ public class LambdaBootstrapper<TRequest, TResponse>
 
             var invocation = invocationResult.Data;
 
-            using var context = _logger.WithContext("AwsRequestId", invocation.RequestId);
+            using var context = Logger.WithContext("AwsRequestId", invocation.RequestId);
 
             // Deserialize the request payload
             try
             {
-                _logger.BootstrapInvocationRequestDeserializationStart();
+                Logger.BootstrapInvocationRequestDeserializationStart();
 
                 var request = JsonSerializer.Deserialize(invocation.Payload, _requestTypeInfo);
                 if (request == null)
                 {
-                    _logger.BootstrapInvocationRequestDeserializationFailed();
+                    Logger.BootstrapInvocationRequestDeserializationFailed();
                     var errorPayload = new InvocationErrorPayload("DeserializationError", "Failed to deserialize request payload. Null payload returned.", Array.Empty<string>());
                     await LambdaRuntimeClient.ReportInvocationErrorAsync(invocation.RequestId, errorPayload, cancellationToken);
                     continue;
@@ -118,7 +130,7 @@ public class LambdaBootstrapper<TRequest, TResponse>
             }
             catch (Exception ex)
             {
-                // Capture the error and send it to the Runtime API
+                Logger.BootstrapInvocationProcessingFailed(ex);
                 var errorPayload = new InvocationErrorPayload(ex.GetType().FullName ?? ex.GetType().Name, ex.Message, ex.StackTrace?.Split(Environment.NewLine) ?? Array.Empty<string>());
                 await LambdaRuntimeClient.ReportInvocationErrorAsync(invocation.RequestId, errorPayload, cancellationToken);
             }
@@ -178,6 +190,7 @@ public sealed class LambdaBootstrapper<TFunction, TRequest, TResponse> : LambdaB
             }
             catch (Exception ex)
             {
+                Logger.BootstrapFunctionFactoryInitializationFailed(ex);
                 var errorPayload = new InitializationErrorPayload(ex.GetType().FullName ?? ex.GetType().Name, "Function Factory Initialization Failure", ex.ToString());
                 await LambdaRuntimeClient.ReportInitializationErrorAsync(errorPayload, cancellationToken);
                 throw;
