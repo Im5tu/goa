@@ -11,5 +11,12 @@
         <AnalysisLevel>latest</AnalysisLevel>
         <!-- Use the top level for the artifacts directory -->
         <ArtifactsPath>$(MSBuildThisFileDirectory)artifacts</ArtifactsPath>
+        <!-- Default GoaAutoGenerateExtensions to true -->
+        <GoaAutoGenerateExtensions Condition="'$(GoaAutoGenerateExtensions)' == ''">true</GoaAutoGenerateExtensions>
     </PropertyGroup>
+
+    <!-- Make GoaAutoGenerateExtensions visible to the source generator -->
+    <ItemGroup>
+        <CompilerVisibleProperty Include="GoaAutoGenerateExtensions" />
+    </ItemGroup>
 </Project>

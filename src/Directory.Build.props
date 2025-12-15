@@ -2,9 +2,12 @@
     <Import Project="$([MSBuild]::GetPathOfFileAbove('Directory.Build.props', '$(MSBuildThisFileDirectory)../'))" Condition="Exists($([MSBuild]::GetPathOfFileAbove('Directory.Build.props', '$(MSBuildThisFileDirectory)../')))" />
 
     <PropertyGroup>
-        <!-- We need to determine whether or not this is a enerator project -->
+        <!-- We need to determine whether or not this is a generator project -->
         <IsGeneratorProject Condition="'$(MSBuildProjectName)' == ''">false</IsGeneratorProject>
         <IsGeneratorProject Condition="$(MSBuildProjectName.EndsWith('.Generator'))">true</IsGeneratorProject>
+        <!-- We need to determine whether or not this is an analyzers project -->
+        <IsAnalyzersProject Condition="'$(MSBuildProjectName)' == ''">false</IsAnalyzersProject>
+        <IsAnalyzersProject Condition="$(MSBuildProjectName.EndsWith('.Analyzers'))">true</IsAnalyzersProject>
         <!-- Skip versioning on debug builds for performance -->
         <MinVerSkip Condition="'$(Configuration)' == 'Debug'">true</MinVerSkip>
         <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
@@ -21,8 +24,8 @@
         <EmbedUntrackedSources>true</EmbedUntrackedSources>
     </PropertyGroup>
 
-    <!-- Ensure that our packages are built properly for none generator projects-->
-    <PropertyGroup Condition="$(IsGeneratorProject) != 'true'">
+    <!-- Ensure that our packages are built properly for none generator or analyzer projects-->
+    <PropertyGroup Condition="$(IsGeneratorProject) != 'true' AND $(IsAnalyzersProject) != 'true'">
         <IsPackable>true</IsPackable>
         <UseArtifactsOutput>true</UseArtifactsOutput>
         <EnablePackageValidation>true</EnablePackageValidation>
@@ -51,9 +54,32 @@
         <!-- force the package to go into the right place. Requires <IncludeBuildOutput>false</IncludeBuildOutput> -->
         <None Include="$(OutputPath)\$(AssemblyName).dll" Pack="true" PackagePath="analyzers/dotnet/cs" />
     </ItemGroup>
+
+    <!-- For analyzers projects we use the same settings as generators -->
+    <PropertyGroup Condition="$(IsAnalyzersProject) == 'true'">
+        <DevelopmentDependency>true</DevelopmentDependency>
+        <TargetFramework>netstandard2.0</TargetFramework>
+        <TargetFrameworks />
+        <LangVersion>latest</LangVersion>
+        <OutputType>Library</OutputType>
+        <PackageType>Analyzer</PackageType>
+        <IsRoslynComponent>true</IsRoslynComponent>
+        <EnforceExtendedAnalyzerRules>true</EnforceExtendedAnalyzerRules>
+        <IncludeBuildOutput>false</IncludeBuildOutput>
+        <!-- NU5128: Missing dependencies, RS1038: Workspaces in analyzer (needed for CodeFix) -->
+        <NoWarn>$(NoWarn);NU5128;RS1038</NoWarn>
+    </PropertyGroup>
+    <ItemGroup Condition="$(IsAnalyzersProject) == 'true'">
+        <None Include="$(OutputPath)\$(AssemblyName).dll" Pack="true" PackagePath="analyzers/dotnet/cs" />
+    </ItemGroup>
+
     <!-- If the package has a corresponding generator, ensure that's packaged properly as well -->
     <ItemGroup Condition="Exists('../$(ProjectName).Generator/$(ProjectName).Generator.csproj')">
         <ProjectReference Include="../$(ProjectName).Generator/$(ProjectName).Generator.csproj" IncludeAssets="Analyzers" />
+    </ItemGroup>
+    <!-- If the package has a corresponding analyzers project, ensure that's packaged properly as well -->
+    <ItemGroup Condition="Exists('../$(ProjectName).Analyzers/$(ProjectName).Analyzers.csproj')">
+        <ProjectReference Include="../$(ProjectName).Analyzers/$(ProjectName).Analyzers.csproj" IncludeAssets="Analyzers" />
     </ItemGroup>
 
     <!-- Include the readme's so we can see them -->

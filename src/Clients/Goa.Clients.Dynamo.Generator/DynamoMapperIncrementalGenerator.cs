@@ -22,10 +22,21 @@ public class DynamoMapperIncrementalGenerator : IIncrementalGenerator
                 transform: static (ctx, _) => GetSemanticTargetForGeneration(ctx))
             .Where(static m => m is not null);
 
-        // Combine with compilation and generate code
-        var compilationAndTypes = context.CompilationProvider.Combine(typeProvider.Collect());
+        // Get the auto-generate extensions option from MSBuild properties
+        var optionsProvider = context.AnalyzerConfigOptionsProvider
+            .Select(static (options, _) =>
+            {
+                options.GlobalOptions.TryGetValue("build_property.GoaAutoGenerateExtensions", out var autoGenerateExtensions);
+                return string.Equals(autoGenerateExtensions, "true", StringComparison.OrdinalIgnoreCase);
+            });
 
-        context.RegisterSourceOutput(compilationAndTypes, static (spc, source) => Execute(source.Left, source.Right, spc));
+        // Combine compilation, types, and options
+        var compilationAndTypes = context.CompilationProvider
+            .Combine(typeProvider.Collect())
+            .Combine(optionsProvider);
+
+        context.RegisterSourceOutput(compilationAndTypes, static (spc, source) =>
+            Execute(source.Left.Left, source.Left.Right, source.Right, spc));
     }
 
     private static bool IsCandidateType(SyntaxNode node)
@@ -70,7 +81,7 @@ public class DynamoMapperIncrementalGenerator : IIncrementalGenerator
         return false;
     }
 
-    private static void Execute(Compilation compilation, ImmutableArray<INamedTypeSymbol?> types, SourceProductionContext context)
+    private static void Execute(Compilation compilation, ImmutableArray<INamedTypeSymbol?> types, bool autoGenerateExtensions, SourceProductionContext context)
     {
         if (types.IsDefaultOrEmpty)
             return;
@@ -99,13 +110,20 @@ public class DynamoMapperIncrementalGenerator : IIncrementalGenerator
             // Generate code
             var keyFactoryGenerator = new KeyFactoryGenerator(typeHandlerRegistry);
             var mapperGenerator = new MapperGenerator(typeHandlerRegistry);
+            var extensionGenerator = new ExtensionGenerator(autoGenerateExtensions);
 
             var keyFactoryCode = keyFactoryGenerator.GenerateCode(analyzedTypes, generationContext);
             var mapperCode = mapperGenerator.GenerateCode(analyzedTypes, generationContext);
+            var extensionCode = extensionGenerator.GenerateCode(analyzedTypes, generationContext);
 
             // Add source files
             context.AddSource("DynamoKeyFactory.g.cs", SourceText.From(keyFactoryCode, Encoding.UTF8));
             context.AddSource("DynamoMapper.g.cs", SourceText.From(mapperCode, Encoding.UTF8));
+
+            if (!string.IsNullOrEmpty(extensionCode))
+            {
+                context.AddSource("DynamoExtensions.g.cs", SourceText.From(extensionCode, Encoding.UTF8));
+            }
         }
         catch (Exception ex)
         {
@@ -131,6 +149,7 @@ public class DynamoMapperIncrementalGenerator : IIncrementalGenerator
         registry.RegisterHandler(new UnixTimestampAttributeHandler());
         registry.RegisterHandler(new IgnoreAttributeHandler());
         registry.RegisterHandler(new SerializedNameAttributeHandler());
+        registry.RegisterHandler(new ExtensionAttributeHandler());
         return registry;
     }
 

@@ -3,7 +3,7 @@ using Goa.Functions.ApiGateway.Payloads;
 using Goa.Functions.ApiGateway.Payloads.V2;
 using Goa.Functions.Core;
 using System.Diagnostics;
-using TestConsole;
+using TestConsole;using TestConsole.DynamoModels;
 
 
 
@@ -171,7 +171,6 @@ var request = new ProxyPayloadV2Request
 runtime.Enqueue(request);
 runtime.Enqueue(request);
 runtime.Enqueue(request);
-
 
 
 

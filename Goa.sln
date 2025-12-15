@@ -118,6 +118,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Goa.Performance.Benchmarks"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Goa.Functions.CloudWatchLogs", "src\Functions\Goa.Functions.CloudWatchLogs\Goa.Functions.CloudWatchLogs.csproj", "{C6E5BBFC-112F-4F54-A6F5-29284FF34BB0}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Goa.Clients.Dynamo.Analyzers", "src\Clients\Goa.Clients.Dynamo.Analyzers\Goa.Clients.Dynamo.Analyzers.csproj", "{93AA002A-E622-4EFD-883D-BD54CB266483}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -536,6 +538,18 @@ Global
 		{C6E5BBFC-112F-4F54-A6F5-29284FF34BB0}.Release|x64.Build.0 = Release|Any CPU
 		{C6E5BBFC-112F-4F54-A6F5-29284FF34BB0}.Release|x86.ActiveCfg = Release|Any CPU
 		{C6E5BBFC-112F-4F54-A6F5-29284FF34BB0}.Release|x86.Build.0 = Release|Any CPU
+		{93AA002A-E622-4EFD-883D-BD54CB266483}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{93AA002A-E622-4EFD-883D-BD54CB266483}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{93AA002A-E622-4EFD-883D-BD54CB266483}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{93AA002A-E622-4EFD-883D-BD54CB266483}.Debug|x64.Build.0 = Debug|Any CPU
+		{93AA002A-E622-4EFD-883D-BD54CB266483}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{93AA002A-E622-4EFD-883D-BD54CB266483}.Debug|x86.Build.0 = Debug|Any CPU
+		{93AA002A-E622-4EFD-883D-BD54CB266483}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{93AA002A-E622-4EFD-883D-BD54CB266483}.Release|Any CPU.Build.0 = Release|Any CPU
+		{93AA002A-E622-4EFD-883D-BD54CB266483}.Release|x64.ActiveCfg = Release|Any CPU
+		{93AA002A-E622-4EFD-883D-BD54CB266483}.Release|x64.Build.0 = Release|Any CPU
+		{93AA002A-E622-4EFD-883D-BD54CB266483}.Release|x86.ActiveCfg = Release|Any CPU
+		{93AA002A-E622-4EFD-883D-BD54CB266483}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -581,5 +595,6 @@ Global
 		{5242A8CF-1351-4B0E-A160-D71102C23593} = {B5DC1548-387B-4ABB-B4E8-CED73AFD8863}
 		{A1B2C3D4-E5F6-7890-1234-567890ABCDEF} = {B9BAC8A3-D4AA-4F7F-84CE-4746EC865CC2}
 		{C6E5BBFC-112F-4F54-A6F5-29284FF34BB0} = {51395382-E73F-4070-A65A-C2D5ADF9D5A8}
+		{93AA002A-E622-4EFD-883D-BD54CB266483} = {14163F55-30AB-44EF-899E-19790A93BB37}
 	EndGlobalSection
 EndGlobal

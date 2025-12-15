@@ -3,6 +3,6 @@
 
     <!-- Ensure that we always include a reference to the core project for things like extensions -->
     <ItemGroup>
-        <ProjectReference Include="..\Goa.Clients.Core\Goa.Clients.Core.csproj" Condition="'$(IsGeneratorProject)' != 'true' AND $(MSBuildProjectName) != 'Goa.Clients.Core'" />
+        <ProjectReference Include="..\Goa.Clients.Core\Goa.Clients.Core.csproj" Condition="'$(IsGeneratorProject)' != 'true' AND '$(IsAnalyzersProject)' != 'true' AND $(MSBuildProjectName) != 'Goa.Clients.Core'" />
     </ItemGroup>
 </Project>

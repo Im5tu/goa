@@ -1,0 +1,8 @@
+<Project>
+  <PropertyGroup>
+    <GoaAutoGenerateExtensions Condition="'$(GoaAutoGenerateExtensions)' == ''">true</GoaAutoGenerateExtensions>
+  </PropertyGroup>
+  <ItemGroup>
+    <CompilerVisibleProperty Include="GoaAutoGenerateExtensions" />
+  </ItemGroup>
+</Project>
