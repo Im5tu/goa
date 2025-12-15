@@ -130,7 +130,7 @@ public class LambdaBootstrapper<TRequest, TResponse>
             }
             catch (Exception ex)
             {
-                Logger.BootstrapInvocationProcessingFailed(ex);
+                Logger.BootstrapInvocationProcessingFailed(ex, invocation.Payload);
                 var errorPayload = new InvocationErrorPayload(ex.GetType().FullName ?? ex.GetType().Name, ex.Message, ex.StackTrace?.Split(Environment.NewLine) ?? Array.Empty<string>());
                 await LambdaRuntimeClient.ReportInvocationErrorAsync(invocation.RequestId, errorPayload, cancellationToken);
             }

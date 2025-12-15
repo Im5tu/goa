@@ -15,8 +15,8 @@ internal static partial class BootstrappingLogExtensions
     internal static partial void BootstrapInvocationRequestDeserializationFailed(this ILogger logger);
     [LoggerMessage(EventId = 104, Level = LogLevel.Warning, Message = "Failed to get next invocation: {ErrorMessage}")]
     internal static partial void BootstrapGetNextInvocationFailed(this ILogger logger, string? errorMessage);
-    [LoggerMessage(EventId = 105, Level = LogLevel.Error, Message = "Invocation processing failed")]
-    internal static partial void BootstrapInvocationProcessingFailed(this ILogger logger, Exception exception);
+    [LoggerMessage(EventId = 105, Level = LogLevel.Error, Message = "Invocation processing failed. Payload: {payload}")]
+    internal static partial void BootstrapInvocationProcessingFailed(this ILogger logger, Exception exception, string payload);
     [LoggerMessage(EventId = 106, Level = LogLevel.Error, Message = "Function factory initialization failed")]
     internal static partial void BootstrapFunctionFactoryInitializationFailed(this ILogger logger, Exception exception);
 
