@@ -68,7 +68,7 @@ public class AttributeHandlerRegistryTests
         var attributes = registry.ProcessAttributes(mockSymbol);
 
         // Assert
-        await Assert.That(attributes).Count().EqualTo(1);
+        await Assert.That(attributes).Count().IsEqualTo(1);
         await Assert.That(attributes[0]).IsEqualTo(expectedAttributeInfo);
 
         mockHandler.Verify(h => h.CanHandle(mockAttributeData), Times.Once);
@@ -135,7 +135,7 @@ public class AttributeHandlerRegistryTests
         var attributes = registry.ProcessAttributes(mockSymbol);
 
         // Assert
-        await Assert.That(attributes).Count().EqualTo(1);
+        await Assert.That(attributes).Count().IsEqualTo(1);
 
         // First handler should be used
         firstHandler.Verify(h => h.CanHandle(mockAttributeData), Times.Once);
@@ -228,7 +228,7 @@ public class AttributeHandlerRegistryTests
         var dynamoAttributes = registry.GetAttributes<DynamoModelAttributeInfo>(mockSymbol);
 
         // Assert
-        await Assert.That(dynamoAttributes).Count().EqualTo(1);
+        await Assert.That(dynamoAttributes).Count().IsEqualTo(1);
         await Assert.That(dynamoAttributes[0]).IsEqualTo(attribute2);
     }
 

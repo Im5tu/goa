@@ -90,7 +90,7 @@ public class SnsClientIntegrationTests
         await Assert.That(request.Subject).IsEqualTo("Test subject");
         await Assert.That(request.MessageStructure).IsEqualTo("json");
         await Assert.That(() => request.MessageAttributes).IsNotNull();
-        await Assert.That(request.MessageAttributes!).Count().EqualTo(1);
+        await Assert.That(request.MessageAttributes!).Count().IsEqualTo(1);
         await Assert.That(request.MessageAttributes!["attr1"].StringValue).IsEqualTo("value1");
     }
 

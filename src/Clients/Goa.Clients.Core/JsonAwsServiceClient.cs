@@ -4,6 +4,7 @@ using Goa.Clients.Core.Logging;
 using Microsoft.Extensions.Logging;
 using System.Diagnostics;
 using System.Net.Http.Headers;
+using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Text.Json.Serialization.Metadata;
@@ -47,16 +48,16 @@ public abstract class JsonAwsServiceClient<T> : AwsServiceClient<T> where T : Aw
     protected async Task<ApiResponse<TResponse>> SendAsync<TRequest, TResponse>(HttpMethod method, string requestUri, TRequest request, string target, CancellationToken cancellationToken, Dictionary<string, string>? headers = null)
         where TResponse : class
     {
-        string? content = null;
+        byte[]? content = null;
         if (request != null && method != HttpMethod.Get)
         {
             if (request is string stringPayload && IsJsonSerialized(stringPayload))
             {
-                content = stringPayload;
+                content = Encoding.UTF8.GetBytes(stringPayload);
             }
             else
             {
-                content = SerializeToJson(request);
+                content = SerializeToUtf8Bytes(request);
             }
         }
 
@@ -156,15 +157,15 @@ public abstract class JsonAwsServiceClient<T> : AwsServiceClient<T> where T : Aw
     }
 
     /// <summary>
-    /// Serializes a request object to JSON using the configured serialization context.
+    /// Serializes a request object to UTF-8 bytes using the configured serialization context.
     /// </summary>
-    private string SerializeToJson<TRequest>(TRequest request)
+    private byte[] SerializeToUtf8Bytes<TRequest>(TRequest request)
     {
         var typeInfo = _jsonSerializerContext.GetTypeInfo(typeof(TRequest)) as JsonTypeInfo<TRequest>;
         if (typeInfo is null)
             throw new InvalidOperationException($"Cannot find type {typeof(TRequest).Name} in serialization context {_jsonSerializerContext.GetType().FullName}");
 
-        return JsonSerializer.Serialize(request, typeInfo);
+        return JsonSerializer.SerializeToUtf8Bytes(request, typeInfo);
     }
 
     /// <summary>

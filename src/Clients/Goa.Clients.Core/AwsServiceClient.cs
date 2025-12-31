@@ -113,11 +113,11 @@ public abstract class AwsServiceClient<T> where T : AwsServiceConfiguration
     /// </summary>
     /// <param name="method">The HTTP method to use.</param>
     /// <param name="requestUri">The API endpoint to target.</param>
-    /// <param name="content">The request content to send.</param>
+    /// <param name="content">The request content to send as UTF-8 bytes.</param>
     /// <param name="contentType">The content type for the request.</param>
     /// <param name="headers">Additional headers to add to the request.</param>
     /// <returns>A configured HTTP request message.</returns>
-    protected HttpRequestMessage CreateRequestMessage(HttpMethod method, string requestUri, string? content = null, MediaTypeHeaderValue? contentType = null, Dictionary<string, string>? headers = null)
+    protected HttpRequestMessage CreateRequestMessage(HttpMethod method, string requestUri, byte[]? content = null, MediaTypeHeaderValue? contentType = null, Dictionary<string, string>? headers = null)
     {
         var uri = Configuration.ServiceUrl ?? $"https://{Configuration.Service.ToLower()}.{Configuration.Region}.amazonaws.com/";
 
@@ -140,10 +140,13 @@ public abstract class AwsServiceClient<T> where T : AwsServiceConfiguration
             Method = method
         };
 
-        if (content != null && method != HttpMethod.Get)
+        if (content != null && content.Length > 0 && method != HttpMethod.Get)
         {
-            Debug.WriteLine("REQUEST: " + content);
-            requestMessage.Content = new StringContent(content, Encoding.UTF8, contentType);
+            Debug.WriteLine("REQUEST: " + Encoding.UTF8.GetString(content));
+            var byteContent = new ByteArrayContent(content);
+            if (contentType != null)
+                byteContent.Headers.ContentType = contentType;
+            requestMessage.Content = byteContent;
             requestMessage.Options.Set(HttpOptions.Payload, content);
         }
 
