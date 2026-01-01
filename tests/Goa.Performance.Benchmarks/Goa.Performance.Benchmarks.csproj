@@ -8,19 +8,19 @@
 
   <ItemGroup>
     <!-- BenchmarkDotNet -->
-    <PackageReference Include="BenchmarkDotNet" Version="0.15.8" />
-    <PackageReference Include="BenchmarkDotNet.Diagnostics.Windows" Version="0.15.8" Condition="'$(OS)' == 'Windows_NT'" />
+    <PackageReference Include="BenchmarkDotNet" />
+    <PackageReference Include="BenchmarkDotNet.Diagnostics.Windows" Condition="'$(OS)' == 'Windows_NT'" />
 
     <!-- AWS SDK for comparison -->
-    <PackageReference Include="AWSSDK.Core" Version="4.0.3.6" />
-    <PackageReference Include="AWSSDK.SQS" Version="4.0.2.9" />
-    <PackageReference Include="AWSSDK.DynamoDBv2" Version="4.0.10.5" />
-    <PackageReference Include="AWSSDK.Lambda" Version="4.0.12.1" />
-    <PackageReference Include="AWSSDK.SecurityToken" Version="4.0.5.4" />
+    <PackageReference Include="AWSSDK.Core" />
+    <PackageReference Include="AWSSDK.SQS" />
+    <PackageReference Include="AWSSDK.DynamoDBv2" />
+    <PackageReference Include="AWSSDK.Lambda" />
+    <PackageReference Include="AWSSDK.SecurityToken" />
 
     <!-- LocalStack/Docker support -->
-    <PackageReference Include="Testcontainers" Version="4.9.0" />
-    <PackageReference Include="Testcontainers.LocalStack" Version="4.9.0" />
+    <PackageReference Include="Testcontainers" />
+    <PackageReference Include="Testcontainers.LocalStack" />
 
     <!-- Reference Goa projects -->
     <ProjectReference Include="..\..\src\Goa.Core\Goa.Core.csproj" />
