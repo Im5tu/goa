@@ -395,7 +395,7 @@ public class RequestSignerComparisonTests
     public async Task RequestSigner_Handles_PreComputed_Payload_Option()
     {
         // Test validates the HttpOptions.Payload optimization that avoids reading request content
-        // This is critical for performance when the payload is already available as a string
+        // This is critical for performance when the payload is already available as byte[]
 
         // Arrange
         var payload = "{\"Action\":\"SendMessage\",\"MessageBody\":\"Test message\"}";
