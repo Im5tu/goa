@@ -43,6 +43,7 @@
 
     <!-- Build tooling -->
     <PackageVersion Include="DotNet.ReproducibleBuilds" Version="1.2.39" />
+    <PackageVersion Include="Microsoft.TemplateEngine.Tasks" Version="7.0.120" />
     <PackageVersion Include="Microsoft.VisualStudio.Threading.Analyzers" Version="17.14.15" />
   </ItemGroup>
 </Project>

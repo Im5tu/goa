@@ -21,7 +21,7 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="Microsoft.TemplateEngine.Tasks" PrivateAssets="all" IsImplicitlyDefined="true" VersionOverride="7.0.120" />
+        <PackageReference Include="Microsoft.TemplateEngine.Tasks" PrivateAssets="all" IsImplicitlyDefined="true" />
     </ItemGroup>
 
     <ItemGroup>
