@@ -4,6 +4,7 @@ using Goa.Clients.Core.Logging;
 using Microsoft.Extensions.Logging;
 using System.Diagnostics;
 using System.Net.Http.Headers;
+using System.Text;
 using System.Text.Encodings.Web;
 
 namespace Goa.Clients.Core;
@@ -43,16 +44,16 @@ public abstract class XmlAwsServiceClient<T> : AwsServiceClient<T> where T : Aws
         where TRequest : class, ISerializeToXml
         where TResponse : class, IDeserializeFromXml, new()
     {
-        string? content = null;
+        byte[]? content = null;
         if (request != null && method != HttpMethod.Get)
         {
             if (request is string stringPayload && IsXmlSerialized(stringPayload))
             {
-                content = stringPayload;
+                content = Encoding.UTF8.GetBytes(stringPayload);
             }
             else
             {
-                content = SerializeToXml(request);
+                content = SerializeToXmlBytes(request);
             }
         }
 
@@ -150,13 +151,13 @@ public abstract class XmlAwsServiceClient<T> : AwsServiceClient<T> where T : Aws
     }
 
     /// <summary>
-    /// Serializes a request object to XML using the ISerializeToXml interface.
+    /// Serializes a request object to UTF-8 bytes using the ISerializeToXml interface.
     /// </summary>
-    private static string SerializeToXml(object request)
+    private static byte[] SerializeToXmlBytes(object request)
     {
         if (request is ISerializeToXml xmlSerializable)
         {
-            return xmlSerializable.SerializeToXml();
+            return Encoding.UTF8.GetBytes(xmlSerializable.SerializeToXml());
         }
 
         throw new InvalidOperationException($"Cannot serialize request of type {request.GetType().Name}. Please implement ISerializeToXml interface.");

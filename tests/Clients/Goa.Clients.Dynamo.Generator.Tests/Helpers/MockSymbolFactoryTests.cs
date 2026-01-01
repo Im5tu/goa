@@ -203,7 +203,7 @@ public class MockSymbolFactoryTests
 
         // Assert
         await Assert.That(dictionaryType.Object.TypeArguments)
-            .Count().EqualTo(2)
+            .Count().IsEqualTo(2)
             .Because("Dictionary<string, int> should have 2 type arguments");
 
         await Assert.That(dictionaryType.Object.IsGenericType)

@@ -1,4 +1,5 @@
 using System.Net.Http.Headers;
+using System.Text;
 using ErrorOr;
 using Goa.Clients.Core;
 using Goa.Clients.Core.Http;
@@ -37,14 +38,15 @@ internal sealed class SnsServiceClient : AwsServiceClient<SnsServiceClientConfig
 
         try
         {
-            // Serialize request to query parameters
+            // Serialize request to query parameters and convert to bytes
             var queryParameters = SerializeToQueryParameters(request);
+            var content = Encoding.UTF8.GetBytes(queryParameters);
 
             // Create request message
             var requestMessage = CreateRequestMessage(
                 HttpMethod.Post,
                 "/",
-                queryParameters,
+                content,
                 new MediaTypeHeaderValue("application/x-www-form-urlencoded"));
 
             // Send request and get raw HTTP response

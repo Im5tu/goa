@@ -72,6 +72,60 @@ internal sealed class RequestSigner
     }
 
     /// <summary>
+    /// Signs an HTTP request using pre-fetched AWS credentials.
+    /// This overload avoids async credential lookup and can complete fully synchronously
+    /// when the payload is pre-computed via <see cref="HttpOptions.Payload"/>.
+    /// </summary>
+    public ValueTask<string> SignRequestAsync(HttpRequestMessage request, AwsCredentials credentials, DateTime? signingTime = null)
+    {
+        var time = signingTime ?? DateTime.UtcNow;
+        var (region, serviceName) = GetRequestParameters(request);
+
+        // Check if we can complete synchronously (null content or pre-computed payload)
+        if (request.Content is null)
+        {
+            var payloadHash = ComputeEmptyPayloadHash();
+            var signature = ComputeSignatureCore(request, time, region, serviceName, credentials, payloadHash);
+            return ValueTask.FromResult(signature);
+        }
+
+        if (request.Options.TryGetValue(HttpOptions.Payload, out var payload) && payload?.Length > 0)
+        {
+            var payloadHash = ComputePayloadHashFromBytes(payload);
+            var signature = ComputeSignatureCore(request, time, region, serviceName, credentials, payloadHash);
+            return ValueTask.FromResult(signature);
+        }
+
+        // Fall back to async for streaming content
+        return SignRequestWithCredentialsAsync(request, credentials, time, region, serviceName);
+    }
+
+    /// <summary>
+    /// Computes hash of empty payload synchronously.
+    /// </summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static Sha256Hash ComputeEmptyPayloadHash()
+    {
+        Span<byte> hash = stackalloc byte[32];
+        SHA256.HashData(ReadOnlySpan<byte>.Empty, hash);
+        return Sha256Hash.FromBytes(hash);
+    }
+
+    /// <summary>
+    /// Async fallback for signing when content must be streamed.
+    /// </summary>
+    private async ValueTask<string> SignRequestWithCredentialsAsync(
+        HttpRequestMessage request,
+        AwsCredentials credentials,
+        DateTime time,
+        string region,
+        string serviceName)
+    {
+        var payloadHash = await ComputePayloadHashFromStreamAsync(request).ConfigureAwait(false);
+        return ComputeSignatureCore(request, time, region, serviceName, credentials, payloadHash);
+    }
+
+    /// <summary>
     /// Computes the full authorization header value for a request.
     /// This method also adds required headers to the request for immediate usage.
     /// </summary>
@@ -379,63 +433,73 @@ internal sealed class RequestSigner
     }
 
     /// <summary>
-    /// Computes payload hash asynchronously, returning a value-type digest to avoid heap allocation.
+    /// Computes payload hash, returning synchronously when possible to avoid async state machine overhead.
     /// Uses streaming for large payloads to maintain low memory footprint.
     /// </summary>
-    private static async ValueTask<Sha256Hash> ComputePayloadHashAsync(HttpRequestMessage request)
+    private static ValueTask<Sha256Hash> ComputePayloadHashAsync(HttpRequestMessage request)
     {
-        Span<byte> hash = stackalloc byte[32];
-
         if (request.Content is null)
         {
+            Span<byte> hash = stackalloc byte[32];
             SHA256.HashData(ReadOnlySpan<byte>.Empty, hash);
-            return Sha256Hash.FromBytes(hash);
+            return ValueTask.FromResult(Sha256Hash.FromBytes(hash));
         }
 
-        // Check for pre-computed payload option first
-        if (request.Options.TryGetValue(HttpOptions.Payload, out var payload) && !string.IsNullOrEmpty(payload))
+        // Check for pre-computed payload option first - can complete synchronously
+        if (request.Options.TryGetValue(HttpOptions.Payload, out var payload) && payload?.Length > 0)
         {
-            var byteCount = Encoding.UTF8.GetByteCount(payload);
-            if (byteCount <= 1024) // Use stackalloc for small payloads
-            {
-                Span<byte> bytes = stackalloc byte[byteCount];
-                Encoding.UTF8.GetBytes(payload, bytes);
-                SHA256.HashData(bytes, hash);
-            }
-            else // Use ArrayPool for larger payloads
-            {
-                var rented = ArrayPool<byte>.Shared.Rent(byteCount);
-                try
-                {
-                    var span = rented.AsSpan(0, byteCount);
-                    Encoding.UTF8.GetBytes(payload, span);
-                    SHA256.HashData(span, hash);
-                }
-                finally
-                {
-                    ArrayPool<byte>.Shared.Return(rented, clearArray: true);
-                }
-            }
-            return Sha256Hash.FromBytes(hash);
+            return ValueTask.FromResult(ComputePayloadHashFromBytes(payload));
         }
 
-        // Stream large content to avoid loading entire payload into memory
-        using var stream = await request.Content.ReadAsStreamAsync().ConfigureAwait(false);
+        // Stream large content asynchronously
+        return ComputePayloadHashFromStreamAsync(request);
+    }
+
+    /// <summary>
+    /// Computes payload hash synchronously from pre-computed UTF-8 bytes.
+    /// </summary>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static Sha256Hash ComputePayloadHashFromBytes(byte[] payload)
+    {
+        Span<byte> hash = stackalloc byte[32];
+        SHA256.HashData(payload, hash);
+        return Sha256Hash.FromBytes(hash);
+    }
+
+    /// <summary>
+    /// Computes payload hash by streaming content asynchronously.
+    /// Used when payload is not pre-computed and must be read from the request body.
+    /// </summary>
+    private static async ValueTask<Sha256Hash> ComputePayloadHashFromStreamAsync(HttpRequestMessage request)
+    {
+        using var stream = await request.Content!.ReadAsStreamAsync().ConfigureAwait(false);
         using var ih = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
-        var buffer = ArrayPool<byte>.Shared.Rent(8192);
+
+        // Dynamic buffer sizing based on content length hint
+        var contentLength = request.Content.Headers.ContentLength;
+        var bufferSize = contentLength switch
+        {
+            null => 1024,           // Unknown size: 1KB (conservative)
+            <= 8192 => 8192,        // Small: 8KB
+            <= 65536 => 16384,      // Medium: 16KB
+            <= 524288 => 65536,     // Large (up to 512KB): 64KB
+            _ => 131072             // XLarge: 128KB
+        };
+
+        var buffer = ArrayPool<byte>.Shared.Rent(bufferSize);
         try
         {
             int read;
             while ((read = await stream.ReadAsync(buffer.AsMemory(0, buffer.Length)).ConfigureAwait(false)) > 0)
                 ih.AppendData(buffer, 0, read);
 
-            Span<byte> rentedHash = stackalloc byte[32];
-            ih.TryGetHashAndReset(rentedHash, out _);
-            return Sha256Hash.FromBytes(rentedHash);
+            Span<byte> hash = stackalloc byte[32];
+            ih.TryGetHashAndReset(hash, out _);
+            return Sha256Hash.FromBytes(hash);
         }
         finally
         {
-            ArrayPool<byte>.Shared.Return(buffer);
+            ArrayPool<byte>.Shared.Return(buffer, clearArray: true);
         }
     }
 
@@ -1137,7 +1201,7 @@ internal sealed class RequestSigner
         foreach (var header in request.Headers)
         {
             if (!IsAwsManagedHeader(header.Key))
-                signedHeaders.Add(header.Key.ToLower());
+                signedHeaders.Add(header.Key.ToLowerInvariant());
         }
 
         // Add content headers
@@ -1145,7 +1209,7 @@ internal sealed class RequestSigner
         {
             foreach (var header in request.Content.Headers)
             {
-                signedHeaders.Add(header.Key.ToLower());
+                signedHeaders.Add(header.Key.ToLowerInvariant());
             }
         }
 

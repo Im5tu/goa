@@ -71,7 +71,7 @@ public class NamingHelpersTests
 
         // Assert
         await Assert.That(result)
-            .Count().EqualTo(0);
+            .Count().IsEqualTo(0);
     }
 
     [Test]
@@ -85,7 +85,7 @@ public class NamingHelpersTests
 
         // Assert
         await Assert.That(result)
-            .Count().EqualTo(1);
+            .Count().IsEqualTo(1);
         await Assert.That(result[0])
             .IsEqualTo("Id");
     }
@@ -101,7 +101,7 @@ public class NamingHelpersTests
 
         // Assert
         await Assert.That(result)
-            .Count().EqualTo(3);
+            .Count().IsEqualTo(3);
         await Assert.That(result[0])
             .IsEqualTo("Type");
         await Assert.That(result[1])
@@ -121,7 +121,7 @@ public class NamingHelpersTests
 
         // Assert
         await Assert.That(result)
-            .Count().EqualTo(2);
+            .Count().IsEqualTo(2);
         await Assert.That(result[0])
             .IsEqualTo("PropertyName");
         await Assert.That(result[1])
@@ -139,7 +139,7 @@ public class NamingHelpersTests
 
         // Assert
         await Assert.That(result)
-            .Count().EqualTo(0);
+            .Count().IsEqualTo(0);
     }
 
     [Test]
@@ -467,7 +467,7 @@ public class NamingHelpersTests
 
         // Assert
         await Assert.That(result)
-            .Count().EqualTo(1);
+            .Count().IsEqualTo(1);
         await Assert.That(result[0])
             .IsEqualTo("Outer<Inner");
     }

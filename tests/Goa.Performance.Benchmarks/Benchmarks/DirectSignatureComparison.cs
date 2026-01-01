@@ -24,8 +24,15 @@ public class DirectSignatureComparison
     private string _largePayload = null!;
     private string _xlargePayload = null!;
 
+    // Pre-computed bytes for Goa benchmarks (avoids encoding in benchmark hot path)
+    private byte[] _smallPayloadBytes = null!;
+    private byte[] _mediumPayloadBytes = null!;
+    private byte[] _largePayloadBytes = null!;
+    private byte[] _xlargePayloadBytes = null!;
+
     // Goa components
     private RequestSigner _goaSigner = null!;
+    private AwsCredentials _goaCredentials = null!;
     private HttpRequestMessage _goaRequestSmall = null!;
     private HttpRequestMessage _goaRequestMedium = null!;
     private HttpRequestMessage _goaRequestLarge = null!;
@@ -33,7 +40,7 @@ public class DirectSignatureComparison
 
     // AWS SDK components
     private AWS4Signer _awsSigner = null!;
-    private BasicAWSCredentials _awsCredentials = null!;
+    private ImmutableCredentials _awsImmutableCredentials = null!;
     private AmazonSQSConfig _sqsConfig = null!;
     private IRequest _awsRequestSmall = null!;
     private IRequest _awsRequestMedium = null!;
@@ -43,104 +50,126 @@ public class DirectSignatureComparison
     [GlobalSetup]
     public void Setup()
     {
-        // Generate test payloads
+        // Generate test payloads (strings for AWS SDK)
         _smallPayload = BenchmarkConfig.GeneratePayload(BenchmarkConfig.PayloadSizes.Small);
         _mediumPayload = BenchmarkConfig.GeneratePayload(BenchmarkConfig.PayloadSizes.Medium);
         _largePayload = BenchmarkConfig.GeneratePayload(BenchmarkConfig.PayloadSizes.Large);
         _xlargePayload = BenchmarkConfig.GeneratePayload(BenchmarkConfig.PayloadSizes.XLarge);
 
-        // Setup Goa components
-        var goaCredentials = new StaticCredentialProvider(
+        // Pre-compute bytes for Goa (simulates real-world where serialization produces bytes directly)
+        _smallPayloadBytes = Encoding.UTF8.GetBytes(_smallPayload);
+        _mediumPayloadBytes = Encoding.UTF8.GetBytes(_mediumPayload);
+        _largePayloadBytes = Encoding.UTF8.GetBytes(_largePayload);
+        _xlargePayloadBytes = Encoding.UTF8.GetBytes(_xlargePayload);
+
+        // Setup Goa components - pre-fetch credentials to avoid async overhead in benchmark
+        _goaCredentials = new AwsCredentials(
             BenchmarkConfig.AccessKey,
             BenchmarkConfig.SecretKey,
             BenchmarkConfig.SessionToken);
-        var goaCredentialChain = new CredentialProviderChain(new[] { goaCredentials });
+        var goaCredentialProvider = new StaticCredentialProvider(
+            BenchmarkConfig.AccessKey,
+            BenchmarkConfig.SecretKey,
+            BenchmarkConfig.SessionToken);
+        var goaCredentialChain = new CredentialProviderChain(new[] { goaCredentialProvider });
         _goaSigner = new RequestSigner(goaCredentialChain);
 
-        // Prepare Goa requests
-        _goaRequestSmall = CreateGoaRequest(_smallPayload);
-        _goaRequestMedium = CreateGoaRequest(_mediumPayload);
-        _goaRequestLarge = CreateGoaRequest(_largePayload);
-        _goaRequestXLarge = CreateGoaRequest(_xlargePayload);
+        // Prepare Goa requests (reused, headers cleared between iterations)
+        _goaRequestSmall = CreateGoaRequest(_smallPayloadBytes);
+        _goaRequestMedium = CreateGoaRequest(_mediumPayloadBytes);
+        _goaRequestLarge = CreateGoaRequest(_largePayloadBytes);
+        _goaRequestXLarge = CreateGoaRequest(_xlargePayloadBytes);
 
         // Setup AWS SDK components
-        _awsCredentials = BenchmarkConfig.GetAwsCredentials();
+        var awsCredentials = BenchmarkConfig.GetAwsCredentials();
+        _awsImmutableCredentials = awsCredentials.GetCredentials();
         _awsSigner = new AWS4Signer();
         _sqsConfig = new AmazonSQSConfig()
         {
             RegionEndpoint = Amazon.RegionEndpoint.GetBySystemName(BenchmarkConfig.Region)
         };
 
-        // Prepare AWS requests
+        // Prepare AWS requests (reused, headers cleared between iterations)
         _awsRequestSmall = CreateAwsRequest(_smallPayload);
         _awsRequestMedium = CreateAwsRequest(_mediumPayload);
         _awsRequestLarge = CreateAwsRequest(_largePayload);
         _awsRequestXLarge = CreateAwsRequest(_xlargePayload);
     }
 
-    // Goa Benchmarks
+    // Goa Benchmarks - use pre-fetched credentials to eliminate async credential lookup overhead
     [Benchmark]
     [BenchmarkCategory("Small")]
-    public async ValueTask<string> Goa_SignRequest_Small()
+    public async Task<string> Goa_SignRequest_Small()
     {
-        return await _goaSigner.SignRequestAsync(_goaRequestSmall);
+        ClearSigningHeaders(_goaRequestSmall);
+        return await _goaSigner.SignRequestAsync(_goaRequestSmall, _goaCredentials);
     }
 
     [Benchmark]
     [BenchmarkCategory("Medium")]
-    public async ValueTask<string> Goa_SignRequest_Medium()
+    public async Task<string> Goa_SignRequest_Medium()
     {
-        return await _goaSigner.SignRequestAsync(_goaRequestMedium);
+        ClearSigningHeaders(_goaRequestMedium);
+        return await _goaSigner.SignRequestAsync(_goaRequestMedium, _goaCredentials);
     }
 
     [Benchmark]
     [BenchmarkCategory("Large")]
-    public async ValueTask<string> Goa_SignRequest_Large()
+    public async Task<string> Goa_SignRequest_Large()
     {
-        return await _goaSigner.SignRequestAsync(_goaRequestLarge);
+        ClearSigningHeaders(_goaRequestLarge);
+        return await _goaSigner.SignRequestAsync(_goaRequestLarge, _goaCredentials);
     }
 
     [Benchmark]
     [BenchmarkCategory("XLarge")]
-    public async ValueTask<string> Goa_SignRequest_XLarge()
+    public async Task<string> Goa_SignRequest_XLarge()
     {
-        return await _goaSigner.SignRequestAsync(_goaRequestXLarge);
+        ClearSigningHeaders(_goaRequestXLarge);
+        return await _goaSigner.SignRequestAsync(_goaRequestXLarge, _goaCredentials);
     }
 
     // AWS SDK Benchmarks
     [Benchmark(Baseline = true)]
     [BenchmarkCategory("Small")]
-    public async Task<string> AwsSdk_SignRequest_Small()
+    public string AwsSdk_SignRequest_Small()
     {
-        return await SignWithAwsSdk(_awsRequestSmall);
+        ClearSigningHeaders(_awsRequestSmall);
+        return SignWithAwsSdk(_awsRequestSmall);
     }
 
     [Benchmark(Baseline = true)]
     [BenchmarkCategory("Medium")]
-    public async Task<string> AwsSdk_SignRequest_Medium()
+    public string AwsSdk_SignRequest_Medium()
     {
-        return await SignWithAwsSdk(_awsRequestMedium);
+        ClearSigningHeaders(_awsRequestMedium);
+        return SignWithAwsSdk(_awsRequestMedium);
     }
 
     [Benchmark(Baseline = true)]
     [BenchmarkCategory("Large")]
-    public async Task<string> AwsSdk_SignRequest_Large()
+    public string AwsSdk_SignRequest_Large()
     {
-        return await SignWithAwsSdk(_awsRequestLarge);
+        ClearSigningHeaders(_awsRequestLarge);
+        return SignWithAwsSdk(_awsRequestLarge);
     }
 
     [Benchmark(Baseline = true)]
     [BenchmarkCategory("XLarge")]
-    public async Task<string> AwsSdk_SignRequest_XLarge()
+    public string AwsSdk_SignRequest_XLarge()
     {
-        return await SignWithAwsSdk(_awsRequestXLarge);
+        ClearSigningHeaders(_awsRequestXLarge);
+        return SignWithAwsSdk(_awsRequestXLarge);
     }
 
-    private HttpRequestMessage CreateGoaRequest(string payload)
+    private HttpRequestMessage CreateGoaRequest(byte[] payload)
     {
+        var content = new ByteArrayContent(payload);
+        content.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("application/x-amz-json-1.1");
+
         var request = new HttpRequestMessage(HttpMethod.Post, "https://sqs.us-east-1.amazonaws.com/")
         {
-            Content = new StringContent(payload, Encoding.UTF8, "application/x-amz-json-1.1")
+            Content = content
         };
 
         request.Options.Set(HttpOptions.Region, BenchmarkConfig.Region);
@@ -165,14 +194,27 @@ public class DirectSignatureComparison
         return request;
     }
 
-    private async Task<string> SignWithAwsSdk(IRequest request)
+    private string SignWithAwsSdk(IRequest request)
     {
-        var credentials = await _awsCredentials.GetCredentialsAsync();
-
-        // Use the actual AWS4Signer to sign the request
-        var signingResult = _awsSigner.SignRequest(request, _sqsConfig, null, credentials.AccessKey, credentials.SecretKey);
-
+        var signingResult = _awsSigner.SignRequest(request, _sqsConfig, null,
+            _awsImmutableCredentials.AccessKey, _awsImmutableCredentials.SecretKey);
         return signingResult.Signature;
+    }
+
+    private static void ClearSigningHeaders(HttpRequestMessage request)
+    {
+        request.Headers.Remove("Authorization");
+        request.Headers.Remove("X-Amz-Date");
+        request.Headers.Remove("X-Amz-Security-Token");
+        request.Headers.Remove("x-amz-content-sha256");
+    }
+
+    private static void ClearSigningHeaders(IRequest request)
+    {
+        request.Headers.Remove("Authorization");
+        request.Headers.Remove("X-Amz-Date");
+        request.Headers.Remove("X-Amz-Security-Token");
+        request.Headers.Remove("x-amz-content-sha256");
     }
 
     [GlobalCleanup]

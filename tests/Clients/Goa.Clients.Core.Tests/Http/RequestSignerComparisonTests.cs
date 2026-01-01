@@ -395,15 +395,17 @@ public class RequestSignerComparisonTests
     public async Task RequestSigner_Handles_PreComputed_Payload_Option()
     {
         // Test validates the HttpOptions.Payload optimization that avoids reading request content
-        // This is critical for performance when the payload is already available as a string
+        // This is critical for performance when the payload is already available as byte[]
 
         // Arrange
         var payload = "{\"Action\":\"SendMessage\",\"MessageBody\":\"Test message\"}";
+        var payloadBytes = Encoding.UTF8.GetBytes(payload);
         var request = new HttpRequestMessage(HttpMethod.Post, "https://sqs.us-east-1.amazonaws.com/");
         request.Options.Set(HttpOptions.Region, "us-east-1");
         request.Options.Set(HttpOptions.Service, "sqs");
-        request.Options.Set(HttpOptions.Payload, payload); // Pre-computed payload
-        request.Content = new StringContent(payload, Encoding.UTF8, "application/x-amz-json-1.1");
+        request.Options.Set(HttpOptions.Payload, payloadBytes); // Pre-computed payload bytes
+        request.Content = new ByteArrayContent(payloadBytes);
+        request.Content.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("application/x-amz-json-1.1");
 
         // Act
         var (scheme, authValue) = await _goaSigner.GetAuthorizationHeaderAsync(request, _fixedDateTime);

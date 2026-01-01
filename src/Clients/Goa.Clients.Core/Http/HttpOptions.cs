@@ -26,7 +26,7 @@ public static class HttpOptions
     public static HttpRequestOptionsKey<string> ApiVersion = new(nameof(ApiVersion));
     
     /// <summary>
-    /// HTTP request option key for specifying the request payload.
+    /// HTTP request option key for specifying the request payload as UTF-8 bytes.
     /// </summary>
-    public static HttpRequestOptionsKey<string> Payload = new(nameof(Payload));
+    public static HttpRequestOptionsKey<byte[]> Payload = new(nameof(Payload));
 }
