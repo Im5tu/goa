@@ -797,12 +797,25 @@ public partial class UpdateItemBuilder(string tableName)
 
     /// <summary>
     /// Sets a condition expression that must be satisfied for the update operation to succeed.
+    /// Multiple conditions are combined with AND.
     /// </summary>
     /// <param name="condition">The condition that must be met.</param>
     /// <returns>The UpdateItemBuilder instance for method chaining.</returns>
     public UpdateItemBuilder WithCondition(Condition condition)
     {
-        _request.ConditionExpression = condition.Expression;
+        if (string.IsNullOrEmpty(condition.Expression))
+        {
+            return this;
+        }
+
+        if (string.IsNullOrEmpty(_request.ConditionExpression))
+        {
+            _request.ConditionExpression = condition.Expression;
+        }
+        else
+        {
+            _request.ConditionExpression = $"({_request.ConditionExpression}) AND ({condition.Expression})";
+        }
 
         if (condition.ExpressionNames.Count > 0)
         {

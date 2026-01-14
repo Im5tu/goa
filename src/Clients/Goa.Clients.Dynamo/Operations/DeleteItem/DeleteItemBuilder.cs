@@ -30,18 +30,24 @@ public class DeleteItemBuilder(string tableName)
 
     /// <summary>
     /// Sets a condition expression that must be satisfied for the delete operation to succeed.
+    /// Multiple conditions are combined with AND.
     /// </summary>
     /// <param name="condition">The condition that must be met.</param>
     /// <returns>The DeleteItemBuilder instance for method chaining.</returns>
     public DeleteItemBuilder WithCondition(Condition condition)
     {
+        if (string.IsNullOrEmpty(condition.Expression))
+        {
+            return this;
+        }
+
         if (string.IsNullOrEmpty(_request.ConditionExpression))
         {
             _request.ConditionExpression = condition.Expression;
         }
         else
         {
-            _request.ConditionExpression += " AND " + condition.Expression;
+            _request.ConditionExpression = $"({_request.ConditionExpression}) AND ({condition.Expression})";
         }
 
         if (condition.ExpressionNames.Count > 0)

@@ -544,4 +544,107 @@ public class ConditionExpressionValuesTests
     }
 
     #endregion
+
+    #region Multiple Condition Parentheses Tests
+
+    [Test]
+    public async Task UpdateItemBuilder_WithCondition_MultipleConditions_CombinesWithParentheses()
+    {
+        var builder = new UpdateItemBuilder("TestTable")
+            .WithKey("pk", "value")
+            .Set("status", "active")
+            .WithCondition(Condition.AttributeExists("lockToken"))
+            .WithCondition(Condition.Equals("version", 1));
+
+        var request = builder.Build();
+
+        await Assert.That(request.ConditionExpression)
+            .IsEqualTo("(attribute_exists(#lockToken)) AND (#version = :version)");
+    }
+
+    [Test]
+    public async Task PutItemBuilder_WithCondition_MultipleConditions_CombinesWithParentheses()
+    {
+        var builder = new PutItemBuilder("TestTable")
+            .WithItem(new Dictionary<string, AttributeValue> { ["pk"] = "value" })
+            .WithCondition(Condition.AttributeNotExists("pk"))
+            .WithCondition(Condition.Equals("version", 1));
+
+        var request = builder.Build();
+
+        await Assert.That(request.ConditionExpression)
+            .IsEqualTo("(attribute_not_exists(#pk)) AND (#version = :version)");
+    }
+
+    [Test]
+    public async Task DeleteItemBuilder_WithCondition_MultipleConditions_CombinesWithParentheses()
+    {
+        var builder = new DeleteItemBuilder("TestTable")
+            .WithKey("pk", "value")
+            .WithCondition(Condition.AttributeExists("lockToken"))
+            .WithCondition(Condition.Equals("version", 1));
+
+        var request = builder.Build();
+
+        await Assert.That(request.ConditionExpression)
+            .IsEqualTo("(attribute_exists(#lockToken)) AND (#version = :version)");
+    }
+
+    [Test]
+    public async Task UpdateItemBuilder_WithCondition_ThreeConditions_NestsParentheses()
+    {
+        var builder = new UpdateItemBuilder("TestTable")
+            .WithKey("pk", "value")
+            .Set("status", "active")
+            .WithCondition(Condition.AttributeExists("a"))
+            .WithCondition(Condition.AttributeExists("b"))
+            .WithCondition(Condition.AttributeExists("c"));
+
+        var request = builder.Build();
+
+        await Assert.That(request.ConditionExpression)
+            .IsEqualTo("((attribute_exists(#a)) AND (attribute_exists(#b))) AND (attribute_exists(#c))");
+    }
+
+    [Test]
+    public async Task UpdateItemBuilder_WithCondition_EmptyCondition_IsIgnored()
+    {
+        var builder = new UpdateItemBuilder("TestTable")
+            .WithKey("pk", "value")
+            .Set("status", "active")
+            .WithCondition(new Condition(string.Empty, [], []))
+            .WithCondition(Condition.AttributeExists("lockToken"));
+
+        var request = builder.Build();
+
+        await Assert.That(request.ConditionExpression).IsEqualTo("attribute_exists(#lockToken)");
+    }
+
+    [Test]
+    public async Task PutItemBuilder_WithCondition_EmptyCondition_IsIgnored()
+    {
+        var builder = new PutItemBuilder("TestTable")
+            .WithItem(new Dictionary<string, AttributeValue> { ["pk"] = "value" })
+            .WithCondition(new Condition(string.Empty, [], []))
+            .WithCondition(Condition.AttributeNotExists("pk"));
+
+        var request = builder.Build();
+
+        await Assert.That(request.ConditionExpression).IsEqualTo("attribute_not_exists(#pk)");
+    }
+
+    [Test]
+    public async Task DeleteItemBuilder_WithCondition_EmptyCondition_IsIgnored()
+    {
+        var builder = new DeleteItemBuilder("TestTable")
+            .WithKey("pk", "value")
+            .WithCondition(new Condition(string.Empty, [], []))
+            .WithCondition(Condition.AttributeExists("lockToken"));
+
+        var request = builder.Build();
+
+        await Assert.That(request.ConditionExpression).IsEqualTo("attribute_exists(#lockToken)");
+    }
+
+    #endregion
 }

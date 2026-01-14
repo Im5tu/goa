@@ -41,12 +41,25 @@ public class PutItemBuilder(string tableName)
 
     /// <summary>
     /// Sets a condition expression that must be satisfied for the put operation to succeed.
+    /// Multiple conditions are combined with AND.
     /// </summary>
     /// <param name="condition">The condition that must be met.</param>
     /// <returns>The PutItemBuilder instance for method chaining.</returns>
     public PutItemBuilder WithCondition(Condition condition)
     {
-        _request.ConditionExpression = condition.Expression;
+        if (string.IsNullOrEmpty(condition.Expression))
+        {
+            return this;
+        }
+
+        if (string.IsNullOrEmpty(_request.ConditionExpression))
+        {
+            _request.ConditionExpression = condition.Expression;
+        }
+        else
+        {
+            _request.ConditionExpression = $"({_request.ConditionExpression}) AND ({condition.Expression})";
+        }
 
         if (condition.ExpressionNames.Count > 0)
         {

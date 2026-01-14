@@ -63,7 +63,8 @@ public partial class QueryBuilder(string tableName)
     /// </summary>
     /// <param name="indexName">The name of the index to query, or null to query the base table.</param>
     /// <returns>The QueryBuilder instance for method chaining.</returns>
-    /// <exception cref="ArgumentException">Thrown when indexName is not between 3-255 characters or contains invalid characters.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when indexName length is less than 3 or greater than 255 characters.</exception>
+    /// <exception cref="ArgumentException">Thrown when indexName contains invalid characters (must match pattern [a-zA-Z0-9_.-]+).</exception>
     public QueryBuilder WithIndex(string? indexName)
     {
         if (string.IsNullOrWhiteSpace(indexName))

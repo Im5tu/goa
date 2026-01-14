@@ -3,8 +3,10 @@ using Goa.Clients.Dynamo.Models;
 using Goa.Clients.Dynamo.Operations;
 using Goa.Clients.Dynamo.Operations.Batch;
 using Goa.Clients.Dynamo.Operations.DeleteItem;
+using Goa.Clients.Dynamo.Operations.PutItem;
 using Goa.Clients.Dynamo.Operations.Query;
 using Goa.Clients.Dynamo.Operations.Scan;
+using Goa.Clients.Dynamo.Operations.UpdateItem;
 
 namespace Goa.Clients.Dynamo.Tests;
 
@@ -106,7 +108,7 @@ public class BuilderChainingTests
         var request = builder.Build();
 
         await Assert.That(request.ConditionExpression)
-            .IsEqualTo("attribute_exists(#lockToken) AND #version = :version");
+            .IsEqualTo("(attribute_exists(#lockToken)) AND (#version = :version)");
         await Assert.That(request.ExpressionAttributeNames!["#lockToken"]).IsEqualTo("lockToken");
         await Assert.That(request.ExpressionAttributeNames!["#version"]).IsEqualTo("version");
         await Assert.That(request.ExpressionAttributeValues![":version"].N).IsEqualTo("1");
@@ -216,5 +218,79 @@ public class BuilderChainingTests
 
         await Assert.That(request.ReturnConsumedCapacity).IsEqualTo(ReturnConsumedCapacity.INDEXES);
         await Assert.That(request.ReturnItemCollectionMetrics).IsEqualTo(ReturnItemCollectionMetrics.SIZE);
+    }
+
+    [Test]
+    public async Task DeleteItemBuilder_WithReturnValuesOnConditionCheckFailure_AllOld_SetsValue()
+    {
+        var builder = new DeleteItemBuilder("TestTable")
+            .WithKey("pk", new AttributeValue { S = "value1" })
+            .WithReturnValuesOnConditionCheckFailure(ReturnValuesOnConditionCheckFailure.ALL_OLD);
+
+        var request = builder.Build();
+
+        await Assert.That(request.ReturnValuesOnConditionCheckFailure).IsEqualTo(ReturnValuesOnConditionCheckFailure.ALL_OLD);
+    }
+
+    [Test]
+    public async Task DeleteItemBuilder_WithReturnValuesOnConditionCheckFailure_None_SetsValue()
+    {
+        var builder = new DeleteItemBuilder("TestTable")
+            .WithKey("pk", new AttributeValue { S = "value1" })
+            .WithReturnValuesOnConditionCheckFailure(ReturnValuesOnConditionCheckFailure.NONE);
+
+        var request = builder.Build();
+
+        await Assert.That(request.ReturnValuesOnConditionCheckFailure).IsEqualTo(ReturnValuesOnConditionCheckFailure.NONE);
+    }
+
+    [Test]
+    public async Task PutItemBuilder_WithReturnValuesOnConditionCheckFailure_AllOld_SetsValue()
+    {
+        var builder = new PutItemBuilder("TestTable")
+            .WithItem(new Dictionary<string, AttributeValue> { ["pk"] = "value1" })
+            .WithReturnValuesOnConditionCheckFailure(ReturnValuesOnConditionCheckFailure.ALL_OLD);
+
+        var request = builder.Build();
+
+        await Assert.That(request.ReturnValuesOnConditionCheckFailure).IsEqualTo(ReturnValuesOnConditionCheckFailure.ALL_OLD);
+    }
+
+    [Test]
+    public async Task PutItemBuilder_WithReturnValuesOnConditionCheckFailure_None_SetsValue()
+    {
+        var builder = new PutItemBuilder("TestTable")
+            .WithItem(new Dictionary<string, AttributeValue> { ["pk"] = "value1" })
+            .WithReturnValuesOnConditionCheckFailure(ReturnValuesOnConditionCheckFailure.NONE);
+
+        var request = builder.Build();
+
+        await Assert.That(request.ReturnValuesOnConditionCheckFailure).IsEqualTo(ReturnValuesOnConditionCheckFailure.NONE);
+    }
+
+    [Test]
+    public async Task UpdateItemBuilder_WithReturnValuesOnConditionCheckFailure_AllOld_SetsValue()
+    {
+        var builder = new UpdateItemBuilder("TestTable")
+            .WithKey("pk", new AttributeValue { S = "value1" })
+            .Set("status", "active")
+            .WithReturnValuesOnConditionCheckFailure(ReturnValuesOnConditionCheckFailure.ALL_OLD);
+
+        var request = builder.Build();
+
+        await Assert.That(request.ReturnValuesOnConditionCheckFailure).IsEqualTo(ReturnValuesOnConditionCheckFailure.ALL_OLD);
+    }
+
+    [Test]
+    public async Task UpdateItemBuilder_WithReturnValuesOnConditionCheckFailure_None_SetsValue()
+    {
+        var builder = new UpdateItemBuilder("TestTable")
+            .WithKey("pk", new AttributeValue { S = "value1" })
+            .Set("status", "active")
+            .WithReturnValuesOnConditionCheckFailure(ReturnValuesOnConditionCheckFailure.NONE);
+
+        var request = builder.Build();
+
+        await Assert.That(request.ReturnValuesOnConditionCheckFailure).IsEqualTo(ReturnValuesOnConditionCheckFailure.NONE);
     }
 }
