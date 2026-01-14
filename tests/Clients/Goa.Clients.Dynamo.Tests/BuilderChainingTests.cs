@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Goa.Clients.Dynamo.Enums;
 using Goa.Clients.Dynamo.Models;
 using Goa.Clients.Dynamo.Operations;
@@ -7,6 +8,7 @@ using Goa.Clients.Dynamo.Operations.PutItem;
 using Goa.Clients.Dynamo.Operations.Query;
 using Goa.Clients.Dynamo.Operations.Scan;
 using Goa.Clients.Dynamo.Operations.UpdateItem;
+using Goa.Clients.Dynamo.Serialization;
 
 namespace Goa.Clients.Dynamo.Tests;
 
@@ -292,5 +294,45 @@ public class BuilderChainingTests
         var request = builder.Build();
 
         await Assert.That(request.ReturnValuesOnConditionCheckFailure).IsEqualTo(ReturnValuesOnConditionCheckFailure.NONE);
+    }
+
+    [Test]
+    public async Task DeleteItemBuilder_WithReturnValuesOnConditionCheckFailure_AllOld_SerializesCorrectly()
+    {
+        var builder = new DeleteItemBuilder("TestTable")
+            .WithKey("pk", new AttributeValue { S = "value1" })
+            .WithReturnValuesOnConditionCheckFailure(ReturnValuesOnConditionCheckFailure.ALL_OLD);
+
+        var request = builder.Build();
+        var json = JsonSerializer.Serialize(request, DynamoJsonContext.Default.DeleteItemRequest);
+
+        await Assert.That(json).Contains("\"ReturnValuesOnConditionCheckFailure\":\"ALL_OLD\"");
+    }
+
+    [Test]
+    public async Task PutItemBuilder_WithReturnValuesOnConditionCheckFailure_AllOld_SerializesCorrectly()
+    {
+        var builder = new PutItemBuilder("TestTable")
+            .WithItem(new Dictionary<string, AttributeValue> { ["pk"] = "value1" })
+            .WithReturnValuesOnConditionCheckFailure(ReturnValuesOnConditionCheckFailure.ALL_OLD);
+
+        var request = builder.Build();
+        var json = JsonSerializer.Serialize(request, DynamoJsonContext.Default.PutItemRequest);
+
+        await Assert.That(json).Contains("\"ReturnValuesOnConditionCheckFailure\":\"ALL_OLD\"");
+    }
+
+    [Test]
+    public async Task UpdateItemBuilder_WithReturnValuesOnConditionCheckFailure_AllOld_SerializesCorrectly()
+    {
+        var builder = new UpdateItemBuilder("TestTable")
+            .WithKey("pk", new AttributeValue { S = "value1" })
+            .Set("status", "active")
+            .WithReturnValuesOnConditionCheckFailure(ReturnValuesOnConditionCheckFailure.ALL_OLD);
+
+        var request = builder.Build();
+        var json = JsonSerializer.Serialize(request, DynamoJsonContext.Default.UpdateItemRequest);
+
+        await Assert.That(json).Contains("\"ReturnValuesOnConditionCheckFailure\":\"ALL_OLD\"");
     }
 }
