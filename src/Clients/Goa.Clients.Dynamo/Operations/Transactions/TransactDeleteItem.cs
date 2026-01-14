@@ -1,4 +1,5 @@
-﻿using Goa.Clients.Dynamo.Models;
+﻿using Goa.Clients.Dynamo.Enums;
+using Goa.Clients.Dynamo.Models;
 
 namespace Goa.Clients.Dynamo.Operations.Transactions;
 
@@ -31,4 +32,10 @@ public class TransactDeleteItem
     /// One or more substitution tokens for attribute names in an expression.
     /// </summary>
     public Dictionary<string, string>? ExpressionAttributeNames { get; set; }
+
+    /// <summary>
+    /// Specifies how to return attribute values when a conditional check fails.
+    /// Use ALL_OLD to return all attributes of the item as they appeared before the operation.
+    /// </summary>
+    public ReturnValuesOnConditionCheckFailure ReturnValuesOnConditionCheckFailure { get; set; } = ReturnValuesOnConditionCheckFailure.NONE;
 }

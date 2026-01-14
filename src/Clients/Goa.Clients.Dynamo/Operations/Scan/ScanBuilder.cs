@@ -31,10 +31,18 @@ public class ScanBuilder(string tableName)
             _request.FilterExpression += " AND " + condition.Expression;
         }
 
-        _request.ExpressionAttributeNames ??= new(StringComparer.OrdinalIgnoreCase);
-        _request.ExpressionAttributeValues ??= new(StringComparer.OrdinalIgnoreCase);
-        _request.ExpressionAttributeNames.Merge(condition.ExpressionNames);
-        _request.ExpressionAttributeValues.Merge(condition.ExpressionValues);
+        if (condition.ExpressionNames.Count > 0)
+        {
+            _request.ExpressionAttributeNames ??= new(StringComparer.OrdinalIgnoreCase);
+            _request.ExpressionAttributeNames.Merge(condition.ExpressionNames);
+        }
+
+        if (condition.ExpressionValues.Count > 0)
+        {
+            _request.ExpressionAttributeValues ??= new(StringComparer.OrdinalIgnoreCase);
+            _request.ExpressionAttributeValues.Merge(condition.ExpressionValues);
+        }
+
         return this;
     }
 

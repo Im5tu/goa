@@ -1,3 +1,4 @@
+using Goa.Clients.Dynamo.Enums;
 using Goa.Clients.Dynamo.Models;
 
 namespace Goa.Clients.Dynamo.Operations.Transactions;
@@ -68,6 +69,17 @@ public class TransactGetBuilder
         }
 
         return WithGet(tableName, key);
+    }
+
+    /// <summary>
+    /// Determines the level of detail about consumed capacity to return.
+    /// </summary>
+    /// <param name="returnConsumedCapacity">The level of consumed capacity information to return.</param>
+    /// <returns>The TransactGetBuilder instance for method chaining.</returns>
+    public TransactGetBuilder WithReturnConsumedCapacity(ReturnConsumedCapacity returnConsumedCapacity)
+    {
+        _request.ReturnConsumedCapacity = returnConsumedCapacity;
+        return this;
     }
 
     /// <summary>
