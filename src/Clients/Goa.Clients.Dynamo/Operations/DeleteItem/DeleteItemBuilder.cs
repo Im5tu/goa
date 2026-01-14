@@ -30,24 +30,38 @@ public class DeleteItemBuilder(string tableName)
 
     /// <summary>
     /// Sets a condition expression that must be satisfied for the delete operation to succeed.
+    /// Multiple conditions are combined with AND.
     /// </summary>
     /// <param name="condition">The condition that must be met.</param>
     /// <returns>The DeleteItemBuilder instance for method chaining.</returns>
     public DeleteItemBuilder WithCondition(Condition condition)
     {
+        if (string.IsNullOrEmpty(condition.Expression))
+        {
+            return this;
+        }
+
         if (string.IsNullOrEmpty(_request.ConditionExpression))
         {
             _request.ConditionExpression = condition.Expression;
         }
         else
         {
-            _request.ConditionExpression += " AND " + condition.Expression;
+            _request.ConditionExpression = $"({_request.ConditionExpression}) AND ({condition.Expression})";
         }
 
-        _request.ExpressionAttributeNames ??= new(StringComparer.OrdinalIgnoreCase);
-        _request.ExpressionAttributeValues ??= new(StringComparer.OrdinalIgnoreCase);
-        _request.ExpressionAttributeNames.Merge(condition.ExpressionNames);
-        _request.ExpressionAttributeValues.Merge(condition.ExpressionValues);
+        if (condition.ExpressionNames.Count > 0)
+        {
+            _request.ExpressionAttributeNames ??= new(StringComparer.OrdinalIgnoreCase);
+            _request.ExpressionAttributeNames.Merge(condition.ExpressionNames);
+        }
+
+        if (condition.ExpressionValues.Count > 0)
+        {
+            _request.ExpressionAttributeValues ??= new(StringComparer.OrdinalIgnoreCase);
+            _request.ExpressionAttributeValues.Merge(condition.ExpressionValues);
+        }
+
         return this;
     }
 
@@ -87,6 +101,17 @@ public class DeleteItemBuilder(string tableName)
     public DeleteItemBuilder WithReturnItemCollectionMetrics(ReturnItemCollectionMetrics returnItemCollectionMetrics)
     {
         _request.ReturnItemCollectionMetrics = returnItemCollectionMetrics;
+        return this;
+    }
+
+    /// <summary>
+    /// Specifies how to return attribute values when a conditional check fails.
+    /// </summary>
+    /// <param name="returnValuesOnConditionCheckFailure">The return values on condition check failure setting.</param>
+    /// <returns>The DeleteItemBuilder instance for method chaining.</returns>
+    public DeleteItemBuilder WithReturnValuesOnConditionCheckFailure(ReturnValuesOnConditionCheckFailure returnValuesOnConditionCheckFailure)
+    {
+        _request.ReturnValuesOnConditionCheckFailure = returnValuesOnConditionCheckFailure;
         return this;
     }
 

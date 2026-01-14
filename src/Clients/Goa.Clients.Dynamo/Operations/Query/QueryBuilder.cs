@@ -1,3 +1,4 @@
+using System.Text.RegularExpressions;
 using Goa.Clients.Dynamo.Enums;
 using Goa.Clients.Dynamo.Models;
 using Goa.Core;
@@ -8,7 +9,7 @@ namespace Goa.Clients.Dynamo.Operations.Query;
 /// Fluent builder for constructing DynamoDB Query requests with a user-friendly API.
 /// </summary>
 /// <param name="tableName">The name of the table to query.</param>
-public class QueryBuilder(string tableName)
+public partial class QueryBuilder(string tableName)
 {
     private readonly QueryRequest _request = new()
     {
@@ -31,10 +32,18 @@ public class QueryBuilder(string tableName)
             _request.KeyConditionExpression += " AND " + condition.Expression;
         }
 
-        _request.ExpressionAttributeNames ??= new(StringComparer.OrdinalIgnoreCase);
-        _request.ExpressionAttributeValues ??= new(StringComparer.OrdinalIgnoreCase);
-        _request.ExpressionAttributeNames.Merge(condition.ExpressionNames);
-        _request.ExpressionAttributeValues.Merge(condition.ExpressionValues);
+        if (condition.ExpressionNames.Count > 0)
+        {
+            _request.ExpressionAttributeNames ??= new(StringComparer.OrdinalIgnoreCase);
+            _request.ExpressionAttributeNames.Merge(condition.ExpressionNames);
+        }
+
+        if (condition.ExpressionValues.Count > 0)
+        {
+            _request.ExpressionAttributeValues ??= new(StringComparer.OrdinalIgnoreCase);
+            _request.ExpressionAttributeValues.Merge(condition.ExpressionValues);
+        }
+
         return this;
     }
 
@@ -54,20 +63,45 @@ public class QueryBuilder(string tableName)
     /// </summary>
     /// <param name="indexName">The name of the index to query, or null to query the base table.</param>
     /// <returns>The QueryBuilder instance for method chaining.</returns>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when indexName length is less than 3 or greater than 255 characters.</exception>
+    /// <exception cref="ArgumentException">Thrown when indexName contains invalid characters (must match pattern [a-zA-Z0-9_.-]+).</exception>
     public QueryBuilder WithIndex(string? indexName)
     {
-        _request.IndexName = string.IsNullOrWhiteSpace(indexName) ? null : indexName;
+        if (string.IsNullOrWhiteSpace(indexName))
+        {
+            _request.IndexName = null;
+            return this;
+        }
+
+        ArgumentOutOfRangeException.ThrowIfLessThan(indexName.Length, 3, nameof(indexName));
+        ArgumentOutOfRangeException.ThrowIfGreaterThan(indexName.Length, 255, nameof(indexName));
+
+        if (!IndexNamePattern().IsMatch(indexName))
+        {
+            throw new ArgumentException("Index name must match pattern [a-zA-Z0-9_.-]+.", nameof(indexName));
+        }
+
+        _request.IndexName = indexName;
         return this;
     }
+
+    [GeneratedRegex("^[a-zA-Z0-9_.-]+$")]
+    private static partial Regex IndexNamePattern();
 
     /// <summary>
     /// Sets the maximum number of items to return from the query.
     /// </summary>
     /// <param name="limit">The maximum number of items to return, or null for no limit.</param>
     /// <returns>The QueryBuilder instance for method chaining.</returns>
+    /// <exception cref="ArgumentOutOfRangeException">Thrown when limit is less than 1.</exception>
     public QueryBuilder WithLimit(int? limit)
     {
-        _request.Limit = limit > 0 ? limit : null;
+        if (limit.HasValue)
+        {
+            ArgumentOutOfRangeException.ThrowIfLessThan(limit.Value, 1, nameof(limit));
+        }
+
+        _request.Limit = limit;
         return this;
     }
 
@@ -175,10 +209,18 @@ public class QueryBuilder(string tableName)
             _request.FilterExpression += " AND " + condition.Expression;
         }
 
-        _request.ExpressionAttributeNames ??= new(StringComparer.OrdinalIgnoreCase);
-        _request.ExpressionAttributeValues ??= new(StringComparer.OrdinalIgnoreCase);
-        _request.ExpressionAttributeNames.Merge(condition.ExpressionNames);
-        _request.ExpressionAttributeValues.Merge(condition.ExpressionValues);
+        if (condition.ExpressionNames.Count > 0)
+        {
+            _request.ExpressionAttributeNames ??= new(StringComparer.OrdinalIgnoreCase);
+            _request.ExpressionAttributeNames.Merge(condition.ExpressionNames);
+        }
+
+        if (condition.ExpressionValues.Count > 0)
+        {
+            _request.ExpressionAttributeValues ??= new(StringComparer.OrdinalIgnoreCase);
+            _request.ExpressionAttributeValues.Merge(condition.ExpressionValues);
+        }
+
         return this;
     }
 

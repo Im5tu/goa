@@ -41,16 +41,38 @@ public class PutItemBuilder(string tableName)
 
     /// <summary>
     /// Sets a condition expression that must be satisfied for the put operation to succeed.
+    /// Multiple conditions are combined with AND.
     /// </summary>
     /// <param name="condition">The condition that must be met.</param>
     /// <returns>The PutItemBuilder instance for method chaining.</returns>
     public PutItemBuilder WithCondition(Condition condition)
     {
-        _request.ConditionExpression = condition.Expression;
-        _request.ExpressionAttributeNames ??= new(StringComparer.OrdinalIgnoreCase);
-        _request.ExpressionAttributeValues ??= new(StringComparer.OrdinalIgnoreCase);
-        _request.ExpressionAttributeNames.Merge(condition.ExpressionNames);
-        _request.ExpressionAttributeValues.Merge(condition.ExpressionValues);
+        if (string.IsNullOrEmpty(condition.Expression))
+        {
+            return this;
+        }
+
+        if (string.IsNullOrEmpty(_request.ConditionExpression))
+        {
+            _request.ConditionExpression = condition.Expression;
+        }
+        else
+        {
+            _request.ConditionExpression = $"({_request.ConditionExpression}) AND ({condition.Expression})";
+        }
+
+        if (condition.ExpressionNames.Count > 0)
+        {
+            _request.ExpressionAttributeNames ??= new(StringComparer.OrdinalIgnoreCase);
+            _request.ExpressionAttributeNames.Merge(condition.ExpressionNames);
+        }
+
+        if (condition.ExpressionValues.Count > 0)
+        {
+            _request.ExpressionAttributeValues ??= new(StringComparer.OrdinalIgnoreCase);
+            _request.ExpressionAttributeValues.Merge(condition.ExpressionValues);
+        }
+
         return this;
     }
 
@@ -73,6 +95,17 @@ public class PutItemBuilder(string tableName)
     public PutItemBuilder WithReturnValues(ReturnValues returnValues)
     {
         _request.ReturnValues = returnValues;
+        return this;
+    }
+
+    /// <summary>
+    /// Specifies how to return attribute values when a conditional check fails.
+    /// </summary>
+    /// <param name="returnValuesOnConditionCheckFailure">The return values on condition check failure setting.</param>
+    /// <returns>The PutItemBuilder instance for method chaining.</returns>
+    public PutItemBuilder WithReturnValuesOnConditionCheckFailure(ReturnValuesOnConditionCheckFailure returnValuesOnConditionCheckFailure)
+    {
+        _request.ReturnValuesOnConditionCheckFailure = returnValuesOnConditionCheckFailure;
         return this;
     }
 

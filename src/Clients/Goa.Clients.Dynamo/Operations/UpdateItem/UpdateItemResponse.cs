@@ -16,4 +16,9 @@ public class UpdateItemResponse
     /// The number of capacity units consumed by the operation.
     /// </summary>
     public double? ConsumedCapacityUnits { get; set; }
+
+    /// <summary>
+    /// Information about item collections, if any, that were affected by the operation.
+    /// </summary>
+    public Dictionary<string, List<ItemCollectionMetrics>>? ItemCollectionMetrics { get; set; }
 }

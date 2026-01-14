@@ -31,7 +31,7 @@ public class UpdateItemRequest
     /// <summary>
     /// One or more values that can be substituted in an expression.
     /// </summary>
-    public Dictionary<string, AttributeValue>? ExpressionAttributeValues { get; set; }= new(StringComparer.OrdinalIgnoreCase);
+    public Dictionary<string, AttributeValue>? ExpressionAttributeValues { get; set; }
 
     /// <summary>
     /// One or more substitution tokens for attribute names in an expression.
@@ -52,4 +52,10 @@ public class UpdateItemRequest
     /// Determines whether item collection metrics are returned.
     /// </summary>
     public ReturnItemCollectionMetrics ReturnItemCollectionMetrics { get; set; } = ReturnItemCollectionMetrics.NONE;
+
+    /// <summary>
+    /// Specifies how to return attribute values when a conditional check fails.
+    /// Use ALL_OLD to return all attributes of the item as they appeared before the operation.
+    /// </summary>
+    public ReturnValuesOnConditionCheckFailure ReturnValuesOnConditionCheckFailure { get; set; } = ReturnValuesOnConditionCheckFailure.NONE;
 }

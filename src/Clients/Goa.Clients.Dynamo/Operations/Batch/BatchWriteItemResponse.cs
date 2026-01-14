@@ -23,4 +23,9 @@ public class BatchWriteItemResponse
     /// The write capacity units consumed by the BatchWriteItem operation.
     /// </summary>
     public List<ConsumedCapacity>? ConsumedCapacity { get; set; }
+
+    /// <summary>
+    /// A list of tables that were processed by BatchWriteItem and, for each table, information about any item collections that were affected by individual DeleteItem or PutItem operations.
+    /// </summary>
+    public Dictionary<string, List<ItemCollectionMetrics>>? ItemCollectionMetrics { get; set; }
 }
