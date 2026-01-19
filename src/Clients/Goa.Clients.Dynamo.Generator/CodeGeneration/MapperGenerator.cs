@@ -193,11 +193,30 @@ public class MapperGenerator : ICodeGenerator
         if (string.IsNullOrEmpty(gsiAttr.PKName) || string.IsNullOrEmpty(gsiAttr.SKName))
             return;
 
-        var pkCode = GenerateKeyCode(type, gsiAttr.PK, $"{gsiAttr.PKName}");
-        var skCode = GenerateKeyCode(type, gsiAttr.SK, $"{gsiAttr.SKName}");
+        var pkAnalysis = AnalyzeGSIPattern(type, gsiAttr.PK);
+        var skAnalysis = AnalyzeGSIPattern(type, gsiAttr.SK);
 
-        builder.AppendLine($"record[\"{gsiAttr.PKName}\"] = new AttributeValue {{ S = {pkCode} }};");
-        builder.AppendLine($"record[\"{gsiAttr.SKName}\"] = new AttributeValue {{ S = {skCode} }};");
+        // Generate PK assignment - conditional if single nullable property, otherwise direct
+        if (pkAnalysis.IsSingleNullableProperty)
+        {
+            GenerateConditionalGSIKeyAssignment(builder, gsiAttr.PKName!, pkAnalysis.PropertyName!);
+        }
+        else
+        {
+            var pkCode = GenerateKeyCode(type, gsiAttr.PK, gsiAttr.PKName!);
+            builder.AppendLine($"record[\"{gsiAttr.PKName}\"] = new AttributeValue {{ S = {pkCode} }};");
+        }
+
+        // Generate SK assignment - conditional if single nullable property, otherwise direct
+        if (skAnalysis.IsSingleNullableProperty)
+        {
+            GenerateConditionalGSIKeyAssignment(builder, gsiAttr.SKName!, skAnalysis.PropertyName!);
+        }
+        else
+        {
+            var skCode = GenerateKeyCode(type, gsiAttr.SK, gsiAttr.SKName!);
+            builder.AppendLine($"record[\"{gsiAttr.SKName}\"] = new AttributeValue {{ S = {skCode} }};");
+        }
     }
 
     private string GenerateKeyCode(DynamoTypeInfo type, string pattern, string keyName)
@@ -703,5 +722,36 @@ public class MapperGenerator : ICodeGenerator
         }
 
         return gsiAttributes;
+    }
+
+    private (bool IsSingleNullableProperty, string? PropertyName) AnalyzeGSIPattern(
+        DynamoTypeInfo type,
+        string pattern)
+    {
+        var placeholders = NamingHelpers.ExtractPlaceholders(pattern);
+
+        // Must have exactly one placeholder
+        if (placeholders.Count != 1)
+            return (false, null);
+
+        var propertyName = placeholders[0];
+
+        // Pattern must be exactly the placeholder (no static text)
+        if (pattern != $"<{propertyName}>")
+            return (false, null);
+
+        // Find the property and check if it's nullable
+        var property = FindProperty(type, propertyName);
+        if (property == null || !property.IsNullable)
+            return (false, null);
+
+        return (true, propertyName);
+    }
+
+    private void GenerateConditionalGSIKeyAssignment(CodeBuilder builder, string attributeName, string propertyName)
+    {
+        builder.OpenBraceWithLine($"if (!string.IsNullOrEmpty(model.{propertyName}))");
+        builder.AppendLine($"record[\"{attributeName}\"] = new AttributeValue {{ S = model.{propertyName} }};");
+        builder.CloseBrace();
     }
 }
