@@ -149,11 +149,15 @@ public class MapperGenerator : ICodeGenerator
             GeneratePrimaryKeyAssignment(builder, type, dynamoModelAttr);
         }
 
-        // Add GSI keys (including inherited ones)
+        // Add GSI keys (including inherited ones) and collect property names used as GSI keys
         var gsiAttributes = GetAllGSIAttributes(type);
+        var gsiKeyPropertyNames = new HashSet<string>();
         foreach (var gsiAttr in gsiAttributes)
         {
             GenerateGSIKeyAssignment(builder, type, gsiAttr);
+            // Collect property names that are used as single-placeholder GSI keys
+            CollectGSIKeyPropertyNames(type, gsiAttr.PK, gsiKeyPropertyNames);
+            CollectGSIKeyPropertyNames(type, gsiAttr.SK, gsiKeyPropertyNames);
         }
 
         // Add type discriminator for inheritance
@@ -172,8 +176,8 @@ public class MapperGenerator : ICodeGenerator
             builder.AppendLine($"record[\"{typeNameField}\"] = new AttributeValue {{ S = \"{type.FullName}\" }};");
         }
 
-        // Add property mappings
-        GeneratePropertyMappings(builder, type);
+        // Add property mappings, excluding properties already emitted as GSI keys
+        GeneratePropertyMappings(builder, type, gsiKeyPropertyNames);
 
         builder.AppendLine("return record;");
     }
@@ -271,14 +275,17 @@ public class MapperGenerator : ICodeGenerator
         _context.ReportDiagnostic?.Invoke(diagnostic);
     }
 
-    private void GeneratePropertyMappings(CodeBuilder builder, DynamoTypeInfo type)
+    private void GeneratePropertyMappings(CodeBuilder builder, DynamoTypeInfo type, HashSet<string>? excludePropertyNames = null)
     {
         // Get all properties including inherited ones
         var allProperties = GetAllProperties(type);
 
-        // Filter out properties that don't have handlers and aren't ignored for writing
+        // Filter out properties that don't have handlers, aren't ignored for writing,
+        // and aren't already emitted as GSI keys
         var supportedProperties = allProperties
-            .Where(p => _typeHandlerRegistry.CanHandle(p) && !p.IsIgnored(IgnoreDirection.WhenWriting));
+            .Where(p => _typeHandlerRegistry.CanHandle(p)
+                && !p.IsIgnored(IgnoreDirection.WhenWriting)
+                && (excludePropertyNames == null || !excludePropertyNames.Contains(p.Name)));
 
         foreach (var property in supportedProperties)
         {
@@ -768,5 +775,25 @@ public class MapperGenerator : ICodeGenerator
         builder.OpenBraceWithLine($"if ({nullCheck})");
         builder.AppendLine($"record[\"{attributeName}\"] = new AttributeValue {{ S = {valueCode} }};");
         builder.CloseBrace();
+    }
+
+    private void CollectGSIKeyPropertyNames(DynamoTypeInfo type, string pattern, HashSet<string> propertyNames)
+    {
+        var placeholders = NamingHelpers.ExtractPlaceholders(pattern);
+
+        // Only collect if it's a single-placeholder pattern (no static text)
+        if (placeholders.Count != 1)
+            return;
+
+        var propertyName = placeholders[0];
+        if (pattern != $"<{propertyName}>")
+            return;
+
+        // Verify the property exists
+        var property = FindProperty(type, propertyName);
+        if (property != null)
+        {
+            propertyNames.Add(propertyName);
+        }
     }
 }
