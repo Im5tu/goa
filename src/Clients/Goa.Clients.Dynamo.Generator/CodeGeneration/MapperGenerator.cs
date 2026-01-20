@@ -199,7 +199,7 @@ public class MapperGenerator : ICodeGenerator
         // Generate PK assignment - conditional if single nullable property, otherwise direct
         if (pkAnalysis.IsSingleNullableProperty)
         {
-            GenerateConditionalGSIKeyAssignment(builder, gsiAttr.PKName!, pkAnalysis.PropertyName!);
+            GenerateConditionalGSIKeyAssignment(builder, gsiAttr.PKName!, pkAnalysis.Property!);
         }
         else
         {
@@ -210,7 +210,7 @@ public class MapperGenerator : ICodeGenerator
         // Generate SK assignment - conditional if single nullable property, otherwise direct
         if (skAnalysis.IsSingleNullableProperty)
         {
-            GenerateConditionalGSIKeyAssignment(builder, gsiAttr.SKName!, skAnalysis.PropertyName!);
+            GenerateConditionalGSIKeyAssignment(builder, gsiAttr.SKName!, skAnalysis.Property!);
         }
         else
         {
@@ -724,7 +724,7 @@ public class MapperGenerator : ICodeGenerator
         return gsiAttributes;
     }
 
-    private (bool IsSingleNullableProperty, string? PropertyName) AnalyzeGSIPattern(
+    private (bool IsSingleNullableProperty, PropertyInfo? Property) AnalyzeGSIPattern(
         DynamoTypeInfo type,
         string pattern)
     {
@@ -745,13 +745,28 @@ public class MapperGenerator : ICodeGenerator
         if (property == null || !property.IsNullable)
             return (false, null);
 
-        return (true, propertyName);
+        return (true, property);
     }
 
-    private void GenerateConditionalGSIKeyAssignment(CodeBuilder builder, string attributeName, string propertyName)
+    private void GenerateConditionalGSIKeyAssignment(CodeBuilder builder, string attributeName, PropertyInfo property)
     {
-        builder.OpenBraceWithLine($"if (!string.IsNullOrEmpty(model.{propertyName}))");
-        builder.AppendLine($"record[\"{attributeName}\"] = new AttributeValue {{ S = model.{propertyName} }};");
+        string nullCheck;
+        string valueCode;
+
+        if (property.Type.SpecialType == SpecialType.System_String)
+        {
+            nullCheck = $"!string.IsNullOrEmpty(model.{property.Name})";
+            valueCode = $"model.{property.Name}";
+        }
+        else
+        {
+            // Nullable value type (DateTime?, int?, etc.)
+            nullCheck = $"model.{property.Name}.HasValue";
+            valueCode = _typeHandlerRegistry.GenerateKeyFormatting(property);
+        }
+
+        builder.OpenBraceWithLine($"if ({nullCheck})");
+        builder.AppendLine($"record[\"{attributeName}\"] = new AttributeValue {{ S = {valueCode} }};");
         builder.CloseBrace();
     }
 }
