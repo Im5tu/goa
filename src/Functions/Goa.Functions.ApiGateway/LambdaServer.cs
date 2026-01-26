@@ -155,6 +155,14 @@ public abstract class LambdaServer<TRequest, TResponse> : IServer, IAsyncDisposa
         catch (Exception ex)
         {
             exception = ex;
+
+            // Set 500 status code on unhandled exception
+            var responseFeature = features.Get<IHttpResponseFeature>();
+            if (responseFeature is not null)
+            {
+                responseFeature.StatusCode = 500;
+                responseFeature.ReasonPhrase = "Internal Server Error";
+            }
         }
         finally
         {
