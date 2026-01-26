@@ -32,4 +32,10 @@ public sealed class ChatResponse
     /// Gets the list of tools that were executed during this response.
     /// </summary>
     public IReadOnlyList<ToolExecution> ToolsExecuted { get; init; } = [];
+
+    /// <summary>
+    /// Gets the extracted tags from the response content.
+    /// </summary>
+    public IReadOnlyDictionary<string, IReadOnlyList<string>> ExtractedTags { get; init; }
+        = new Dictionary<string, IReadOnlyList<string>>();
 }

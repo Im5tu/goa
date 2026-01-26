@@ -1,6 +1,7 @@
 using System.Text.Json;
 using ErrorOr;
 using Goa.Clients.Bedrock.Conversation.Entities;
+using Goa.Clients.Bedrock.Conversation.Internal;
 using Goa.Clients.Bedrock.Enums;
 using Goa.Clients.Bedrock.Mcp;
 using Goa.Clients.Bedrock.Models;
@@ -202,29 +203,33 @@ internal sealed class ChatSession : IChatSession
                 // Add to history
                 _messages.Add(finalMessage);
 
+                // Extract text content
+                var rawTextContent = finalMessage.Content
+                    .Where(c => c.Text != null)
+                    .Select(c => c.Text!)
+                    .FirstOrDefault() ?? string.Empty;
+
+                // Parse XML tags from the response
+                var (cleanedText, extractedTags) = XmlTagParser.Parse(rawTextContent);
+
                 // Persist if configured
                 if (_options.PersistConversation && _store != null && ConversationId != null)
                 {
-                    var addResult = await _store.AddMessageAsync(ConversationId, ConversationRole.Assistant, finalMessage, response.Usage, ct).ConfigureAwait(false);
+                    var addResult = await _store.AddMessageAsync(ConversationId, ConversationRole.Assistant, finalMessage, response.Usage, ct, extractedTags).ConfigureAwait(false);
                     if (addResult.IsError)
                     {
                         return addResult.Errors;
                     }
                 }
 
-                // Extract text content
-                var textContent = finalMessage.Content
-                    .Where(c => c.Text != null)
-                    .Select(c => c.Text!)
-                    .FirstOrDefault() ?? string.Empty;
-
                 return new ChatResponse
                 {
-                    Text = textContent,
+                    Text = cleanedText,
                     Content = finalMessage.Content,
                     StopReason = response.StopReason,
                     Usage = response.Usage ?? new TokenUsage(),
-                    ToolsExecuted = toolExecutions
+                    ToolsExecuted = toolExecutions,
+                    ExtractedTags = extractedTags
                 };
             }
 

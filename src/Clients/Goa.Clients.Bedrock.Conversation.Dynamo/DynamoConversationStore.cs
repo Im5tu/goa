@@ -44,6 +44,7 @@ public sealed class DynamoConversationStore : IConversationStore
     private const string InputTokensAttribute = "InputTokens";
     private const string OutputTokensAttribute = "OutputTokens";
     private const string TokensAttribute = "Tokens";
+    private const string ExtractedTagsAttribute = "ExtractedTags";
 
     /// <summary>
     /// Initializes a new instance of the <see cref="DynamoConversationStore"/> class.
@@ -195,9 +196,10 @@ public sealed class DynamoConversationStore : IConversationStore
         ConversationRole role,
         Message message,
         TokenUsage? tokenUsage,
-        CancellationToken ct)
+        CancellationToken ct,
+        IReadOnlyDictionary<string, IReadOnlyList<string>>? extractedTags = null)
     {
-        var messagesResult = await AddMessagesAsync(conversationId, [(role, message, tokenUsage)], ct);
+        var messagesResult = await AddMessagesInternalAsync(conversationId, [(role, message, tokenUsage, extractedTags)], ct);
         if (messagesResult.IsError)
             return messagesResult.Errors;
 
@@ -205,9 +207,20 @@ public sealed class DynamoConversationStore : IConversationStore
     }
 
     /// <inheritdoc />
-    public async Task<ErrorOr<IReadOnlyList<ConversationMessage>>> AddMessagesAsync(
+    public Task<ErrorOr<IReadOnlyList<ConversationMessage>>> AddMessagesAsync(
         string conversationId,
         IEnumerable<(ConversationRole Role, Message Message, TokenUsage? TokenUsage)> messages,
+        CancellationToken ct)
+    {
+        return AddMessagesInternalAsync(
+            conversationId,
+            messages.Select(m => (m.Role, m.Message, m.TokenUsage, (IReadOnlyDictionary<string, IReadOnlyList<string>>?)null)),
+            ct);
+    }
+
+    private async Task<ErrorOr<IReadOnlyList<ConversationMessage>>> AddMessagesInternalAsync(
+        string conversationId,
+        IEnumerable<(ConversationRole Role, Message Message, TokenUsage? TokenUsage, IReadOnlyDictionary<string, IReadOnlyList<string>>? ExtractedTags)> messages,
         CancellationToken ct)
     {
         var messageList = messages.ToList();
@@ -233,7 +246,7 @@ public sealed class DynamoConversationStore : IConversationStore
 
         for (var i = 0; i < messageList.Count; i++)
         {
-            var (role, message, tokenUsage) = messageList[i];
+            var (role, message, tokenUsage, extractedTags) = messageList[i];
             var sequenceNumber = startSequence + i;
             var messageId = Guid.NewGuid().ToString("N");
 
@@ -271,6 +284,22 @@ public sealed class DynamoConversationStore : IConversationStore
                 totalTokens += tokenUsage.TotalTokens;
             }
 
+            // Add extracted tags if present
+            if (extractedTags is not null && extractedTags.Count > 0)
+            {
+                var tagsMap = new Dictionary<string, AttributeValue>();
+                foreach (var kvp in extractedTags)
+                {
+                    var tagValues = new List<AttributeValue>();
+                    foreach (var value in kvp.Value)
+                    {
+                        tagValues.Add(new AttributeValue { S = value });
+                    }
+                    tagsMap[kvp.Key] = new AttributeValue { L = tagValues };
+                }
+                messageItem[ExtractedTagsAttribute] = new AttributeValue { M = tagsMap };
+            }
+
             // Inherit conversation TTL
             if (_configuration.DefaultTtl.HasValue)
             {
@@ -295,7 +324,8 @@ public sealed class DynamoConversationStore : IConversationStore
                 Role = role,
                 Message = message,
                 TokenUsage = tokenUsage,
-                CreatedAt = now
+                CreatedAt = now,
+                ExtractedTags = extractedTags?.Count > 0 ? extractedTags : null
             });
         }
 
@@ -627,6 +657,31 @@ public sealed class DynamoConversationStore : IConversationStore
             };
         }
 
+        IReadOnlyDictionary<string, IReadOnlyList<string>>? extractedTags = null;
+        if (record.TryGetMap(ExtractedTagsAttribute, out var tagsMap) && tagsMap is not null)
+        {
+            var tags = new Dictionary<string, IReadOnlyList<string>>();
+            foreach (var kvp in tagsMap)
+            {
+                if (kvp.Value.L is not null)
+                {
+                    var values = new List<string>();
+                    foreach (var item in kvp.Value.L)
+                    {
+                        if (item.S is not null)
+                        {
+                            values.Add(item.S);
+                        }
+                    }
+                    tags[kvp.Key] = values;
+                }
+            }
+            if (tags.Count > 0)
+            {
+                extractedTags = tags;
+            }
+        }
+
         return new ConversationMessage
         {
             Id = id,
@@ -635,7 +690,8 @@ public sealed class DynamoConversationStore : IConversationStore
             Role = role,
             Message = new Message { Role = role, Content = content },
             TokenUsage = tokenUsage,
-            CreatedAt = createdAt
+            CreatedAt = createdAt,
+            ExtractedTags = extractedTags
         };
     }
 

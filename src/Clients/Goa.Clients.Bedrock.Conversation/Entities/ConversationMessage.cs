@@ -42,4 +42,9 @@ public class ConversationMessage
     /// The timestamp when the message was created.
     /// </summary>
     public DateTimeOffset CreatedAt { get; set; }
+
+    /// <summary>
+    /// Tags extracted from the message content, keyed by tag name with a list of values.
+    /// </summary>
+    public IReadOnlyDictionary<string, IReadOnlyList<string>>? ExtractedTags { get; set; }
 }

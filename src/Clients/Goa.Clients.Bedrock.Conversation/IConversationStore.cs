@@ -43,9 +43,10 @@ public interface IConversationStore
     /// <param name="role">The role of the entity sending the message.</param>
     /// <param name="message">The message content.</param>
     /// <param name="tokenUsage">Optional token usage information for the message.</param>
+    /// <param name="extractedTags">Optional extracted tags from the message content.</param>
     /// <param name="ct">A cancellation token to cancel the operation.</param>
     /// <returns>The created conversation message, or an error if the operation failed.</returns>
-    Task<ErrorOr<ConversationMessage>> AddMessageAsync(string conversationId, ConversationRole role, Message message, TokenUsage? tokenUsage, CancellationToken ct);
+    Task<ErrorOr<ConversationMessage>> AddMessageAsync(string conversationId, ConversationRole role, Message message, TokenUsage? tokenUsage, CancellationToken ct, IReadOnlyDictionary<string, IReadOnlyList<string>>? extractedTags = null);
 
     /// <summary>
     /// Adds multiple messages to a conversation.

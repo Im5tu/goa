@@ -297,4 +297,108 @@ public class DynamoConversationStoreTests
         await Assert.That(getResult.Value.TotalTokenUsage!.OutputTokens).IsEqualTo(20);
         await Assert.That(getResult.Value.TotalTokenUsage!.TotalTokens).IsEqualTo(40);
     }
+
+    [Test]
+    public async Task AddMessageAsync_ShouldStoreExtractedTags()
+    {
+        var createResult = await _fixture.ConversationStore.CreateConversationAsync(null, CancellationToken.None);
+        await Assert.That(createResult.IsError).IsFalse();
+
+        var message = new Message { Content = [new ContentBlock { Text = "Response with tags" }] };
+        var extractedTags = new Dictionary<string, IReadOnlyList<string>>
+        {
+            ["thinking"] = new List<string> { "thought1", "thought2" },
+            ["reasoning"] = new List<string> { "reason1" }
+        };
+
+        var addResult = await _fixture.ConversationStore.AddMessageAsync(
+            createResult.Value.Id,
+            ConversationRole.Assistant,
+            message,
+            null,
+            CancellationToken.None,
+            extractedTags);
+
+        await Assert.That(addResult.IsError).IsFalse();
+        await Assert.That(addResult.Value.ExtractedTags).IsNotNull();
+        await Assert.That(addResult.Value.ExtractedTags!.Count).IsEqualTo(2);
+        await Assert.That(addResult.Value.ExtractedTags!["thinking"]).Contains("thought1").And.Contains("thought2");
+        await Assert.That(addResult.Value.ExtractedTags!["reasoning"]).Contains("reason1");
+    }
+
+    [Test]
+    public async Task AddMessageAsync_ShouldNotStoreExtractedTags_WhenNull()
+    {
+        var createResult = await _fixture.ConversationStore.CreateConversationAsync(null, CancellationToken.None);
+        await Assert.That(createResult.IsError).IsFalse();
+
+        var message = new Message { Content = [new ContentBlock { Text = "Response without tags" }] };
+
+        var addResult = await _fixture.ConversationStore.AddMessageAsync(
+            createResult.Value.Id,
+            ConversationRole.Assistant,
+            message,
+            null,
+            CancellationToken.None,
+            null);
+
+        await Assert.That(addResult.IsError).IsFalse();
+        await Assert.That(addResult.Value.ExtractedTags).IsNull();
+    }
+
+    [Test]
+    public async Task AddMessageAsync_ShouldNotStoreExtractedTags_WhenEmpty()
+    {
+        var createResult = await _fixture.ConversationStore.CreateConversationAsync(null, CancellationToken.None);
+        await Assert.That(createResult.IsError).IsFalse();
+
+        var message = new Message { Content = [new ContentBlock { Text = "Response without tags" }] };
+        var extractedTags = new Dictionary<string, IReadOnlyList<string>>();
+
+        var addResult = await _fixture.ConversationStore.AddMessageAsync(
+            createResult.Value.Id,
+            ConversationRole.Assistant,
+            message,
+            null,
+            CancellationToken.None,
+            extractedTags);
+
+        await Assert.That(addResult.IsError).IsFalse();
+        await Assert.That(addResult.Value.ExtractedTags).IsNull();
+    }
+
+    [Test]
+    public async Task GetConversationWithMessagesAsync_ShouldDeserializeExtractedTags()
+    {
+        var createResult = await _fixture.ConversationStore.CreateConversationAsync(null, CancellationToken.None);
+        await Assert.That(createResult.IsError).IsFalse();
+
+        var message = new Message { Content = [new ContentBlock { Text = "Response with tags" }] };
+        var extractedTags = new Dictionary<string, IReadOnlyList<string>>
+        {
+            ["thinking"] = new List<string> { "thought1", "thought2" },
+            ["reasoning"] = new List<string> { "reason1" }
+        };
+
+        await _fixture.ConversationStore.AddMessageAsync(
+            createResult.Value.Id,
+            ConversationRole.Assistant,
+            message,
+            null,
+            CancellationToken.None,
+            extractedTags);
+
+        var getResult = await _fixture.ConversationStore.GetConversationWithMessagesAsync(
+            createResult.Value.Id,
+            null,
+            null,
+            CancellationToken.None);
+
+        await Assert.That(getResult.IsError).IsFalse();
+        await Assert.That(getResult.Value.Messages).Count().IsEqualTo(1);
+        await Assert.That(getResult.Value.Messages[0].ExtractedTags).IsNotNull();
+        await Assert.That(getResult.Value.Messages[0].ExtractedTags!.Count).IsEqualTo(2);
+        await Assert.That(getResult.Value.Messages[0].ExtractedTags!["thinking"]).Contains("thought1").And.Contains("thought2");
+        await Assert.That(getResult.Value.Messages[0].ExtractedTags!["reasoning"]).Contains("reason1");
+    }
 }

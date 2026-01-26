@@ -444,8 +444,8 @@ public class ChatSessionTests
         await session.SendAsync("Hello");
 
         // Assert - should save user message and assistant message
-        mockStore.Verify(s => s.AddMessageAsync("conv-1", ConversationRole.User, It.IsAny<Message>(), null, It.IsAny<CancellationToken>()), Times.Once);
-        mockStore.Verify(s => s.AddMessageAsync("conv-1", ConversationRole.Assistant, It.IsAny<Message>(), It.IsAny<TokenUsage?>(), It.IsAny<CancellationToken>()), Times.Once);
+        mockStore.Verify(s => s.AddMessageAsync("conv-1", ConversationRole.User, It.IsAny<Message>(), null, It.IsAny<CancellationToken>(), It.IsAny<IReadOnlyDictionary<string, IReadOnlyList<string>>?>()), Times.Once);
+        mockStore.Verify(s => s.AddMessageAsync("conv-1", ConversationRole.Assistant, It.IsAny<Message>(), It.IsAny<TokenUsage?>(), It.IsAny<CancellationToken>(), It.IsAny<IReadOnlyDictionary<string, IReadOnlyList<string>>?>()), Times.Once);
     }
 
     [Test]

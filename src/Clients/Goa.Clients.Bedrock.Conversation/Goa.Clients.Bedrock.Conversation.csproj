@@ -13,4 +13,8 @@
   <ItemGroup>
     <ProjectReference Include="..\Goa.Clients.Bedrock\Goa.Clients.Bedrock.csproj" />
   </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Goa.Clients.Bedrock.Conversation.Tests" />
+  </ItemGroup>
 </Project>
