@@ -1,4 +1,6 @@
+using DotNet.Testcontainers.Builders;
 using DotNet.Testcontainers.Containers;
+using DotNet.Testcontainers.Images;
 using Testcontainers.LocalStack;
 using TUnit.Core.Interfaces;
 
@@ -13,12 +15,12 @@ public class LocalStackFixture : IAsyncInitializer, IAsyncDisposable
     public async Task InitializeAsync()
     {
         var unixSocket = "/var/run/docker.sock";
-        _container = new LocalStackBuilder()
-            .WithImage("localstack/localstack:latest")
+        _container = new ContainerBuilder(new DockerImage("localstack/localstack"))
             .WithEnvironment("SERVICES", "lambda")
             .WithEnvironment("DEBUG", "1")
             .WithEnvironment("DOCKER_HOST", $"unix://{unixSocket}")
             .WithEnvironment("LAMBDA_EXECUTOR", "docker")
+            .WithPortBinding(4566, true)
             .WithBindMount(unixSocket, unixSocket)
             .Build();
 

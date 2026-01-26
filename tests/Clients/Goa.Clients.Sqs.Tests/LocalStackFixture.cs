@@ -1,5 +1,6 @@
 using DotNet.Testcontainers.Builders;
 using DotNet.Testcontainers.Containers;
+using DotNet.Testcontainers.Images;
 using TUnit.Core.Interfaces;
 
 namespace Goa.Clients.Sqs.Tests;
@@ -12,8 +13,7 @@ public class LocalStackFixture : IAsyncInitializer, IAsyncDisposable
 
     public async Task InitializeAsync()
     {
-        _container = new ContainerBuilder()
-            .WithImage("localstack/localstack")
+        _container = new ContainerBuilder(new DockerImage("localstack/localstack"))
             .WithEnvironment("SERVICES", "sqs")
             .WithEnvironment("DEBUG", "1")
             .WithEnvironment("DOCKER_HOST", "unix:///var/run/docker.sock")
