@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <PackageTitle>Goa - Bedrock Conversation</PackageTitle>
+    <Description>Conversation store abstractions for Bedrock-based AI applications with source generator support for high-performance AWS Lambda functions</Description>
+    <PackageTags>$(PackageBaseTags);bedrock;client;ai;llm;conversation</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="ErrorOr" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Goa.Clients.Bedrock\Goa.Clients.Bedrock.csproj" />
+  </ItemGroup>
+</Project>

@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <OutputType>Exe</OutputType>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="AWSSDK.DynamoDBv2" />
+        <PackageReference Include="Moq" />
+        <PackageReference Include="TUnit" />
+        <PackageReference Include="Testcontainers" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\..\..\src\Clients\Goa.Clients.Bedrock.Conversation.Dynamo\Goa.Clients.Bedrock.Conversation.Dynamo.csproj" />
+    </ItemGroup>
+
+</Project>

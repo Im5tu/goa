@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <PackageTitle>Goa - Bedrock Client</PackageTitle>
+    <Description>Bedrock Runtime client with source generator support for high-performance AWS Lambda functions</Description>
+    <PackageTags>$(PackageBaseTags);bedrock;client;ai;llm</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="ErrorOr" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Goa.Performance.Benchmarks" />
+  </ItemGroup>
+</Project>

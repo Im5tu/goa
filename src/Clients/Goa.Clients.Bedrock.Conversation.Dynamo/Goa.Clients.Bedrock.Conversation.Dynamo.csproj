@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <PackageTitle>Goa - Bedrock Conversation DynamoDB Store</PackageTitle>
+    <Description>DynamoDB-backed conversation store for Bedrock-based AI applications with source generator support for high-performance AWS Lambda functions</Description>
+    <PackageTags>$(PackageBaseTags);bedrock;client;ai;llm;conversation;dynamodb</PackageTags>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="ErrorOr" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Goa.Clients.Bedrock.Conversation\Goa.Clients.Bedrock.Conversation.csproj" />
+    <ProjectReference Include="..\Goa.Clients.Dynamo\Goa.Clients.Dynamo.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Goa.Clients.Bedrock.Conversation.Dynamo.Tests" />
+  </ItemGroup>
+</Project>
