@@ -16,6 +16,7 @@
     </ItemGroup>
 
     <ItemGroup>
+        <InternalsVisibleTo Include="Goa.Clients.Bedrock" />
         <InternalsVisibleTo Include="Goa.Clients.Dynamo" />
         <InternalsVisibleTo Include="Goa.Clients.EventBridge" />
         <InternalsVisibleTo Include="Goa.Clients.Lambda" />

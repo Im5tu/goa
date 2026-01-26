@@ -63,7 +63,7 @@ public abstract class AwsServiceClient<T> where T : AwsServiceConfiguration
         var client = _httpClientFactory.CreateClient(_clientType);
 
         request.Options.Set(HttpOptions.Region, Configuration.Region);
-        request.Options.Set(HttpOptions.Service, Configuration.Service);
+        request.Options.Set(HttpOptions.Service, Configuration.SigningService);
         request.Options.Set(HttpOptions.Target, target);
         request.Options.Set(HttpOptions.ApiVersion, Configuration.ApiVersion);
 
@@ -72,6 +72,7 @@ public abstract class AwsServiceClient<T> where T : AwsServiceConfiguration
             ["Client"] = _clientType,
             ["Region"] = Configuration.Region,
             ["Service"] = Configuration.Service,
+            ["SigningService"] = Configuration.SigningService,
             ["Target"] = target,
             ["ApiVersion"] = Configuration.ApiVersion,
             ["Method"] = request.Method.ToString(),

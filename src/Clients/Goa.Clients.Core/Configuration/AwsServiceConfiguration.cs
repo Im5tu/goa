@@ -29,13 +29,21 @@ public class AwsServiceConfiguration
     /// </summary>
     public string? ServiceUrl { get; set; }
     internal string Service { get; init; }
-    
+
+    /// <summary>
+    /// Gets or sets the AWS service name used for SigV4 signing. Defaults to Service if not set.
+    /// Some AWS services use a different signing service name than their endpoint prefix.
+    /// </summary>
+    internal string SigningService { get; init; }
+
     /// <summary>
     /// Initializes a new instance of the AwsServiceConfiguration class.
     /// </summary>
     /// <param name="service">The AWS service name (e.g., "dynamodb", "s3").</param>
-    protected AwsServiceConfiguration(string service)
+    /// <param name="signingService">The AWS service name used for SigV4 signing. Defaults to service if not specified.</param>
+    protected AwsServiceConfiguration(string service, string? signingService = null)
     {
         Service = service;
+        SigningService = signingService ?? service;
     }
 }
