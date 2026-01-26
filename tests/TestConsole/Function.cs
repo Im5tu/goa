@@ -1,212 +1,335 @@
-using Goa.Functions.ApiGateway;
-using Goa.Functions.ApiGateway.Payloads;
-using Goa.Functions.ApiGateway.Payloads.V2;
-using Goa.Functions.Core;
-using System.Diagnostics;
-using TestConsole;using TestConsole.DynamoModels;
+using System.Text.Json;
+using System.Text.Json.Serialization;
+using Goa.Clients.Bedrock.Conversation.Chat;
+using Goa.Clients.Bedrock.Conversation.Dynamo;
+using Goa.Clients.Bedrock.Mcp;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 
+const string ModelId = "amazon.nova-micro-v1:0";
 
+const string SystemPrompt = """
+    You are a helpful household assistant that helps users manage their home tasks and appliances.
 
-var runtime = new FakeRuntimeClient();
-
-// use a fake lambda runtime client for testing
-// var request = new ProxyPayloadV1Request
-// {
-//     Resource = "/api/resource",
-//     Path = "/api/resource",
-//     HttpMethod = "POST",
-//     Headers = new Dictionary<string, string>
-//     {
-//         { "Content-Type", "application/json" },
-//         // This is signed with a dummy key (secret-key) using the HMAC-SHA256 algorithm.
-//         {
-//             "Authorization",
-//             "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ1c2VyLWlkLTEyMyIsImVtYWlsIjoidXNlckBleGFtcGxlLmNvbSIsInJvbGUiOiJhZG1pbiJ9.j7X7XXEHOZxnxarZjfp4UBl3JISrT9X2MDUy9Pf2VCE\n"
-//         }
-//     },
-//     MultiValueHeaders = new Dictionary<string, IList<string>>
-//     {
-//         { "Accept", new List<string> { "application/json", "text/plain" } }
-//     },
-//     QueryStringParameters = new Dictionary<string, string>
-//     {
-//         { "queryKey", "queryValue" }
-//     },
-//     MultiValueQueryStringParameters = new Dictionary<string, IList<string>>
-//     {
-//         { "multiQueryKey", new List<string> { "value1", "value2" } }
-//     },
-//     PathParameters = new Dictionary<string, string>
-//     {
-//         { "id", "12345" }
-//     },
-//     StageVariables = new Dictionary<string, string>
-//     {
-//         { "stage", "production" }
-//     },
-//     RequestContext = new ProxyPayloadV1RequestContext
-//     {
-//         Path = "/api/resource",
-//         AccountId = "123456789012",
-//         ResourceId = "resource-id-123",
-//         Stage = "production",
-//         RequestId = "request-id-12345",
-//         Identity = new ProxyPayloadV1RequestIdentity
-//         {
-//             CognitoIdentityPoolId = "cognito-pool-id",
-//             AccountId = "123456789012",
-//             CognitoIdentityId = "cognito-identity-id",
-//             Caller = "caller-id",
-//             ApiKey = "api-key",
-//             ApiKeyId = "api-key-id",
-//             AccessKey = "access-key-id",
-//             SourceIp = "192.168.1.1",
-//             UserAgent = "PostmanRuntime/7.29.0",
-//             User = "test-user"
-//         },
-//         ApiId = "api-id-12345",
-//         DomainName = "api.example.com",
-//         DomainPrefix = "api",
-//         RequestTime = "12/Dec/2023:19:14:00 +0000",
-//         RequestTimeEpoch = 1702404840000,
-//         ExtendedRequestId = "extended-id-12345",
-//         ConnectionId = "connection-id-12345",
-//         EventType = "MESSAGE",
-//         RouteKey = "POST /api/resource",
-//         IntegrationLatency = "100",
-//         MessageId = "message-id-12345",
-//         Authorizer = new CustomAuthorizerContext
-//         {
-//             Claims = new Dictionary<string, string>
-//             {
-//                 { "sub", "user-sub-id" },
-//                 { "email", "user@example.com" }
-//             },
-//             Scopes = new List<string> { "scope1", "scope2" }
-//         }
-//     },
-//     Body = "{ \"example\": \"data\" }",
-//     IsBase64Encoded = false
-// };
-var request = new ProxyPayloadV2Request
-{
-    RouteKey = "POST /api/resource",
-    RawPath = "/api/resource",
-    RawQueryString = "queryKey=queryValue&multiQueryKey=value1&multiQueryKey=value2",
-    Headers = new Dictionary<string, string>
+    When responding, you MUST use the following JSON format:
     {
-        { "Content-Type", "application/json" },
-        // This is signed with a dummy key (secret-key) using the HMAC-SHA256 algorithm.
-        {
-            "Authorization",
-            "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ1c2VyLWlkLTEyMyIsImVtYWlsIjoidXNlckBleGFtcGxlLmNvbSIsInJvbGUiOiJhZG1pbiJ9.j7X7XXEHOZxnxarZjfp4UBl3JISrT9X2MDUy9Pf2VCE\n"
-        },
-        { "Accept", "application/json,text/plain" }
-    },
-    Cookies = new List<string> { "sessionId=abc123; Path=/; HttpOnly" }, // Example cookie
-    QueryStringParameters = new Dictionary<string, string>
-    {
-        { "queryKey", "queryValue" },
-        { "multiQueryKey", "value1,value2" } // Flattened multi-value query keys for v2
-    },
-    PathParameters = new Dictionary<string, string>
-    {
-        { "id", "12345" }
-    },
-    StageVariables = new Dictionary<string, string>
-    {
-        { "stage", "production" }
-    },
-    RequestContext = new ProxyPayloadV2RequestContext
-    {
-        AccountId = "123456789012",
-        ApiId = "api-id-12345",
-        Authorizer = new ProxyPayloadV2RequestAuthorizer
-        {
-            Jwt = new JwtDescription
+        "message": "Your response message to the user",
+        "entities": [
             {
-                Claims = new Dictionary<string, string>
+                "type": "task|appliance",
+                "id": "entity-id",
+                "name": "entity name",
+                "action": "created|completed|listed|none"
+            }
+        ],
+        "messageType": "info|success|error|question"
+    }
+
+    Rules:
+    - Always extract relevant entities from your response
+    - Use tools when appropriate to list, create, or complete tasks
+    - Use tools to list available appliances
+    - Be concise and helpful
+    - If no entities are relevant, use an empty array for entities
+    """;
+
+Environment.SetEnvironmentVariable("AWS_REGION", "eu-west-2");
+
+// Configure services with Bedrock client and chat session factory
+var services = new ServiceCollection();
+services.AddBedrockDynamoConversationStore(config =>
+{
+    config.TableName = "haus-staging-data";
+});
+services.TryAddSingleton<IMcpToolAdapter, McpToolAdapter>();
+
+#pragma warning disable ASP0000 // Do not call 'IServiceCollection.BuildServiceProvider' in 'ConfigureServices'
+var serviceProvider = services.BuildServiceProvider();
+#pragma warning restore ASP0000
+
+// Create mock MCP tools
+var mcpTools = CreateMockTools();
+
+// Create chat session with the new abstraction
+var factory = serviceProvider.GetRequiredService<IChatSessionFactory>();
+
+var sessionResult = await factory.CreateAsync(new ChatSessionOptions
+{
+    ModelId = ModelId,
+    SystemPrompt = SystemPrompt,
+    PersistConversation = true,
+    Metadata = new() { Title = "TestConsole Demo", ModelId = ModelId }
+});
+
+if (sessionResult.IsError)
+{
+    Console.WriteLine($"Failed to create session: {sessionResult.FirstError.Description}");
+    return;
+}
+
+await using var session = sessionResult.Value;
+session.RegisterTools(mcpTools);
+
+Console.WriteLine($"Conversation ID: {session.ConversationId}\n");
+Console.WriteLine("Bedrock Conversation Demo");
+Console.WriteLine("=========================");
+Console.WriteLine("Type 'exit' to quit.\n");
+
+while (true)
+{
+    Console.Write("You: ");
+    var userInput = Console.ReadLine();
+
+    if (string.IsNullOrWhiteSpace(userInput))
+        continue;
+
+    if (userInput.Equals("exit", StringComparison.OrdinalIgnoreCase))
+        break;
+
+    var response = await session.SendAsync(userInput);
+
+    if (response.IsError)
+    {
+        Console.WriteLine($"Error: {response.FirstError.Description}");
+        continue;
+    }
+
+    foreach (var tool in response.Value.ToolsExecuted)
+    {
+        Console.WriteLine($"  [Tool: {tool.ToolName}]");
+    }
+
+    Console.WriteLine($"Assistant: {(string.IsNullOrEmpty(response.Value.Text) ? "(no response)" : response.Value.Text)}");
+    Console.WriteLine($"  [Tokens - Input: {response.Value.Usage.InputTokens}, Output: {response.Value.Usage.OutputTokens}]");
+    Console.WriteLine();
+}
+
+Console.WriteLine($"Total tokens - Input: {session.TotalTokenUsage.InputTokens}, Output: {session.TotalTokenUsage.OutputTokens}");
+Console.WriteLine("Goodbye!");
+
+static List<McpToolDefinition> CreateMockTools()
+{
+    return
+    [
+        new McpToolDefinition
+        {
+            Name = "list_tasks",
+            Description = "Lists all household tasks with their current status",
+            InputSchema = JsonDocument.Parse("""
                 {
-                    { "sub", "user-sub-id" },
-                    { "email", "user@example.com" }
-                },
-                Scopes = new List<string> { "scope1", "scope2" }
+                    "type": "object",
+                    "properties": {
+                        "status": {
+                            "type": "string",
+                            "description": "Filter by status: pending, completed, or all",
+                            "enum": ["pending", "completed", "all"]
+                        }
+                    }
+                }
+                """).RootElement,
+            Handler = async (input, ct) =>
+            {
+                await Task.CompletedTask;
+                var status = input.TryGetProperty("status", out var statusProp)
+                    ? statusProp.GetString() ?? "all"
+                    : "all";
+
+                var tasks = new TaskItem[]
+                {
+                    new() { Id = "task-1", Name = "Buy groceries", Status = "pending", DueDate = "2024-01-26" },
+                    new() { Id = "task-2", Name = "Clean kitchen", Status = "completed", DueDate = "2024-01-25" },
+                    new() { Id = "task-3", Name = "Take out trash", Status = "pending", DueDate = "2024-01-25" },
+                    new() { Id = "task-4", Name = "Do laundry", Status = "pending", DueDate = "2024-01-27" }
+                };
+
+                var filtered = status == "all"
+                    ? tasks
+                    : tasks.Where(t => t.Status == status).ToArray();
+
+                return JsonDocument.Parse(JsonSerializer.Serialize(filtered, DemoJsonContext.Default.TaskItemArray)).RootElement;
             }
         },
-        DomainName = "api.example.com",
-        DomainPrefix = "api",
-        Http = new ProxyPayloadV2RequestHttpDescription
+        new McpToolDefinition
         {
-            Method = "POST",
-            Path = "/api/resource",
-            Protocol = "HTTP/1.1",
-            SourceIp = "192.168.1.1",
-            UserAgent = "PostmanRuntime/7.29.0"
-        },
-        RequestId = "request-id-12345",
-        RouteId = "route-id-12345",
-        RouteKey = "POST /api/resource",
-        Stage = "production",
-        Time = "12/Dec/2023:19:14:00 +0000",
-        TimeEpoch = 1702404840000,
-        Authentication = new ProxyPayloadV2RequestAuthentication
-        {
-            ClientCert = new ProxyRequestClientCert
-            {
-                SubjectDN = "CN=test-user",
-                IssuerDN = "CN=test-issuer",
-                SerialNumber = "1234567890",
-                Validity = new ClientCertValidity
+            Name = "create_task",
+            Description = "Creates a new household task",
+            InputSchema = JsonDocument.Parse("""
                 {
-                    NotBefore = "12/Dec/2023:19:00:00 +0000",
-                    NotAfter = "12/Dec/2024:19:00:00 +0000"
+                    "type": "object",
+                    "properties": {
+                        "name": {
+                            "type": "string",
+                            "description": "The name of the task"
+                        },
+                        "dueDate": {
+                            "type": "string",
+                            "description": "The due date in YYYY-MM-DD format"
+                        }
+                    },
+                    "required": ["name"]
                 }
+                """).RootElement,
+            Handler = async (input, ct) =>
+            {
+                await Task.CompletedTask;
+                var name = input.GetProperty("name").GetString() ?? "Unnamed task";
+                var dueDate = input.TryGetProperty("dueDate", out var dueProp)
+                    ? dueProp.GetString() ?? "2024-01-30"
+                    : "2024-01-30";
+
+                var newTask = new CreatedTaskResult
+                {
+                    Id = $"task-{Guid.NewGuid():N}"[..12],
+                    Name = name,
+                    Status = "pending",
+                    DueDate = dueDate,
+                    Created = true
+                };
+
+                return JsonDocument.Parse(JsonSerializer.Serialize(newTask, DemoJsonContext.Default.CreatedTaskResult)).RootElement;
+            }
+        },
+        new McpToolDefinition
+        {
+            Name = "complete_task",
+            Description = "Marks a task as completed",
+            InputSchema = JsonDocument.Parse("""
+                {
+                    "type": "object",
+                    "properties": {
+                        "taskId": {
+                            "type": "string",
+                            "description": "The ID of the task to complete"
+                        }
+                    },
+                    "required": ["taskId"]
+                }
+                """).RootElement,
+            Handler = async (input, ct) =>
+            {
+                await Task.CompletedTask;
+                var taskId = input.GetProperty("taskId").GetString() ?? "unknown";
+
+                var result = new CompletedTaskResult
+                {
+                    Id = taskId,
+                    Status = "completed",
+                    CompletedAt = DateTime.UtcNow.ToString("O"),
+                    Success = true
+                };
+
+                return JsonDocument.Parse(JsonSerializer.Serialize(result, DemoJsonContext.Default.CompletedTaskResult)).RootElement;
+            }
+        },
+        new McpToolDefinition
+        {
+            Name = "list_appliances",
+            Description = "Lists all smart home appliances and their current status",
+            InputSchema = JsonDocument.Parse("""
+                {
+                    "type": "object",
+                    "properties": {
+                        "room": {
+                            "type": "string",
+                            "description": "Filter by room name, or omit for all rooms"
+                        }
+                    }
+                }
+                """).RootElement,
+            Handler = async (input, ct) =>
+            {
+                await Task.CompletedTask;
+                var room = input.TryGetProperty("room", out var roomProp)
+                    ? roomProp.GetString()
+                    : null;
+
+                var appliances = new Appliance[]
+                {
+                    new() { Id = "app-1", Name = "Living Room Thermostat", Room = "Living Room", Status = "on", Temperature = 72 },
+                    new() { Id = "app-2", Name = "Kitchen Lights", Room = "Kitchen", Status = "off", Temperature = null },
+                    new() { Id = "app-3", Name = "Bedroom AC", Room = "Bedroom", Status = "on", Temperature = 68 },
+                    new() { Id = "app-4", Name = "Front Door Lock", Room = "Entrance", Status = "locked", Temperature = null },
+                    new() { Id = "app-5", Name = "Garage Door", Room = "Garage", Status = "closed", Temperature = null }
+                };
+
+                var filtered = string.IsNullOrEmpty(room)
+                    ? appliances
+                    : appliances.Where(a => a.Room.Equals(room, StringComparison.OrdinalIgnoreCase)).ToArray();
+
+                return JsonDocument.Parse(JsonSerializer.Serialize(filtered, DemoJsonContext.Default.ApplianceArray)).RootElement;
             }
         }
-    },
-    Body = "{ \"example\": \"data\" }",
-    IsBase64Encoded = false
-};
-
-runtime.Enqueue(request);
-runtime.Enqueue(request);
-runtime.Enqueue(request);
-
-
-
-
-
-
-
-
-var sw = Stopwatch.StartNew();
-
-var app = Host.CreateDefaultBuilder()
-    .UseLambdaLifecycle(runtime)
-    .ForAspNetCore(app =>
-    {
-        app.UseRouting();
-        app.UseEndpoints(endpoints =>
-        {
-            endpoints.MapGet("/ping", () => new Pong("PONG!"));
-            endpoints.MapPost("/api/resource", () => new Pong("Hello Resource!"));
-        });
-    }, apiGatewayType: ApiGatewayType.HttpV2)
-    .WithServices(services =>
-    {
-        services.ConfigureHttpJsonOptions(options =>
-        {
-            options.SerializerOptions.TypeInfoResolver = HttpSerializerContext.Default;
-        });
-    });
-
-await Task.WhenAny(app.RunAsync(), Task.Run(async () =>
-{
-    while (runtime.PendingInvocations > 0)
-        await Task.Delay(10);
-}));
-Console.WriteLine($"Run: {sw.ElapsedMilliseconds:0.##}ms");
-
-namespace TestConsole
-{
+    ];
 }
+
+// AOT-compatible model types
+internal sealed class TaskItem
+{
+    [JsonPropertyName("id")]
+    public required string Id { get; init; }
+
+    [JsonPropertyName("name")]
+    public required string Name { get; init; }
+
+    [JsonPropertyName("status")]
+    public required string Status { get; init; }
+
+    [JsonPropertyName("dueDate")]
+    public required string DueDate { get; init; }
+}
+
+internal sealed class CreatedTaskResult
+{
+    [JsonPropertyName("id")]
+    public required string Id { get; init; }
+
+    [JsonPropertyName("name")]
+    public required string Name { get; init; }
+
+    [JsonPropertyName("status")]
+    public required string Status { get; init; }
+
+    [JsonPropertyName("dueDate")]
+    public required string DueDate { get; init; }
+
+    [JsonPropertyName("created")]
+    public required bool Created { get; init; }
+}
+
+internal sealed class CompletedTaskResult
+{
+    [JsonPropertyName("id")]
+    public required string Id { get; init; }
+
+    [JsonPropertyName("status")]
+    public required string Status { get; init; }
+
+    [JsonPropertyName("completedAt")]
+    public required string CompletedAt { get; init; }
+
+    [JsonPropertyName("success")]
+    public required bool Success { get; init; }
+}
+
+internal sealed class Appliance
+{
+    [JsonPropertyName("id")]
+    public required string Id { get; init; }
+
+    [JsonPropertyName("name")]
+    public required string Name { get; init; }
+
+    [JsonPropertyName("room")]
+    public required string Room { get; init; }
+
+    [JsonPropertyName("status")]
+    public required string Status { get; init; }
+
+    [JsonPropertyName("temperature")]
+    public int? Temperature { get; init; }
+}
+
+[JsonSerializable(typeof(TaskItem[]))]
+[JsonSerializable(typeof(CreatedTaskResult))]
+[JsonSerializable(typeof(CompletedTaskResult))]
+[JsonSerializable(typeof(Appliance[]))]
+internal sealed partial class DemoJsonContext : JsonSerializerContext;

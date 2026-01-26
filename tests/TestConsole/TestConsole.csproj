@@ -18,6 +18,9 @@
       <ProjectReference Include="..\..\src\Functions\Goa.Functions.ApiGateway.Authorizer\Goa.Functions.ApiGateway.Authorizer.csproj" />
       <ProjectReference Include="..\..\src\Functions\Goa.Functions.ApiGateway\Goa.Functions.ApiGateway.csproj" />
       <ProjectReference Include="..\..\src\Clients\Goa.Clients.Dynamo\Goa.Clients.Dynamo.csproj" />
+      <ProjectReference Include="..\..\src\Clients\Goa.Clients.Bedrock\Goa.Clients.Bedrock.csproj" />
+      <ProjectReference Include="..\..\src\Clients\Goa.Clients.Bedrock.Conversation\Goa.Clients.Bedrock.Conversation.csproj" />
+      <ProjectReference Include="..\..\src\Clients\Goa.Clients.Bedrock.Conversation.Dynamo\Goa.Clients.Bedrock.Conversation.Dynamo.csproj" />
       <ProjectReference Include="..\..\src\Functions\Goa.Functions.Dynamo\Goa.Functions.Dynamo.csproj" />
       <ProjectReference Include="..\..\src\Functions\Goa.Functions.EventBridge\Goa.Functions.EventBridge.csproj" />
       <ProjectReference Include="..\..\src\Functions\Goa.Functions.Kinesis\Goa.Functions.Kinesis.csproj" />
