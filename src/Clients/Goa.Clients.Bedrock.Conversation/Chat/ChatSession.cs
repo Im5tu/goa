@@ -86,13 +86,16 @@ internal sealed class ChatSession : IChatSession
             Content = content.ToList()
         };
 
-        // Add to in-memory history
-        _messages.Add(userMessage);
+        // Clean message content (extract XML tags)
+        var (cleanedUserMessage, userExtractedTags) = CleanMessageContent(userMessage);
+
+        // Add cleaned message to in-memory history
+        _messages.Add(cleanedUserMessage);
 
         // Persist if configured
         if (_options.PersistConversation && _store != null && ConversationId != null)
         {
-            var addResult = await _store.AddMessageAsync(ConversationId, ConversationRole.User, userMessage, null, ct).ConfigureAwait(false);
+            var addResult = await _store.AddMessageAsync(ConversationId, ConversationRole.User, cleanedUserMessage, null, ct, userExtractedTags).ConfigureAwait(false);
             if (addResult.IsError)
             {
                 return addResult.Errors;
@@ -138,13 +141,16 @@ internal sealed class ChatSession : IChatSession
                     return Error.Failure("Goa.Bedrock.Chat.NoAssistantMessage", "No assistant message in tool use response.");
                 }
 
-                // Add assistant message to history
-                _messages.Add(assistantMessage);
+                // Clean assistant message content (extract XML tags)
+                var (cleanedAssistantMessage, assistantExtractedTags) = CleanMessageContent(assistantMessage);
+
+                // Add cleaned message to history
+                _messages.Add(cleanedAssistantMessage);
 
                 // Persist assistant message if configured
                 if (_options.PersistConversation && _store != null && ConversationId != null)
                 {
-                    var addResult = await _store.AddMessageAsync(ConversationId, ConversationRole.Assistant, assistantMessage, response.Usage, ct).ConfigureAwait(false);
+                    var addResult = await _store.AddMessageAsync(ConversationId, ConversationRole.Assistant, cleanedAssistantMessage, response.Usage, ct, assistantExtractedTags).ConfigureAwait(false);
                     if (addResult.IsError)
                     {
                         return addResult.Errors;
@@ -180,12 +186,15 @@ internal sealed class ChatSession : IChatSession
                     Role = ConversationRole.User,
                     Content = toolResults
                 };
-                _messages.Add(toolResultMessage);
+
+                // Clean tool result message (extract XML tags)
+                var (cleanedToolResultMessage, toolResultExtractedTags) = CleanMessageContent(toolResultMessage);
+                _messages.Add(cleanedToolResultMessage);
 
                 // Persist tool results if configured
                 if (_options.PersistConversation && _store != null && ConversationId != null)
                 {
-                    var addResult = await _store.AddMessageAsync(ConversationId, ConversationRole.User, toolResultMessage, null, ct).ConfigureAwait(false);
+                    var addResult = await _store.AddMessageAsync(ConversationId, ConversationRole.User, cleanedToolResultMessage, null, ct, toolResultExtractedTags).ConfigureAwait(false);
                     if (addResult.IsError)
                     {
                         return addResult.Errors;
@@ -200,22 +209,22 @@ internal sealed class ChatSession : IChatSession
             var finalMessage = response.Output?.Message;
             if (finalMessage != null)
             {
-                // Add to history
-                _messages.Add(finalMessage);
+                // Clean message content (extract XML tags)
+                var (cleanedFinalMessage, finalExtractedTags) = CleanMessageContent(finalMessage);
 
-                // Extract text content
-                var rawTextContent = finalMessage.Content
+                // Add cleaned message to history
+                _messages.Add(cleanedFinalMessage);
+
+                // Extract cleaned text content
+                var cleanedText = cleanedFinalMessage.Content
                     .Where(c => c.Text != null)
                     .Select(c => c.Text!)
                     .FirstOrDefault() ?? string.Empty;
 
-                // Parse XML tags from the response
-                var (cleanedText, extractedTags) = XmlTagParser.Parse(rawTextContent);
-
                 // Persist if configured
                 if (_options.PersistConversation && _store != null && ConversationId != null)
                 {
-                    var addResult = await _store.AddMessageAsync(ConversationId, ConversationRole.Assistant, finalMessage, response.Usage, ct, extractedTags).ConfigureAwait(false);
+                    var addResult = await _store.AddMessageAsync(ConversationId, ConversationRole.Assistant, cleanedFinalMessage, response.Usage, ct, finalExtractedTags).ConfigureAwait(false);
                     if (addResult.IsError)
                     {
                         return addResult.Errors;
@@ -225,11 +234,11 @@ internal sealed class ChatSession : IChatSession
                 return new ChatResponse
                 {
                     Text = cleanedText,
-                    Content = finalMessage.Content,
+                    Content = cleanedFinalMessage.Content,
                     StopReason = response.StopReason,
                     Usage = response.Usage ?? new TokenUsage(),
                     ToolsExecuted = toolExecutions,
-                    ExtractedTags = extractedTags
+                    ExtractedTags = finalExtractedTags
                 };
             }
 
@@ -298,6 +307,47 @@ internal sealed class ChatSession : IChatSession
                 TotalTokens = tokenUsage.TotalTokens
             };
         }
+    }
+
+    private static (Message CleanedMessage, IReadOnlyDictionary<string, IReadOnlyList<string>> ExtractedTags) CleanMessageContent(Message message)
+    {
+        var cleanedContent = new List<ContentBlock>();
+        var allTags = new Dictionary<string, List<string>>();
+
+        foreach (var block in message.Content)
+        {
+            if (block.Text != null)
+            {
+                var (cleanedText, tags) = XmlTagParser.Parse(block.Text);
+
+                // Merge extracted tags
+                foreach (var (key, values) in tags)
+                {
+                    if (!allTags.TryGetValue(key, out var list))
+                    {
+                        list = [];
+                        allTags[key] = list;
+                    }
+                    list.AddRange(values);
+                }
+
+                if (!string.IsNullOrWhiteSpace(cleanedText))
+                {
+                    cleanedContent.Add(new ContentBlock { Text = cleanedText });
+                }
+            }
+            else
+            {
+                // Preserve non-text blocks (ToolUse, ToolResult, etc.)
+                cleanedContent.Add(block);
+            }
+        }
+
+        var result = allTags.ToDictionary(
+            kvp => kvp.Key,
+            kvp => (IReadOnlyList<string>)kvp.Value);
+
+        return (new Message { Role = message.Role, Content = cleanedContent }, result);
     }
 
     private ConverseRequest BuildConverseRequest(IReadOnlyList<Tool>? bedrockTools)
