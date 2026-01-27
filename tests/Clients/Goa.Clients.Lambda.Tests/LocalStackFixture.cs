@@ -14,14 +14,16 @@ public class LocalStackFixture : IAsyncInitializer, IAsyncDisposable
 
     public async Task InitializeAsync()
     {
-        var unixSocket = "/var/run/docker.sock";
         _container = new ContainerBuilder(new DockerImage("localstack/localstack"))
             .WithEnvironment("SERVICES", "lambda")
             .WithEnvironment("DEBUG", "1")
-            .WithEnvironment("DOCKER_HOST", $"unix://{unixSocket}")
+            .WithEnvironment("DOCKER_HOST", "unix:///var/run/docker.sock")
+            .WithEnvironment("LOCALSTACK_HOST", "localhost")
             .WithEnvironment("LAMBDA_EXECUTOR", "docker")
             .WithPortBinding(4566, true)
-            .WithBindMount(unixSocket, unixSocket)
+            .WithBindMount("/var/run/docker.sock", "/var/run/docker.sock")
+            .WithWaitStrategy(Wait.ForUnixContainer()
+                .UntilHttpRequestIsSucceeded(r => r.ForPort(4566).ForPath("/_localstack/health")))
             .Build();
 
         await _container.StartAsync();
