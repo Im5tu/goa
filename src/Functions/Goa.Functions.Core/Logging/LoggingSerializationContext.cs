@@ -1,3 +1,4 @@
+using System.Net.Http;
 using System.Text.Json.Serialization;
 
 namespace Goa.Functions.Core.Logging;
@@ -17,4 +18,5 @@ namespace Goa.Functions.Core.Logging;
 [JsonSerializable(typeof(short))]
 [JsonSerializable(typeof(int))]
 [JsonSerializable(typeof(long))]
+[JsonSerializable(typeof(HttpMethod))]
 internal partial class LoggingSerializationContext : JsonSerializerContext;
