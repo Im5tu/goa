@@ -27,8 +27,8 @@ internal static partial class BootstrappingLogExtensions
     internal static partial void GetNextInvocationComplete(this ILogger logger);
     [LoggerMessage(EventId = 202, Level = LogLevel.Error, Message = "Failed to get next invocation from Lambda Runtime API")]
     internal static partial void GetNextInvocationError(this ILogger logger, Exception exception);
-    [LoggerMessage(EventId = 203, Level = LogLevel.Warning, Message = "Get next invocation was cancelled")]
-    internal static partial void GetNextInvocationCancelled(this ILogger logger, Exception exception);
+    [LoggerMessage(EventId = 203, Level = LogLevel.Warning, Message = "Get next invocation request timed out")]
+    internal static partial void GetNextInvocationTimedOut(this ILogger logger, Exception exception);
 
     // LambdaRuntimeClient.ReportInitializationError: EventIds 300-399
     [LoggerMessage(EventId = 300, Level = LogLevel.Trace, Message = "Reporting initialization error")]

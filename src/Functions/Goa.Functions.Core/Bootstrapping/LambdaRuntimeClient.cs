@@ -75,10 +75,16 @@ internal sealed class LambdaRuntimeClient : ILambdaRuntimeClient
             _logger.GetNextInvocationComplete();
             return Result<InvocationRequest>.Success(new InvocationRequest(requestId, payload, deadlineMs, functionArn));
         }
-        catch (TaskCanceledException ex)
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
-            _logger.GetNextInvocationCancelled(ex);
-            return Result<InvocationRequest>.Failure("No pending invocation could be found.");
+            // External cancellation (shutdown) - propagate so the loop exits
+            throw;
+        }
+        catch (OperationCanceledException ex)
+        {
+            // Internal cancellation (should be rare with infinite timeout)
+            _logger.GetNextInvocationTimedOut(ex);
+            return Result<InvocationRequest>.Failure("Get next invocation request timed out.");
         }
         catch (HttpRequestException ex)
         {
@@ -94,8 +100,11 @@ internal sealed class LambdaRuntimeClient : ILambdaRuntimeClient
             var url = string.Format(_invocationErrorUrlTemplate, awsRequestId);
             var content = new StringContent(JsonSerializer.Serialize(errorPayload, RuntimeClientSerializationContext.Default.InvocationErrorPayload), Encoding.UTF8, "application/json");
 
+            using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            timeoutCts.CancelAfter(RequestTimeout);
+
             _logger.ReportInvocationErrorStart();
-            using var response = await _httpClient.PostAsync(url, content, cancellationToken);
+            using var response = await _httpClient.PostAsync(url, content, timeoutCts.Token);
             _logger.ReportInvocationErrorComplete((int)response.StatusCode);
             if (!response.IsSuccessStatusCode)
             {
@@ -117,8 +126,11 @@ internal sealed class LambdaRuntimeClient : ILambdaRuntimeClient
         {
             var content = new StringContent(JsonSerializer.Serialize(errorPayload, RuntimeClientSerializationContext.Default.InitializationErrorPayload), Encoding.UTF8, "application/json");
 
+            using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            timeoutCts.CancelAfter(RequestTimeout);
+
             _logger.ReportInitializationErrorStart();
-            using var response = await _httpClient.PostAsync(_initializationErrorUrl, content, cancellationToken);
+            using var response = await _httpClient.PostAsync(_initializationErrorUrl, content, timeoutCts.Token);
             _logger.ReportInitializationErrorComplete((int)response.StatusCode);
             if (!response.IsSuccessStatusCode)
             {
@@ -140,12 +152,15 @@ internal sealed class LambdaRuntimeClient : ILambdaRuntimeClient
         {
             var url = string.Format(_invocationResponseUrlTemplate, awsRequestId);
 
+            using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            timeoutCts.CancelAfter(RequestTimeout);
+
             _logger.SendResponseStart();
             using var request = new HttpRequestMessage(HttpMethod.Post, url)
             {
                 Content = content
             };
-            using var response = await _httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
+            using var response = await _httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, timeoutCts.Token);
             _logger.SendResponseComplete((int)response.StatusCode);
             if (!response.IsSuccessStatusCode)
             {
@@ -161,6 +176,8 @@ internal sealed class LambdaRuntimeClient : ILambdaRuntimeClient
         }
     }
 
+    private static readonly TimeSpan RequestTimeout = TimeSpan.FromSeconds(30);
+
     private static HttpClient CreateHttpClient() => new(new SocketsHttpHandler
     {
         UseCookies = false,
@@ -168,15 +185,14 @@ internal sealed class LambdaRuntimeClient : ILambdaRuntimeClient
         // HttpClient by default supports only ASCII characters in headers. Changing it to allow UTF8 characters.
         RequestHeaderEncodingSelector = delegate { return Encoding.UTF8; },
         ResponseHeaderEncodingSelector = delegate { return Encoding.UTF8; },
-        // Connection pool settings to prevent stale connections after Lambda freeze/thaw cycles
-        PooledConnectionLifetime = TimeSpan.FromMinutes(1),
-        PooledConnectionIdleTimeout = TimeSpan.FromSeconds(10),
-        KeepAlivePingPolicy = HttpKeepAlivePingPolicy.Always,
-        KeepAlivePingDelay = TimeSpan.FromSeconds(5),
-        KeepAlivePingTimeout = TimeSpan.FromSeconds(1)
     })
     {
-        Timeout = string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("AWS_LAMBDA_RUNTIME_API")) ? TimeSpan.FromSeconds(2) : TimeSpan.FromSeconds(100),
+        // The /runtime/invocation/next call is a long-polling blocking call.
+        // The Lambda container can freeze the process while this HTTP request is in-flight.
+        // We must not timeout during freeze/thaw. AWS's official RuntimeSupport uses Timeout.InfiniteTimeSpan.
+        Timeout = string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("AWS_LAMBDA_RUNTIME_API"))
+            ? TimeSpan.FromSeconds(2)
+            : Timeout.InfiniteTimeSpan,
         DefaultRequestVersion = new Version(1, 1),
         DefaultVersionPolicy = HttpVersionPolicy.RequestVersionExact
     };

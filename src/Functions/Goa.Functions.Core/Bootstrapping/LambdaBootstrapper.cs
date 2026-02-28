@@ -76,63 +76,71 @@ public class LambdaBootstrapper<TRequest, TResponse>
 
         while (!cancellationToken.IsCancellationRequested)
         {
-            // Get the next event
-            var invocationResult = await LambdaRuntimeClient.GetNextInvocationAsync(cancellationToken);
-            if (!invocationResult.IsSuccess || invocationResult.Data is null)
-            {
-                Logger.BootstrapGetNextInvocationFailed(invocationResult.ErrorMessage);
-                continue;
-            }
-
-            // Parsing the deadline with a safer fallback in case the DeadlineMs is null or not present
-            var targetTime = DateTimeOffset.FromUnixTimeMilliseconds(long.TryParse(invocationResult.Data.DeadlineMs, out var deadlineMsValue)
-                ? deadlineMsValue
-                : DateTimeOffset.UtcNow.AddMinutes(1).ToUnixTimeMilliseconds());
-
-            // Calculate remaining time with 100ms buffer for cleanup
-            var remainingTime = targetTime - DateTimeOffset.UtcNow;
-            var adjustedDelay = remainingTime.TotalMilliseconds > 100
-                ? remainingTime.Add(TimeSpan.FromMilliseconds(-100))
-                : remainingTime;
-
-            // Create deadline CTS only if we have positive time remaining, otherwise no auto-cancel
-            using var cts = adjustedDelay > TimeSpan.Zero
-                ? new CancellationTokenSource(adjustedDelay)
-                : new CancellationTokenSource();
-
-            // Combine the external cancellation token with the deadline-based token
-            using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, cts.Token);
-
-            var invocation = invocationResult.Data;
-
-            using var context = Logger.WithContext("AwsRequestId", invocation.RequestId);
-
-            // Deserialize the request payload
             try
             {
-                Logger.BootstrapInvocationRequestDeserializationStart();
-
-                var request = JsonSerializer.Deserialize(invocation.Payload, _requestTypeInfo);
-                if (request == null)
+                // Get the next event
+                var invocationResult = await LambdaRuntimeClient.GetNextInvocationAsync(cancellationToken);
+                if (!invocationResult.IsSuccess || invocationResult.Data is null)
                 {
-                    Logger.BootstrapInvocationRequestDeserializationFailed();
-                    var errorPayload = new InvocationErrorPayload("DeserializationError", "Failed to deserialize request payload. Null payload returned.", Array.Empty<string>());
-                    await LambdaRuntimeClient.ReportInvocationErrorAsync(invocation.RequestId, errorPayload, cancellationToken);
+                    Logger.BootstrapGetNextInvocationFailed(invocationResult.ErrorMessage);
                     continue;
                 }
 
-                // Process the event and get the response
-                var response = await _onNext(request, invocation, linkedCts.Token);
+                // Parsing the deadline with a safer fallback in case the DeadlineMs is null or not present
+                var targetTime = DateTimeOffset.FromUnixTimeMilliseconds(long.TryParse(invocationResult.Data.DeadlineMs, out var deadlineMsValue)
+                    ? deadlineMsValue
+                    : DateTimeOffset.UtcNow.AddMinutes(1).ToUnixTimeMilliseconds());
 
-                // Serialize and send the response back to the runtime
-                var responsePayload = _responseSerializer.Serialize(response);
-                await LambdaRuntimeClient.SendResponseAsync(invocation.RequestId, responsePayload, cancellationToken);
+                // Calculate remaining time with 100ms buffer for cleanup
+                var remainingTime = targetTime - DateTimeOffset.UtcNow;
+                var adjustedDelay = remainingTime.TotalMilliseconds > 100
+                    ? remainingTime.Add(TimeSpan.FromMilliseconds(-100))
+                    : remainingTime;
+
+                // Create deadline CTS only if we have positive time remaining, otherwise no auto-cancel
+                using var cts = adjustedDelay > TimeSpan.Zero
+                    ? new CancellationTokenSource(adjustedDelay)
+                    : new CancellationTokenSource();
+
+                // Combine the external cancellation token with the deadline-based token
+                using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, cts.Token);
+
+                var invocation = invocationResult.Data;
+
+                using var context = Logger.WithContext("AwsRequestId", invocation.RequestId);
+
+                // Deserialize the request payload
+                try
+                {
+                    Logger.BootstrapInvocationRequestDeserializationStart();
+
+                    var request = JsonSerializer.Deserialize(invocation.Payload, _requestTypeInfo);
+                    if (request == null)
+                    {
+                        Logger.BootstrapInvocationRequestDeserializationFailed();
+                        var errorPayload = new InvocationErrorPayload("DeserializationError", "Failed to deserialize request payload. Null payload returned.", Array.Empty<string>());
+                        await LambdaRuntimeClient.ReportInvocationErrorAsync(invocation.RequestId, errorPayload, cancellationToken);
+                        continue;
+                    }
+
+                    // Process the event and get the response
+                    var response = await _onNext(request, invocation, linkedCts.Token);
+
+                    // Serialize and send the response back to the runtime
+                    var responsePayload = _responseSerializer.Serialize(response);
+                    await LambdaRuntimeClient.SendResponseAsync(invocation.RequestId, responsePayload, cancellationToken);
+                }
+                catch (Exception ex)
+                {
+                    Logger.BootstrapInvocationProcessingFailed(ex, invocation.Payload);
+                    var errorPayload = new InvocationErrorPayload(ex.GetType().FullName ?? ex.GetType().Name, ex.Message, ex.StackTrace?.Split(Environment.NewLine) ?? Array.Empty<string>());
+                    await LambdaRuntimeClient.ReportInvocationErrorAsync(invocation.RequestId, errorPayload, cancellationToken);
+                }
             }
-            catch (Exception ex)
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
             {
-                Logger.BootstrapInvocationProcessingFailed(ex, invocation.Payload);
-                var errorPayload = new InvocationErrorPayload(ex.GetType().FullName ?? ex.GetType().Name, ex.Message, ex.StackTrace?.Split(Environment.NewLine) ?? Array.Empty<string>());
-                await LambdaRuntimeClient.ReportInvocationErrorAsync(invocation.RequestId, errorPayload, cancellationToken);
+                // Graceful shutdown requested
+                break;
             }
         }
     }

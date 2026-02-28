@@ -120,6 +120,27 @@ public class LambdaBootstrapperTests
         lambdaRuntime.Verify(x => x.SendResponseAsync(It.IsAny<string>(), It.IsAny<HttpContent>(), It.IsAny<CancellationToken>()), Times.Exactly(3));
     }
 
+    [Test]
+    public async Task OnRunAsync_WhenCancellationRequested_ExitsGracefully()
+    {
+        using var cts = new CancellationTokenSource();
+        var lambdaRuntime = new Mock<ILambdaRuntimeClient>();
+        lambdaRuntime.Setup(x => x.GetNextInvocationAsync(It.IsAny<CancellationToken>()))
+            .Returns((CancellationToken ct) =>
+            {
+                cts.Cancel();
+                ct.ThrowIfCancellationRequested();
+                return Task.FromResult(Result<InvocationRequest>.Failure("Test"));
+            });
+        var sut = new LambdaBootstrapper<SafeFunction, Data, Data>(
+            DataSerializationContext.Default, () => new(), lambdaRuntimeClient: lambdaRuntime.Object);
+
+        // Should exit cleanly, not throw
+        await sut.RunAsync(cts.Token);
+
+        lambdaRuntime.Verify(x => x.GetNextInvocationAsync(It.IsAny<CancellationToken>()), Times.Once);
+    }
+
     // Test Functions
     public class SafeFunction : ILambdaFunction<Data, Data>
     {
