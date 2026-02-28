@@ -28,6 +28,11 @@ public class AwsServiceConfiguration
     /// Gets or sets a custom service URL to use instead of the default AWS endpoint.
     /// </summary>
     public string? ServiceUrl { get; set; }
+
+    /// <summary>
+    /// Gets or sets the HTTP client timeout for service requests. Defaults to 10 seconds.
+    /// </summary>
+    public TimeSpan HttpTimeout { get; set; } = TimeSpan.FromSeconds(10);
     internal string Service { get; init; }
 
     /// <summary>

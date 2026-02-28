@@ -56,7 +56,7 @@ public static class ServiceExtensions
         ArgumentNullException.ThrowIfNull(configuration);
 
         // Add the Goa service infrastructure for Bedrock
-        services.AddGoaService(nameof(BedrockServiceClient));
+        services.AddGoaService(nameof(BedrockServiceClient), configuration.HttpTimeout);
 
         // Register the configuration
         services.TryAddSingleton(configuration);

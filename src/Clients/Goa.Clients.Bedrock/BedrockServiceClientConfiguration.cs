@@ -12,5 +12,6 @@ public class BedrockServiceClientConfiguration : AwsServiceConfiguration
     /// </summary>
     public BedrockServiceClientConfiguration() : base("bedrock-runtime", signingService: "bedrock")
     {
+        HttpTimeout = TimeSpan.FromSeconds(30);
     }
 }

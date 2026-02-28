@@ -32,10 +32,12 @@ public static class ServiceExtensions
         return services;
     }
 
-    internal static IServiceCollection AddGoaService(this IServiceCollection services, string serviceName)
+    internal static IServiceCollection AddGoaService(this IServiceCollection services, string serviceName, TimeSpan? httpTimeout = null)
     {
         if (!RegisteredServices.TryAdd(serviceName, 0))
             return services;
+
+        var timeout = httpTimeout ?? TimeSpan.FromSeconds(10);
 
         services.AddHttpClient(serviceName)
             .RemoveAllLoggers()
@@ -44,7 +46,7 @@ public static class ServiceExtensions
             {
                 client.DefaultRequestVersion = HttpVersion.Version30;
                 client.DefaultVersionPolicy = HttpVersionPolicy.RequestVersionOrLower;
-                client.Timeout = TimeSpan.FromSeconds(10);
+                client.Timeout = timeout;
             });
 
         services.TryAddTransient<RequestSigningHandler>();
