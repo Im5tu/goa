@@ -21,6 +21,21 @@ public interface IChatSession : IAsyncDisposable
     TokenUsage TotalTokenUsage { get; }
 
     /// <summary>
+    /// Gets the current model identifier being used for this session.
+    /// </summary>
+    string ModelId { get; }
+
+    /// <summary>
+    /// Changes the model used for subsequent calls in this session.
+    /// If persistence is enabled, the conversation metadata is updated.
+    /// Conversation history is preserved.
+    /// </summary>
+    /// <param name="newModelId">The new model identifier to use.</param>
+    /// <param name="ct">A cancellation token to cancel the operation.</param>
+    /// <returns>Success, or an error if the metadata update failed.</returns>
+    Task<ErrorOr<Success>> ChangeModelAsync(string newModelId, CancellationToken ct = default);
+
+    /// <summary>
     /// Registers a tool that can be used by the model during the conversation.
     /// </summary>
     /// <param name="tool">The tool definition to register.</param>

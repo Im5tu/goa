@@ -1,4 +1,5 @@
 using Goa.Clients.Bedrock.Conversation.Entities;
+using Goa.Clients.Bedrock.Models;
 
 namespace Goa.Clients.Bedrock.Conversation.Chat;
 
@@ -52,4 +53,9 @@ public sealed class ChatSessionOptions
     /// Gets the maximum number of tool execution iterations allowed per message.
     /// </summary>
     public int MaxToolIterations { get; init; } = 10;
+
+    /// <summary>
+    /// Gets the optional service tier for the conversation requests.
+    /// </summary>
+    public ServiceTier? ServiceTier { get; init; }
 }

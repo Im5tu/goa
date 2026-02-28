@@ -564,6 +564,159 @@ public class ChatSessionTests
         });
     }
 
+    [Test]
+    public async Task ChangeModelAsync_UpdatesModelForSubsequentCalls()
+    {
+        // Arrange
+        var mockClient = new Mock<IBedrockClient>();
+        var mockAdapter = new Mock<IMcpToolAdapter>();
+
+        mockAdapter.Setup(a => a.ToBedrockTools(It.IsAny<IEnumerable<McpToolDefinition>>()))
+            .Returns(new List<Tool>());
+
+        var capturedRequests = new List<ConverseRequest>();
+        mockClient.Setup(c => c.ConverseAsync(It.IsAny<ConverseRequest>(), It.IsAny<CancellationToken>()))
+            .Callback<ConverseRequest, CancellationToken>((r, _) => capturedRequests.Add(r))
+            .ReturnsAsync(new ConverseResponse
+            {
+                StopReason = StopReason.EndTurn,
+                Output = new ConverseOutput { Message = new Message { Role = ConversationRole.Assistant, Content = [new ContentBlock { Text = "OK" }] } }
+            });
+
+        var session = await CreateSession(mockClient.Object, mockAdapter.Object);
+
+        // Act
+        await session.SendAsync("First");
+        await session.ChangeModelAsync("amazon.nova-pro-v1:0");
+        await session.SendAsync("Second");
+
+        // Assert
+        await Assert.That(capturedRequests).Count().IsEqualTo(2);
+        await Assert.That(capturedRequests[0].ModelId).IsEqualTo(TestModelId);
+        await Assert.That(capturedRequests[1].ModelId).IsEqualTo("amazon.nova-pro-v1:0");
+    }
+
+    [Test]
+    public async Task ChangeModelAsync_WithPersistence_UpdatesStore()
+    {
+        // Arrange
+        var mockClient = new Mock<IBedrockClient>();
+        var mockAdapter = new Mock<IMcpToolAdapter>();
+        var mockStore = new Mock<IConversationStore>();
+
+        mockAdapter.Setup(a => a.ToBedrockTools(It.IsAny<IEnumerable<McpToolDefinition>>()))
+            .Returns(new List<Tool>());
+
+        mockStore.Setup(s => s.AddMessageAsync(It.IsAny<string>(), It.IsAny<ConversationRole>(), It.IsAny<Message>(), It.IsAny<TokenUsage?>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new ConversationMessage { Id = "msg-1", ConversationId = "conv-1", Message = new Message() });
+
+        mockStore.Setup(s => s.UpdateConversationAsync(It.IsAny<string>(), It.IsAny<ConversationMetadata>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new Entities.Conversation { Id = "conv-1", CreatedAt = DateTimeOffset.UtcNow, UpdatedAt = DateTimeOffset.UtcNow });
+
+        var options = new ChatSessionOptions
+        {
+            ModelId = TestModelId,
+            PersistConversation = true
+        };
+
+        var session = await CreateSession(mockClient.Object, mockAdapter.Object, mockStore.Object, options, "conv-1");
+
+        // Act
+        var result = await session.ChangeModelAsync("amazon.nova-pro-v1:0");
+
+        // Assert
+        await Assert.That(result.IsError).IsFalse();
+        mockStore.Verify(s => s.UpdateConversationAsync(
+            "conv-1",
+            It.Is<ConversationMetadata>(m => m.ModelId == "amazon.nova-pro-v1:0"),
+            It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Test]
+    public async Task ChangeModelAsync_WithoutPersistence_DoesNotCallStore()
+    {
+        // Arrange
+        var mockClient = new Mock<IBedrockClient>();
+        var mockAdapter = new Mock<IMcpToolAdapter>();
+        var session = await CreateSession(mockClient.Object, mockAdapter.Object);
+
+        // Act
+        var result = await session.ChangeModelAsync("amazon.nova-pro-v1:0");
+
+        // Assert
+        await Assert.That(result.IsError).IsFalse();
+        await Assert.That(session.ModelId).IsEqualTo("amazon.nova-pro-v1:0");
+    }
+
+    [Test]
+    public async Task ChangeModelAsync_NullOrEmpty_ThrowsArgumentException()
+    {
+        // Arrange
+        var mockClient = new Mock<IBedrockClient>();
+        var mockAdapter = new Mock<IMcpToolAdapter>();
+        var session = await CreateSession(mockClient.Object, mockAdapter.Object);
+
+        // Act & Assert
+        await Assert.ThrowsAsync<ArgumentNullException>(async () =>
+            await session.ChangeModelAsync(null!));
+
+        await Assert.ThrowsAsync<ArgumentException>(async () =>
+            await session.ChangeModelAsync(""));
+    }
+
+    [Test]
+    public async Task ModelId_ReturnsCurrentModelId()
+    {
+        // Arrange
+        var mockClient = new Mock<IBedrockClient>();
+        var mockAdapter = new Mock<IMcpToolAdapter>();
+        var session = await CreateSession(mockClient.Object, mockAdapter.Object);
+
+        // Assert initial
+        await Assert.That(session.ModelId).IsEqualTo(TestModelId);
+
+        // Act
+        await session.ChangeModelAsync("new-model-id");
+
+        // Assert updated
+        await Assert.That(session.ModelId).IsEqualTo("new-model-id");
+    }
+
+    [Test]
+    public async Task SendAsync_WithServiceTier_IncludesInRequest()
+    {
+        // Arrange
+        var mockClient = new Mock<IBedrockClient>();
+        var mockAdapter = new Mock<IMcpToolAdapter>();
+
+        mockAdapter.Setup(a => a.ToBedrockTools(It.IsAny<IEnumerable<McpToolDefinition>>()))
+            .Returns(new List<Tool>());
+
+        ConverseRequest? capturedRequest = null;
+        mockClient.Setup(c => c.ConverseAsync(It.IsAny<ConverseRequest>(), It.IsAny<CancellationToken>()))
+            .Callback<ConverseRequest, CancellationToken>((r, _) => capturedRequest = r)
+            .ReturnsAsync(new ConverseResponse
+            {
+                StopReason = StopReason.EndTurn,
+                Output = new ConverseOutput { Message = new Message { Role = ConversationRole.Assistant, Content = [new ContentBlock { Text = "OK" }] } }
+            });
+
+        var options = new ChatSessionOptions
+        {
+            ModelId = TestModelId,
+            ServiceTier = ServiceTier.Priority
+        };
+
+        var session = await CreateSession(mockClient.Object, mockAdapter.Object, options: options);
+
+        // Act
+        await session.SendAsync("Test");
+
+        // Assert
+        await Assert.That(capturedRequest).IsNotNull();
+        await Assert.That(capturedRequest!.RequestMetadata?.ServiceTier).IsEqualTo(ServiceTier.Priority);
+    }
+
     private static async Task<IChatSession> CreateSession(
         IBedrockClient client,
         IMcpToolAdapter adapter,
@@ -592,6 +745,7 @@ public class ChatSessionTests
                     StopSequences = options.StopSequences,
                     Metadata = options.Metadata,
                     MaxToolIterations = options.MaxToolIterations,
+                    ServiceTier = options.ServiceTier,
                     PersistConversation = true
                 }
                 : new ChatSessionOptions

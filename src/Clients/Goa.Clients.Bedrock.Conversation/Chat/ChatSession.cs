@@ -22,6 +22,7 @@ internal sealed class ChatSession : IChatSession
     private readonly List<McpToolDefinition> _tools = [];
     private TokenUsage _totalTokenUsage = new();
     private bool _disposed;
+    private string _modelId;
 
     /// <summary>
     /// Creates a new chat session.
@@ -43,10 +44,14 @@ internal sealed class ChatSession : IChatSession
         _store = store;
         _options = options;
         ConversationId = conversationId;
+        _modelId = options.ModelId;
     }
 
     /// <inheritdoc />
     public string? ConversationId { get; }
+
+    /// <inheritdoc />
+    public string ModelId => _modelId;
 
     /// <inheritdoc />
     public TokenUsage TotalTokenUsage => _totalTokenUsage;
@@ -269,6 +274,26 @@ internal sealed class ChatSession : IChatSession
     }
 
     /// <inheritdoc />
+    public async Task<ErrorOr<Success>> ChangeModelAsync(string newModelId, CancellationToken ct = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(newModelId);
+
+        if (_options.PersistConversation && _store != null && ConversationId != null)
+        {
+            var metadata = new ConversationMetadata { ModelId = newModelId };
+            var updateResult = await _store.UpdateConversationAsync(ConversationId, metadata, ct).ConfigureAwait(false);
+            if (updateResult.IsError)
+            {
+                return updateResult.Errors;
+            }
+        }
+
+        _modelId = newModelId;
+
+        return Result.Success;
+    }
+
+    /// <inheritdoc />
     public ValueTask DisposeAsync()
     {
         if (_disposed)
@@ -352,7 +377,7 @@ internal sealed class ChatSession : IChatSession
 
     private ConverseRequest BuildConverseRequest(IReadOnlyList<Tool>? bedrockTools)
     {
-        var builder = new ConverseBuilder(_options.ModelId)
+        var builder = new ConverseBuilder(_modelId)
             .WithMaxTokens(_options.MaxTokens)
             .WithTemperature(_options.Temperature);
 
@@ -369,6 +394,11 @@ internal sealed class ChatSession : IChatSession
         if (_options.StopSequences is { Count: > 0 })
         {
             builder.WithStopSequences(_options.StopSequences.ToArray());
+        }
+
+        if (_options.ServiceTier.HasValue)
+        {
+            builder.WithServiceTier(_options.ServiceTier.Value);
         }
 
         // Add all messages from history
