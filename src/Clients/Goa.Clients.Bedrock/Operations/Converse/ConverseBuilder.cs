@@ -202,6 +202,69 @@ public class ConverseBuilder(string modelId)
     }
 
     /// <summary>
+    /// Configures the request to use JSON schema structured output.
+    /// </summary>
+    /// <param name="name">A name identifier for the schema.</param>
+    /// <param name="schema">The JSON schema as a JSON-stringified string.</param>
+    /// <param name="description">An optional description of the schema.</param>
+    /// <returns>The builder instance for method chaining.</returns>
+    public ConverseBuilder WithJsonSchemaOutput(string name, string schema, string? description = null)
+    {
+        _request.OutputConfig = new OutputConfig
+        {
+            TextFormat = new OutputFormat
+            {
+                Type = "json_schema",
+                Structure = new OutputFormatStructure
+                {
+                    JsonSchema = new JsonSchemaDefinition
+                    {
+                        Name = name,
+                        Schema = schema,
+                        Description = description
+                    }
+                }
+            }
+        };
+        return this;
+    }
+
+    /// <summary>
+    /// Configures the request to use JSON schema structured output.
+    /// </summary>
+    /// <param name="name">A name identifier for the schema.</param>
+    /// <param name="schema">The JSON schema as a JsonElement (will be stringified for the API).</param>
+    /// <param name="description">An optional description of the schema.</param>
+    /// <returns>The builder instance for method chaining.</returns>
+    public ConverseBuilder WithJsonSchemaOutput(string name, JsonElement schema, string? description = null)
+    {
+        return WithJsonSchemaOutput(name, schema.GetRawText(), description);
+    }
+
+    /// <summary>
+    /// Adds a tool with strict schema enforcement that the model can use.
+    /// </summary>
+    /// <param name="name">The name of the tool.</param>
+    /// <param name="description">A description of what the tool does.</param>
+    /// <param name="inputSchema">The JSON schema defining the tool's input parameters.</param>
+    /// <returns>The builder instance for method chaining.</returns>
+    public ConverseBuilder WithStrictTool(string name, string? description, JsonElement inputSchema)
+    {
+        _request.ToolConfig ??= new();
+        _request.ToolConfig.Tools.Add(new Tool
+        {
+            ToolSpec = new ToolSpec
+            {
+                Name = name,
+                Description = description,
+                InputSchema = new ToolInputSchema { Json = inputSchema },
+                Strict = true
+            }
+        });
+        return this;
+    }
+
+    /// <summary>
     /// Sets additional model-specific request fields.
     /// </summary>
     /// <param name="additionalFields">The additional fields as a JSON element.</param>

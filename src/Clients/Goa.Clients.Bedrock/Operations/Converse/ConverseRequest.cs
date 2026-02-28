@@ -46,6 +46,12 @@ public class ConverseRequest
     public GuardrailConfiguration? GuardrailConfig { get; set; }
 
     /// <summary>
+    /// Output configuration for structured output formats.
+    /// </summary>
+    [JsonPropertyName("outputConfig")]
+    public OutputConfig? OutputConfig { get; set; }
+
+    /// <summary>
     /// Additional model-specific request fields.
     /// </summary>
     [JsonPropertyName("additionalModelRequestFields")]

@@ -424,6 +424,135 @@ public class SerializationTests
     }
 
     [Test]
+    public async Task ConverseRequest_WithOutputConfig_Serializes()
+    {
+        // Arrange
+        var request = new ConverseRequest
+        {
+            ModelId = "anthropic.claude-3-sonnet-20240229-v1:0",
+            Messages =
+            [
+                new Message
+                {
+                    Role = ConversationRole.User,
+                    Content = [new ContentBlock { Text = "Extract data." }]
+                }
+            ],
+            OutputConfig = new OutputConfig
+            {
+                TextFormat = new OutputFormat
+                {
+                    Type = "json_schema",
+                    Structure = new OutputFormatStructure
+                    {
+                        JsonSchema = new JsonSchemaDefinition
+                        {
+                            Schema = """{"type":"object","properties":{"name":{"type":"string"}},"required":["name"],"additionalProperties":false}""",
+                            Name = "data_extraction",
+                            Description = "Extract structured data"
+                        }
+                    }
+                }
+            }
+        };
+
+        // Act
+        var json = JsonSerializer.Serialize(request, BedrockJsonContext.Default.ConverseRequest);
+
+        // Assert
+        await Assert.That(json).Contains("\"outputConfig\"");
+        await Assert.That(json).Contains("\"textFormat\"");
+        await Assert.That(json).Contains("\"json_schema\"");
+        await Assert.That(json).Contains("\"jsonSchema\"");
+        await Assert.That(json).Contains("\"data_extraction\"");
+        await Assert.That(json).Contains("\"Extract structured data\"");
+        // Verify schema is a string value (not parsed as JSON object)
+        await Assert.That(json).Contains("\"schema\":");
+    }
+
+    [Test]
+    public async Task ConverseRequest_WithOutputConfig_NullDescriptionOmitted()
+    {
+        // Arrange
+        var request = new ConverseRequest
+        {
+            ModelId = "test-model",
+            Messages =
+            [
+                new Message
+                {
+                    Role = ConversationRole.User,
+                    Content = [new ContentBlock { Text = "Hi" }]
+                }
+            ],
+            OutputConfig = new OutputConfig
+            {
+                TextFormat = new OutputFormat
+                {
+                    Type = "json_schema",
+                    Structure = new OutputFormatStructure
+                    {
+                        JsonSchema = new JsonSchemaDefinition
+                        {
+                            Schema = """{"type":"object"}""",
+                            Name = "test"
+                        }
+                    }
+                }
+            }
+        };
+
+        // Act
+        var json = JsonSerializer.Serialize(request, BedrockJsonContext.Default.ConverseRequest);
+
+        // Assert - description should be omitted when null
+        await Assert.That(json).DoesNotContain("description");
+    }
+
+    [Test]
+    public async Task ToolSpec_WithStrict_Serializes()
+    {
+        // Arrange
+        var inputSchema = JsonDocument.Parse("""{"type": "object"}""").RootElement;
+        var tool = new Tool
+        {
+            ToolSpec = new ToolSpec
+            {
+                Name = "test_tool",
+                InputSchema = new ToolInputSchema { Json = inputSchema },
+                Strict = true
+            }
+        };
+
+        // Act
+        var json = JsonSerializer.Serialize(tool, BedrockJsonContext.Default.Tool);
+
+        // Assert
+        await Assert.That(json).Contains("\"strict\":true");
+    }
+
+    [Test]
+    public async Task ToolSpec_WithoutStrict_StrictOmitted()
+    {
+        // Arrange
+        var inputSchema = JsonDocument.Parse("""{"type": "object"}""").RootElement;
+        var tool = new Tool
+        {
+            ToolSpec = new ToolSpec
+            {
+                Name = "test_tool",
+                InputSchema = new ToolInputSchema { Json = inputSchema }
+            }
+        };
+
+        // Act
+        var json = JsonSerializer.Serialize(tool, BedrockJsonContext.Default.Tool);
+
+        // Assert
+        await Assert.That(json).DoesNotContain("strict");
+    }
+
+    [Test]
     public async Task ConverseRequest_NullPropertiesOmitted_WhenSerializing()
     {
         // Arrange

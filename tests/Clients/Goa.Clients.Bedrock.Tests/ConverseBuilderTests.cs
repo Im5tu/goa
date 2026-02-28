@@ -333,6 +333,80 @@ public class ConverseBuilderTests
     }
 
     [Test]
+    public async Task Build_WithJsonSchemaOutput_SetsOutputConfig()
+    {
+        // Arrange
+        var schema = """{"type": "object", "properties": {"name": {"type": "string"}}, "required": ["name"], "additionalProperties": false}""";
+        var builder = new ConverseBuilder(TestModelId)
+            .WithJsonSchemaOutput("test_schema", schema, "A test schema");
+
+        // Act
+        var request = builder.Build();
+
+        // Assert
+        await Assert.That(request.OutputConfig).IsNotNull();
+        await Assert.That(request.OutputConfig!.TextFormat).IsNotNull();
+        await Assert.That(request.OutputConfig!.TextFormat!.Type).IsEqualTo("json_schema");
+        await Assert.That(request.OutputConfig!.TextFormat!.Structure).IsNotNull();
+        await Assert.That(request.OutputConfig!.TextFormat!.Structure!.JsonSchema).IsNotNull();
+        await Assert.That(request.OutputConfig!.TextFormat!.Structure!.JsonSchema!.Name).IsEqualTo("test_schema");
+        await Assert.That(request.OutputConfig!.TextFormat!.Structure!.JsonSchema!.Schema).IsEqualTo(schema);
+        await Assert.That(request.OutputConfig!.TextFormat!.Structure!.JsonSchema!.Description).IsEqualTo("A test schema");
+    }
+
+    [Test]
+    public async Task Build_WithJsonSchemaOutput_FromJsonElement_StringifiesSchema()
+    {
+        // Arrange
+        var schemaElement = JsonDocument.Parse("""{"type": "object", "properties": {"name": {"type": "string"}}}""").RootElement;
+        var builder = new ConverseBuilder(TestModelId)
+            .WithJsonSchemaOutput("test_schema", schemaElement);
+
+        // Act
+        var request = builder.Build();
+
+        // Assert
+        await Assert.That(request.OutputConfig).IsNotNull();
+        await Assert.That(request.OutputConfig!.TextFormat!.Structure!.JsonSchema!.Schema).Contains("\"type\"");
+        await Assert.That(request.OutputConfig!.TextFormat!.Structure!.JsonSchema!.Schema).Contains("\"properties\"");
+        await Assert.That(request.OutputConfig!.TextFormat!.Structure!.JsonSchema!.Description).IsNull();
+    }
+
+    [Test]
+    public async Task Build_WithStrictTool_SetsStrictFlag()
+    {
+        // Arrange
+        var inputSchema = JsonDocument.Parse("""{"type": "object", "properties": {"location": {"type": "string"}}}""").RootElement;
+        var builder = new ConverseBuilder(TestModelId)
+            .WithStrictTool("get_weather", "Get the current weather", inputSchema);
+
+        // Act
+        var request = builder.Build();
+
+        // Assert
+        await Assert.That(request.ToolConfig).IsNotNull();
+        await Assert.That(request.ToolConfig!.Tools).Count().IsEqualTo(1);
+        await Assert.That(request.ToolConfig!.Tools[0].ToolSpec.Name).IsEqualTo("get_weather");
+        await Assert.That(request.ToolConfig!.Tools[0].ToolSpec.Description).IsEqualTo("Get the current weather");
+        await Assert.That(request.ToolConfig!.Tools[0].ToolSpec.Strict).IsEqualTo(true);
+    }
+
+    [Test]
+    public async Task Build_WithTool_StrictIsNull()
+    {
+        // Arrange
+        var inputSchema = JsonDocument.Parse("""{"type": "object"}""").RootElement;
+        var builder = new ConverseBuilder(TestModelId)
+            .WithTool("my_tool", null, inputSchema);
+
+        // Act
+        var request = builder.Build();
+
+        // Assert
+        await Assert.That(request.ToolConfig!.Tools[0].ToolSpec.Strict).IsNull();
+    }
+
+    [Test]
     public async Task Build_MultipleInferenceConfigCalls_MergesValues()
     {
         // Arrange

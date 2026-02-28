@@ -32,6 +32,11 @@ public class ToolSpec
     /// The input schema that defines the tool's input parameters.
     /// </summary>
     public ToolInputSchema InputSchema { get; set; } = new();
+
+    /// <summary>
+    /// When true, constrains the model to produce tool inputs that exactly match the input schema.
+    /// </summary>
+    public bool? Strict { get; set; }
 }
 
 /// <summary>
