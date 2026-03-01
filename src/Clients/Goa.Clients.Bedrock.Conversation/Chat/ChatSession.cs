@@ -415,6 +415,11 @@ internal sealed class ChatSession : IChatSession
             request.ToolConfig = new ToolConfiguration { Tools = bedrockTools.ToList() };
         }
 
+        if (_options.OutputConfig is not null)
+        {
+            request.OutputConfig = _options.OutputConfig;
+        }
+
         return request;
     }
 

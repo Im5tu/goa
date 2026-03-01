@@ -717,6 +717,89 @@ public class ChatSessionTests
         await Assert.That(capturedRequest!.RequestMetadata?.ServiceTier).IsEqualTo(ServiceTier.Priority);
     }
 
+    [Test]
+    public async Task SendAsync_WithOutputConfig_IncludesInRequest()
+    {
+        // Arrange
+        var mockClient = new Mock<IBedrockClient>();
+        var mockAdapter = new Mock<IMcpToolAdapter>();
+
+        mockAdapter.Setup(a => a.ToBedrockTools(It.IsAny<IEnumerable<McpToolDefinition>>()))
+            .Returns(new List<Tool>());
+
+        ConverseRequest? capturedRequest = null;
+        mockClient.Setup(c => c.ConverseAsync(It.IsAny<ConverseRequest>(), It.IsAny<CancellationToken>()))
+            .Callback<ConverseRequest, CancellationToken>((r, _) => capturedRequest = r)
+            .ReturnsAsync(new ConverseResponse
+            {
+                StopReason = StopReason.EndTurn,
+                Output = new ConverseOutput { Message = new Message { Role = ConversationRole.Assistant, Content = [new ContentBlock { Text = "OK" }] } }
+            });
+
+        var outputConfig = new OutputConfig
+        {
+            TextFormat = new OutputFormat
+            {
+                Type = "json_schema",
+                Structure = new OutputFormatStructure
+                {
+                    JsonSchema = new JsonSchemaDefinition
+                    {
+                        Name = "TestSchema",
+                        Schema = """{"type":"object","properties":{"name":{"type":"string"}},"required":["name"]}"""
+                    }
+                }
+            }
+        };
+
+        var options = new ChatSessionOptions
+        {
+            ModelId = TestModelId,
+            OutputConfig = outputConfig
+        };
+
+        var session = await CreateSession(mockClient.Object, mockAdapter.Object, options: options);
+
+        // Act
+        await session.SendAsync("Test");
+
+        // Assert
+        await Assert.That(capturedRequest).IsNotNull();
+        await Assert.That(capturedRequest!.OutputConfig).IsNotNull();
+        await Assert.That(capturedRequest.OutputConfig!.TextFormat).IsNotNull();
+        await Assert.That(capturedRequest.OutputConfig.TextFormat!.Type).IsEqualTo("json_schema");
+        await Assert.That(capturedRequest.OutputConfig.TextFormat.Structure!.JsonSchema!.Name).IsEqualTo("TestSchema");
+    }
+
+    [Test]
+    public async Task SendAsync_WithoutOutputConfig_DoesNotIncludeInRequest()
+    {
+        // Arrange
+        var mockClient = new Mock<IBedrockClient>();
+        var mockAdapter = new Mock<IMcpToolAdapter>();
+
+        mockAdapter.Setup(a => a.ToBedrockTools(It.IsAny<IEnumerable<McpToolDefinition>>()))
+            .Returns(new List<Tool>());
+
+        ConverseRequest? capturedRequest = null;
+        mockClient.Setup(c => c.ConverseAsync(It.IsAny<ConverseRequest>(), It.IsAny<CancellationToken>()))
+            .Callback<ConverseRequest, CancellationToken>((r, _) => capturedRequest = r)
+            .ReturnsAsync(new ConverseResponse
+            {
+                StopReason = StopReason.EndTurn,
+                Output = new ConverseOutput { Message = new Message { Role = ConversationRole.Assistant, Content = [new ContentBlock { Text = "OK" }] } }
+            });
+
+        var session = await CreateSession(mockClient.Object, mockAdapter.Object);
+
+        // Act
+        await session.SendAsync("Test");
+
+        // Assert
+        await Assert.That(capturedRequest).IsNotNull();
+        await Assert.That(capturedRequest!.OutputConfig).IsNull();
+    }
+
     private static async Task<IChatSession> CreateSession(
         IBedrockClient client,
         IMcpToolAdapter adapter,
@@ -746,6 +829,7 @@ public class ChatSessionTests
                     Metadata = options.Metadata,
                     MaxToolIterations = options.MaxToolIterations,
                     ServiceTier = options.ServiceTier,
+                    OutputConfig = options.OutputConfig,
                     PersistConversation = true
                 }
                 : new ChatSessionOptions

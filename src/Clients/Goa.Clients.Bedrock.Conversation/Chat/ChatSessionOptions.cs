@@ -58,4 +58,9 @@ public sealed class ChatSessionOptions
     /// Gets the optional service tier for the conversation requests.
     /// </summary>
     public ServiceTier? ServiceTier { get; init; }
+
+    /// <summary>
+    /// Gets the optional output configuration for structured output formats (e.g., JSON schema).
+    /// </summary>
+    public OutputConfig? OutputConfig { get; init; }
 }
