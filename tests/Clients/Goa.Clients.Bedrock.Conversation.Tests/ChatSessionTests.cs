@@ -800,6 +800,189 @@ public class ChatSessionTests
         await Assert.That(capturedRequest!.OutputConfig).IsNull();
     }
 
+    [Test]
+    public async Task SendAsync_WhenResponseContainsOnlyXmlTags_PreservesOriginalContent()
+    {
+        // Arrange
+        var mockClient = new Mock<IBedrockClient>();
+        var mockAdapter = new Mock<IMcpToolAdapter>();
+        var mockStore = new Mock<IConversationStore>();
+
+        mockAdapter.Setup(a => a.ToBedrockTools(It.IsAny<IEnumerable<McpToolDefinition>>()))
+            .Returns(new List<Tool>());
+
+        // Bedrock responds with ONLY thinking tags - no visible text
+        mockClient.Setup(c => c.ConverseAsync(It.IsAny<ConverseRequest>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new ConverseResponse
+            {
+                StopReason = StopReason.EndTurn,
+                Output = new ConverseOutput
+                {
+                    Message = new Message
+                    {
+                        Role = ConversationRole.Assistant,
+                        Content = [new ContentBlock { Text = "<thinking>The previous request was about contacts.</thinking>" }]
+                    }
+                },
+                Usage = new TokenUsage { InputTokens = 10, OutputTokens = 46, TotalTokens = 56 }
+            });
+
+        Message? persistedAssistantMessage = null;
+        mockStore.Setup(s => s.AddMessageAsync(
+                It.IsAny<string>(),
+                ConversationRole.Assistant,
+                It.IsAny<Message>(),
+                It.IsAny<TokenUsage?>(),
+                It.IsAny<CancellationToken>(),
+                It.IsAny<IReadOnlyDictionary<string, IReadOnlyList<string>>?>()))
+            .Callback<string, ConversationRole, Message, TokenUsage?, CancellationToken, IReadOnlyDictionary<string, IReadOnlyList<string>>?>(
+                (_, _, msg, _, _, _) => persistedAssistantMessage = msg)
+            .ReturnsAsync(new ConversationMessage { Id = "msg-2", ConversationId = "conv-1", Message = new Message() });
+
+        mockStore.Setup(s => s.AddMessageAsync(
+                It.IsAny<string>(),
+                ConversationRole.User,
+                It.IsAny<Message>(),
+                It.IsAny<TokenUsage?>(),
+                It.IsAny<CancellationToken>(),
+                It.IsAny<IReadOnlyDictionary<string, IReadOnlyList<string>>?>()))
+            .ReturnsAsync(new ConversationMessage { Id = "msg-1", ConversationId = "conv-1", Message = new Message() });
+
+        var options = new ChatSessionOptions
+        {
+            ModelId = TestModelId,
+            PersistConversation = true
+        };
+
+        var session = await CreateSession(mockClient.Object, mockAdapter.Object, mockStore.Object, options, "conv-1");
+
+        // Act
+        var result = await session.SendAsync("Debug: why didn't you find this immediately?");
+
+        // Assert - response should not be empty
+        await Assert.That(result.IsError).IsFalse();
+        await Assert.That(result.Value.Text).IsNotEmpty();
+
+        // Assert - persisted message must have non-empty content
+        await Assert.That(persistedAssistantMessage).IsNotNull();
+        await Assert.That(persistedAssistantMessage!.Content).Count().IsGreaterThan(0);
+
+        // Assert - extracted tags should still contain the thinking content
+        await Assert.That(result.Value.ExtractedTags).ContainsKey("thinking");
+    }
+
+    [Test]
+    public async Task ResumeAsync_WithEmptyContentMessages_FiltersThemOut()
+    {
+        // Arrange
+        var mockClient = new Mock<IBedrockClient>();
+        var mockAdapter = new Mock<IMcpToolAdapter>();
+        var mockStore = new Mock<IConversationStore>();
+
+        mockAdapter.Setup(a => a.ToBedrockTools(It.IsAny<IEnumerable<McpToolDefinition>>()))
+            .Returns(new List<Tool>());
+
+        var conversationWithMessages = new ConversationWithMessages
+        {
+            Conversation = new Entities.Conversation
+            {
+                Id = "conv-corrupted",
+                Metadata = new ConversationMetadata { ModelId = TestModelId },
+                CreatedAt = DateTimeOffset.UtcNow,
+                UpdatedAt = DateTimeOffset.UtcNow,
+                MessageCount = 3
+            },
+            Messages =
+            [
+                new ConversationMessage
+                {
+                    Id = "msg-1",
+                    ConversationId = "conv-corrupted",
+                    Role = Bedrock.Enums.ConversationRole.User,
+                    Message = new Message
+                    {
+                        Role = Bedrock.Enums.ConversationRole.User,
+                        Content = [new ContentBlock { Text = "Hello" }]
+                    }
+                },
+                new ConversationMessage
+                {
+                    Id = "msg-2",
+                    ConversationId = "conv-corrupted",
+                    Role = Bedrock.Enums.ConversationRole.Assistant,
+                    Message = new Message
+                    {
+                        Role = Bedrock.Enums.ConversationRole.Assistant,
+                        Content = [] // Empty - corrupted message
+                    }
+                },
+                new ConversationMessage
+                {
+                    Id = "msg-3",
+                    ConversationId = "conv-corrupted",
+                    Role = Bedrock.Enums.ConversationRole.User,
+                    Message = new Message
+                    {
+                        Role = Bedrock.Enums.ConversationRole.User,
+                        Content = [new ContentBlock { Text = "Hello?" }]
+                    }
+                }
+            ]
+        };
+
+        mockStore.Setup(s => s.GetConversationWithMessagesAsync("conv-corrupted", null, null, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(conversationWithMessages);
+
+        ConverseRequest? capturedRequest = null;
+        mockClient.Setup(c => c.ConverseAsync(It.IsAny<ConverseRequest>(), It.IsAny<CancellationToken>()))
+            .Callback<ConverseRequest, CancellationToken>((r, _) => capturedRequest = r)
+            .ReturnsAsync(new ConverseResponse
+            {
+                StopReason = StopReason.EndTurn,
+                Output = new ConverseOutput
+                {
+                    Message = new Message
+                    {
+                        Role = ConversationRole.Assistant,
+                        Content = [new ContentBlock { Text = "Hi there!" }]
+                    }
+                },
+                Usage = new TokenUsage { InputTokens = 10, OutputTokens = 5, TotalTokens = 15 }
+            });
+
+        var factory = new ChatSessionFactory(mockClient.Object, mockAdapter.Object, mockStore.Object);
+
+        // Act
+        var sessionResult = await factory.ResumeAsync("conv-corrupted", new ChatSessionOptions
+        {
+            ModelId = TestModelId,
+            PersistConversation = true
+        });
+
+        await Assert.That(sessionResult.IsError).IsFalse();
+        var session = sessionResult.Value;
+
+        mockStore.Setup(s => s.AddMessageAsync(
+                It.IsAny<string>(),
+                It.IsAny<ConversationRole>(),
+                It.IsAny<Message>(),
+                It.IsAny<TokenUsage?>(),
+                It.IsAny<CancellationToken>(),
+                It.IsAny<IReadOnlyDictionary<string, IReadOnlyList<string>>?>()))
+            .ReturnsAsync(new ConversationMessage { Id = "msg-4", ConversationId = "conv-corrupted", Message = new Message() });
+
+        var result = await session.SendAsync("New message");
+
+        // Assert - request should only contain non-empty messages (msg-1, msg-3) plus the new message
+        // The empty msg-2 should have been filtered out
+        await Assert.That(result.IsError).IsFalse();
+        await Assert.That(capturedRequest).IsNotNull();
+
+        // History: msg-1 (user) + msg-3 (user) + new message (user) = 3 messages
+        // msg-2 was filtered out
+        await Assert.That(capturedRequest!.Messages).Count().IsEqualTo(3);
+    }
+
     private static async Task<IChatSession> CreateSession(
         IBedrockClient client,
         IMcpToolAdapter adapter,

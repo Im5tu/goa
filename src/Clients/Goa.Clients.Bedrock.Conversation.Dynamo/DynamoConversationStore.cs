@@ -247,6 +247,11 @@ public sealed class DynamoConversationStore : IConversationStore
         for (var i = 0; i < messageList.Count; i++)
         {
             var (role, message, tokenUsage, extractedTags) = messageList[i];
+
+            if (message.Content.Count == 0)
+                return Error.Validation(ConversationErrorCodes.MessageContentEmpty,
+                    "Message content must not be empty");
+
             var sequenceNumber = startSequence + i;
             var messageId = Guid.NewGuid().ToString("N");
 

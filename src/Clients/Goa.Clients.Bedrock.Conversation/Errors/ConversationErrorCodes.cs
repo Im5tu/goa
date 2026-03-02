@@ -64,6 +64,11 @@ public static class ConversationErrorCodes
     public static readonly string MessagesEmpty = $"{Prefix}.MessagesEmpty";
 
     /// <summary>
+    /// Error code for when message content is empty after processing.
+    /// </summary>
+    public static readonly string MessageContentEmpty = $"{Prefix}.MessageContentEmpty";
+
+    /// <summary>
     /// Error code for missing message ID.
     /// </summary>
     public static readonly string MessageMissingId = $"{Prefix}.Message.MissingId";

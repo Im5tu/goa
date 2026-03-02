@@ -313,7 +313,10 @@ internal sealed class ChatSession : IChatSession
     {
         foreach (var msg in messages)
         {
-            _messages.Add(msg.Message);
+            if (msg.Message.Content.Count > 0)
+            {
+                _messages.Add(msg.Message);
+            }
         }
     }
 
@@ -371,6 +374,12 @@ internal sealed class ChatSession : IChatSession
         var result = allTags.ToDictionary(
             kvp => kvp.Key,
             kvp => (IReadOnlyList<string>)kvp.Value);
+
+        if (cleanedContent.Count == 0 && message.Content.Count > 0)
+        {
+            // Tag extraction emptied all content - preserve original to avoid empty messages
+            return (new Message { Role = message.Role, Content = message.Content.ToList() }, result);
+        }
 
         return (new Message { Role = message.Role, Content = cleanedContent }, result);
     }
