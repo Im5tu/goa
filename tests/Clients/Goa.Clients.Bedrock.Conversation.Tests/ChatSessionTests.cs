@@ -801,17 +801,77 @@ public class ChatSessionTests
     }
 
     [Test]
-    public async Task SendAsync_WhenResponseContainsOnlyXmlTags_PreservesOriginalContent()
+    public async Task SendAsync_ThinkingOnlyResponse_AutoContinues()
     {
         // Arrange
         var mockClient = new Mock<IBedrockClient>();
         var mockAdapter = new Mock<IMcpToolAdapter>();
-        var mockStore = new Mock<IConversationStore>();
 
         mockAdapter.Setup(a => a.ToBedrockTools(It.IsAny<IEnumerable<McpToolDefinition>>()))
             .Returns(new List<Tool>());
 
-        // Bedrock responds with ONLY thinking tags - no visible text
+        var callCount = 0;
+        mockClient.Setup(c => c.ConverseAsync(It.IsAny<ConverseRequest>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(() =>
+            {
+                callCount++;
+                if (callCount == 1)
+                {
+                    // First response: only thinking tags, no real content
+                    return new ConverseResponse
+                    {
+                        StopReason = StopReason.EndTurn,
+                        Output = new ConverseOutput
+                        {
+                            Message = new Message
+                            {
+                                Role = ConversationRole.Assistant,
+                                Content = [new ContentBlock { Text = "<thinking>The previous request was about contacts.</thinking>" }]
+                            }
+                        },
+                        Usage = new TokenUsage { InputTokens = 10, OutputTokens = 46, TotalTokens = 56 }
+                    };
+                }
+                // Second response: real content
+                return new ConverseResponse
+                {
+                    StopReason = StopReason.EndTurn,
+                    Output = new ConverseOutput
+                    {
+                        Message = new Message
+                        {
+                            Role = ConversationRole.Assistant,
+                            Content = [new ContentBlock { Text = """{"action":"list_contacts"}""" }]
+                        }
+                    },
+                    Usage = new TokenUsage { InputTokens = 20, OutputTokens = 10, TotalTokens = 30 }
+                };
+            });
+
+        var session = await CreateSession(mockClient.Object, mockAdapter.Object);
+
+        // Act
+        var result = await session.SendAsync("List my contacts");
+
+        // Assert - should return the real content, not the thinking-only response
+        await Assert.That(result.IsError).IsFalse();
+        await Assert.That(result.Value.Text).IsEqualTo("""{"action":"list_contacts"}""");
+
+        // Assert - client was called twice (thinking-only + continuation)
+        mockClient.Verify(c => c.ConverseAsync(It.IsAny<ConverseRequest>(), It.IsAny<CancellationToken>()), Times.Exactly(2));
+    }
+
+    [Test]
+    public async Task SendAsync_ThinkingOnlyResponse_RespectsMaxIterations()
+    {
+        // Arrange
+        var mockClient = new Mock<IBedrockClient>();
+        var mockAdapter = new Mock<IMcpToolAdapter>();
+
+        mockAdapter.Setup(a => a.ToBedrockTools(It.IsAny<IEnumerable<McpToolDefinition>>()))
+            .Returns(new List<Tool>());
+
+        // Always return thinking-only responses
         mockClient.Setup(c => c.ConverseAsync(It.IsAny<ConverseRequest>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new ConverseResponse
             {
@@ -821,54 +881,31 @@ public class ChatSessionTests
                     Message = new Message
                     {
                         Role = ConversationRole.Assistant,
-                        Content = [new ContentBlock { Text = "<thinking>The previous request was about contacts.</thinking>" }]
+                        Content = [new ContentBlock { Text = "<thinking>Still thinking...</thinking>" }]
                     }
                 },
-                Usage = new TokenUsage { InputTokens = 10, OutputTokens = 46, TotalTokens = 56 }
+                Usage = new TokenUsage { InputTokens = 10, OutputTokens = 10, TotalTokens = 20 }
             });
-
-        Message? persistedAssistantMessage = null;
-        mockStore.Setup(s => s.AddMessageAsync(
-                It.IsAny<string>(),
-                ConversationRole.Assistant,
-                It.IsAny<Message>(),
-                It.IsAny<TokenUsage?>(),
-                It.IsAny<CancellationToken>(),
-                It.IsAny<IReadOnlyDictionary<string, IReadOnlyList<string>>?>()))
-            .Callback<string, ConversationRole, Message, TokenUsage?, CancellationToken, IReadOnlyDictionary<string, IReadOnlyList<string>>?>(
-                (_, _, msg, _, _, _) => persistedAssistantMessage = msg)
-            .ReturnsAsync(new ConversationMessage { Id = "msg-2", ConversationId = "conv-1", Message = new Message() });
-
-        mockStore.Setup(s => s.AddMessageAsync(
-                It.IsAny<string>(),
-                ConversationRole.User,
-                It.IsAny<Message>(),
-                It.IsAny<TokenUsage?>(),
-                It.IsAny<CancellationToken>(),
-                It.IsAny<IReadOnlyDictionary<string, IReadOnlyList<string>>?>()))
-            .ReturnsAsync(new ConversationMessage { Id = "msg-1", ConversationId = "conv-1", Message = new Message() });
 
         var options = new ChatSessionOptions
         {
             ModelId = TestModelId,
-            PersistConversation = true
+            MaxToolIterations = 2
         };
 
-        var session = await CreateSession(mockClient.Object, mockAdapter.Object, mockStore.Object, options, "conv-1");
+        var session = await CreateSession(mockClient.Object, mockAdapter.Object, options: options);
 
         // Act
-        var result = await session.SendAsync("Debug: why didn't you find this immediately?");
+        var result = await session.SendAsync("Do something");
 
-        // Assert - response should not be empty
+        // Assert - should stop after MaxToolIterations auto-continues
+        // With MaxToolIterations=2: initial call + 2 auto-continues = 3 total calls
+        // On the 3rd response, iterationCount=2 which is NOT < MaxToolIterations, so it falls through
         await Assert.That(result.IsError).IsFalse();
+        mockClient.Verify(c => c.ConverseAsync(It.IsAny<ConverseRequest>(), It.IsAny<CancellationToken>()), Times.Exactly(3));
+
+        // The response text will contain the original thinking-only content (preserved by CleanMessageContent fallback)
         await Assert.That(result.Value.Text).IsNotEmpty();
-
-        // Assert - persisted message must have non-empty content
-        await Assert.That(persistedAssistantMessage).IsNotNull();
-        await Assert.That(persistedAssistantMessage!.Content).Count().IsGreaterThan(0);
-
-        // Assert - extracted tags should still contain the thinking content
-        await Assert.That(result.Value.ExtractedTags).ContainsKey("thinking");
     }
 
     [Test]

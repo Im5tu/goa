@@ -217,14 +217,57 @@ internal sealed class ChatSession : IChatSession
                 // Clean message content (extract XML tags)
                 var (cleanedFinalMessage, finalExtractedTags) = CleanMessageContent(finalMessage);
 
-                // Add cleaned message to history
-                _messages.Add(cleanedFinalMessage);
-
                 // Extract cleaned text content
                 var cleanedText = cleanedFinalMessage.Content
                     .Where(c => c.Text != null)
                     .Select(c => c.Text!)
                     .FirstOrDefault() ?? string.Empty;
+
+                // Detect thinking-only response: tags were extracted but no real text remains.
+                // Note: CleanMessageContent preserves original content when all text blocks are
+                // stripped by tag extraction (to avoid empty messages), so cleanedText may still
+                // contain raw tags. We re-parse here to check if any non-tag text actually exists.
+                if (finalExtractedTags.Count > 0 && iterationCount < _options.MaxToolIterations)
+                {
+                    var (textWithoutTags, _) = XmlTagParser.Parse(cleanedText);
+                    if (string.IsNullOrWhiteSpace(textWithoutTags))
+                    {
+                        // Model returned only XML tags (e.g. <thinking>) without actual content.
+                        // Add to history and loop to get the real response.
+                        _messages.Add(cleanedFinalMessage);
+
+                        if (_options.PersistConversation && _store != null && ConversationId != null)
+                        {
+                            var addResult = await _store.AddMessageAsync(
+                                ConversationId, ConversationRole.Assistant,
+                                cleanedFinalMessage, response.Usage, ct, finalExtractedTags)
+                                .ConfigureAwait(false);
+                            if (addResult.IsError) return addResult.Errors;
+                        }
+
+                        var continueMessage = new Message
+                        {
+                            Role = ConversationRole.User,
+                            Content = [new ContentBlock { Text = "Continue." }]
+                        };
+                        _messages.Add(continueMessage);
+
+                        if (_options.PersistConversation && _store != null && ConversationId != null)
+                        {
+                            var addResult = await _store.AddMessageAsync(
+                                ConversationId, ConversationRole.User,
+                                continueMessage, null, ct)
+                                .ConfigureAwait(false);
+                            if (addResult.IsError) return addResult.Errors;
+                        }
+
+                        iterationCount++;
+                        continue;
+                    }
+                }
+
+                // Add cleaned message to history
+                _messages.Add(cleanedFinalMessage);
 
                 // Persist if configured
                 if (_options.PersistConversation && _store != null && ConversationId != null)
