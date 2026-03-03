@@ -334,7 +334,7 @@ internal sealed class ChatSession : IChatSession
                 OutputTokens = tokenUsage.OutputTokens,
                 TotalTokens = tokenUsage.TotalTokens,
                 CacheReadInputTokens = tokenUsage.CacheReadInputTokens,
-                CacheCreationInputTokens = tokenUsage.CacheCreationInputTokens
+                CacheWriteInputTokens = tokenUsage.CacheWriteInputTokens
             };
         }
     }
@@ -452,7 +452,7 @@ internal sealed class ChatSession : IChatSession
             OutputTokens = _totalTokenUsage.OutputTokens + usage.OutputTokens,
             TotalTokens = _totalTokenUsage.TotalTokens + usage.TotalTokens,
             CacheReadInputTokens = _totalTokenUsage.CacheReadInputTokens + usage.CacheReadInputTokens,
-            CacheCreationInputTokens = _totalTokenUsage.CacheCreationInputTokens + usage.CacheCreationInputTokens
+            CacheWriteInputTokens = _totalTokenUsage.CacheWriteInputTokens + usage.CacheWriteInputTokens
         };
     }
 }

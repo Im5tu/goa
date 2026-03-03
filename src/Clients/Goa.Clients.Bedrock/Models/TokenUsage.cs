@@ -26,7 +26,7 @@ public class TokenUsage
     public int CacheReadInputTokens { get; set; }
 
     /// <summary>
-    /// The number of input tokens written to cache.
+    /// The number of input tokens written to cache during creation.
     /// </summary>
-    public int CacheCreationInputTokens { get; set; }
+    public int CacheWriteInputTokens { get; set; }
 }
