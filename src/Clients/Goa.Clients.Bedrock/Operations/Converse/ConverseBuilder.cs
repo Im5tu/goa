@@ -28,6 +28,18 @@ public class ConverseBuilder(string modelId)
     }
 
     /// <summary>
+    /// Adds a cache checkpoint after the last system content block.
+    /// Requires at least one system prompt to be set first.
+    /// </summary>
+    /// <returns>The builder instance for method chaining.</returns>
+    public ConverseBuilder WithSystemCachePoint()
+    {
+        _request.System ??= new();
+        _request.System.Add(new SystemContentBlock { CachePoint = new CachePoint() });
+        return this;
+    }
+
+    /// <summary>
     /// Adds a user message to the conversation.
     /// </summary>
     /// <param name="content">The text content of the user message.</param>

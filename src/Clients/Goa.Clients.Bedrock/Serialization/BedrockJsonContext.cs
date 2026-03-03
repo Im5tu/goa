@@ -50,6 +50,7 @@ namespace Goa.Clients.Bedrock.Serialization;
 [JsonSerializable(typeof(GuardrailConfiguration))]
 [JsonSerializable(typeof(PerformanceConfiguration))]
 [JsonSerializable(typeof(TokenUsage))]
+[JsonSerializable(typeof(CachePoint))]
 [JsonSerializable(typeof(ConverseMetrics))]
 // Operations - Converse
 [JsonSerializable(typeof(ConverseRequest))]

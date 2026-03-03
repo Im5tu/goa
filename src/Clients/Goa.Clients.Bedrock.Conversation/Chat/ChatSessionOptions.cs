@@ -60,6 +60,12 @@ public sealed class ChatSessionOptions
     public ServiceTier? ServiceTier { get; init; }
 
     /// <summary>
+    /// Gets a value indicating whether to enable prompt caching for system prompts.
+    /// When enabled, a cache checkpoint is added after the system prompt.
+    /// </summary>
+    public bool EnablePromptCaching { get; init; }
+
+    /// <summary>
     /// Gets the optional output configuration for structured output formats (e.g., JSON schema).
     /// </summary>
     public OutputConfig? OutputConfig { get; init; }

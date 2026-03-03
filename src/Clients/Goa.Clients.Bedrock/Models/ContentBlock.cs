@@ -31,4 +31,9 @@ public class ContentBlock
     /// Tool result content (response from a tool invocation).
     /// </summary>
     public ToolResultBlock? ToolResult { get; set; }
+
+    /// <summary>
+    /// Cache checkpoint for prompt caching.
+    /// </summary>
+    public CachePoint? CachePoint { get; set; }
 }

@@ -80,6 +80,12 @@ public class SystemContentBlock
     /// </summary>
     [JsonPropertyName("text")]
     public string? Text { get; set; }
+
+    /// <summary>
+    /// Cache checkpoint for prompt caching.
+    /// </summary>
+    [JsonPropertyName("cachePoint")]
+    public CachePoint? CachePoint { get; set; }
 }
 
 /// <summary>

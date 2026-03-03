@@ -332,7 +332,9 @@ internal sealed class ChatSession : IChatSession
             {
                 InputTokens = tokenUsage.InputTokens,
                 OutputTokens = tokenUsage.OutputTokens,
-                TotalTokens = tokenUsage.TotalTokens
+                TotalTokens = tokenUsage.TotalTokens,
+                CacheReadInputTokens = tokenUsage.CacheReadInputTokens,
+                CacheCreationInputTokens = tokenUsage.CacheCreationInputTokens
             };
         }
     }
@@ -393,6 +395,11 @@ internal sealed class ChatSession : IChatSession
         if (!string.IsNullOrEmpty(_options.SystemPrompt))
         {
             builder.WithSystemPrompt(_options.SystemPrompt);
+
+            if (_options.EnablePromptCaching)
+            {
+                builder.WithSystemCachePoint();
+            }
         }
 
         if (_options.TopP.HasValue)
@@ -443,7 +450,9 @@ internal sealed class ChatSession : IChatSession
         {
             InputTokens = _totalTokenUsage.InputTokens + usage.InputTokens,
             OutputTokens = _totalTokenUsage.OutputTokens + usage.OutputTokens,
-            TotalTokens = _totalTokenUsage.TotalTokens + usage.TotalTokens
+            TotalTokens = _totalTokenUsage.TotalTokens + usage.TotalTokens,
+            CacheReadInputTokens = _totalTokenUsage.CacheReadInputTokens + usage.CacheReadInputTokens,
+            CacheCreationInputTokens = _totalTokenUsage.CacheCreationInputTokens + usage.CacheCreationInputTokens
         };
     }
 }

@@ -19,4 +19,14 @@ public class TokenUsage
     /// The total number of tokens used.
     /// </summary>
     public int TotalTokens { get; set; }
+
+    /// <summary>
+    /// The number of input tokens read from cache.
+    /// </summary>
+    public int CacheReadInputTokens { get; set; }
+
+    /// <summary>
+    /// The number of input tokens written to cache.
+    /// </summary>
+    public int CacheCreationInputTokens { get; set; }
 }
