@@ -315,6 +315,38 @@ public class DynamoServiceClient : JsonAwsServiceClient<DynamoServiceClientConfi
         return DynamoResponseReader.ReadGetItemResponse(buffer.Span, itemReader);
     }
 
+    /// <inheritdoc/>
+    public async Task<ErrorOr<PutItemResponse>> PutItemAsync<T>(string tableName, T item, DynamoItemWriter<T> itemWriter, CancellationToken cancellationToken = default)
+    {
+        using var buffer = new System.IO.MemoryStream();
+        using var writer = new System.Text.Json.Utf8JsonWriter(buffer);
+        writer.WriteStartObject();
+        writer.WriteString("TableName", tableName);
+        writer.WritePropertyName("Item");
+        itemWriter(writer, item);
+        writer.WriteEndObject();
+        writer.Flush();
+
+        var content = buffer.ToArray();
+        var requestMessage = CreateRequestMessage(
+            HttpMethod.Post, "/", content,
+            new MediaTypeHeaderValue("application/x-amz-json-1.0"));
+        requestMessage.Headers.Add("X-Amz-Target", "DynamoDB_20120810.PutItem");
+
+        using var response = await SendAsync(requestMessage, "DynamoDB_20120810.PutItem", cancellationToken);
+
+        if (!response.IsSuccessStatusCode)
+            return await HandleTypedErrorAsync(response, cancellationToken);
+
+        using var responseBuffer = await ReadResponseBytesAsync(response, cancellationToken);
+        if (responseBuffer.Length == 0)
+            return new PutItemResponse();
+
+        var reader = DynamoJsonContext.GetReader<PutItemResponse>();
+        var jsonReader = new System.Text.Json.Utf8JsonReader(responseBuffer.Span);
+        return reader(ref jsonReader);
+    }
+
     private async Task<Error> HandleTypedErrorAsync(HttpResponseMessage response, CancellationToken cancellationToken)
     {
         var errorPayload = await response.Content.ReadAsStringAsync(cancellationToken);

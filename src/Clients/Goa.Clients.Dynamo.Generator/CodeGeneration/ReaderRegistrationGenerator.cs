@@ -42,6 +42,7 @@ public class ReaderRegistrationGenerator : ICodeGenerator
                     {
                         var normalizedName = NamingHelpers.NormalizeTypeName(type.Name);
                         builder.AppendLine($"DynamoItemReaderRegistry.Register<{type.FullName}>(DynamoJsonMapper.{normalizedName}.ReadFromJson);");
+                        builder.AppendLine($"DynamoItemWriterRegistry.Register<{type.FullName}>(DynamoJsonMapper.{normalizedName}.WriteToJson);");
                     }
                 }
                 builder.CloseBrace();
