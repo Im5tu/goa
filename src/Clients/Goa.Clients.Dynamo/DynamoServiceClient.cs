@@ -347,6 +347,48 @@ public class DynamoServiceClient : JsonAwsServiceClient<DynamoServiceClientConfi
         return reader(ref jsonReader);
     }
 
+    /// <inheritdoc/>
+    public async Task<ErrorOr<BatchGetResult<T>>> BatchGetItemAsync<T>(BatchGetItemRequest request, DynamoItemReader<T> itemReader, CancellationToken cancellationToken = default)
+    {
+        var content = SerializeToUtf8Bytes(request);
+        var requestMessage = CreateRequestMessage(
+            HttpMethod.Post, "/", content,
+            new MediaTypeHeaderValue("application/x-amz-json-1.0"));
+        requestMessage.Headers.Add("X-Amz-Target", "DynamoDB_20120810.BatchGetItem");
+
+        using var response = await SendAsync(requestMessage, "DynamoDB_20120810.BatchGetItem", cancellationToken);
+
+        if (!response.IsSuccessStatusCode)
+            return await HandleTypedErrorAsync(response, cancellationToken);
+
+        using var buffer = await ReadResponseBytesAsync(response, cancellationToken);
+        if (buffer.Length == 0)
+            return new BatchGetResult<T>();
+
+        return DynamoResponseReader.ReadBatchGetItemResponse(buffer.Span, itemReader);
+    }
+
+    /// <inheritdoc/>
+    public async Task<ErrorOr<TransactGetResult<T>>> TransactGetItemsAsync<T>(TransactGetRequest request, DynamoItemReader<T> itemReader, CancellationToken cancellationToken = default)
+    {
+        var content = SerializeToUtf8Bytes(request);
+        var requestMessage = CreateRequestMessage(
+            HttpMethod.Post, "/", content,
+            new MediaTypeHeaderValue("application/x-amz-json-1.0"));
+        requestMessage.Headers.Add("X-Amz-Target", "DynamoDB_20120810.TransactGetItems");
+
+        using var response = await SendAsync(requestMessage, "DynamoDB_20120810.TransactGetItems", cancellationToken);
+
+        if (!response.IsSuccessStatusCode)
+            return await HandleTypedErrorAsync(response, cancellationToken);
+
+        using var buffer = await ReadResponseBytesAsync(response, cancellationToken);
+        if (buffer.Length == 0)
+            return new TransactGetResult<T>();
+
+        return DynamoResponseReader.ReadTransactGetItemResponse(buffer.Span, itemReader);
+    }
+
     private async Task<Error> HandleTypedErrorAsync(HttpResponseMessage response, CancellationToken cancellationToken)
     {
         var errorPayload = await response.Content.ReadAsStringAsync(cancellationToken);

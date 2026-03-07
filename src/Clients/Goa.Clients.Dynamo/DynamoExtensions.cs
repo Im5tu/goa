@@ -322,6 +322,42 @@ public static class DynamoExtensions
     }
 
     /// <summary>
+    /// Executes a typed DynamoDB BatchGetItem operation with automatic retry of unprocessed keys using an async iterator.
+    /// </summary>
+    public static async IAsyncEnumerable<KeyValuePair<string, T>> BatchGetAllAsync<T>(this IDynamoClient client, DynamoItemReader<T> itemReader, Action<BatchGetItemBuilder> builder, [EnumeratorCancellation] CancellationToken cancellationToken = default)
+    {
+        var _builder = new BatchGetItemBuilder();
+        builder(_builder);
+        var request = _builder.Build();
+
+        do
+        {
+            var result = await client.BatchGetItemAsync(request, itemReader, cancellationToken);
+            if (result.IsError)
+            {
+                yield break;
+            }
+
+            foreach (var tableResponse in result.Value.Responses)
+            {
+                foreach (var item in tableResponse.Value)
+                {
+                    yield return new KeyValuePair<string, T>(tableResponse.Key, item);
+                }
+            }
+
+            if (!result.Value.HasUnprocessedKeys)
+            {
+                break;
+            }
+
+            // Retry with unprocessed keys
+            request.RequestItems = result.Value.UnprocessedKeys!;
+        }
+        while (true);
+    }
+
+    /// <summary>
     /// Converts an async enumerable to a list asynchronously.
     /// </summary>
     /// <typeparam name="T">The type of elements in the async enumerable.</typeparam>

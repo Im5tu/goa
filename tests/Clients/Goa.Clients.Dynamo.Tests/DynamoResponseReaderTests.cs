@@ -519,6 +519,129 @@ public class DynamoResponseReaderTests
         await Assert.That(result.ConsumedCapacity!.LocalSecondaryIndexes!["LSI1"].WriteCapacityUnits).IsEqualTo(0.5);
     }
 
+    // === BatchGetItemResponse parsing ===
+
+    [Test]
+    public async Task ReadBatchGetItemResponse_ShouldDeserializeItems()
+    {
+        var json = """
+        {
+            "Responses": {
+                "TestTable": [
+                    {"pk": {"S": "pk1"}, "sk": {"S": "sk1"}, "data": {"S": "data1"}},
+                    {"pk": {"S": "pk2"}, "sk": {"S": "sk2"}, "data": {"S": "data2"}}
+                ],
+                "OtherTable": [
+                    {"pk": {"S": "pk3"}, "sk": {"S": "sk3"}, "data": {"S": "data3"}}
+                ]
+            }
+        }
+        """u8;
+
+        var result = DynamoResponseReader.ReadBatchGetItemResponse<TestEntity>(json, ReadTestEntity);
+
+        await Assert.That(result.Responses.Count).IsEqualTo(2);
+        await Assert.That(result.Responses["TestTable"].Count).IsEqualTo(2);
+        await Assert.That(result.Responses["TestTable"][0].Pk).IsEqualTo("pk1");
+        await Assert.That(result.Responses["TestTable"][0].Data).IsEqualTo("data1");
+        await Assert.That(result.Responses["TestTable"][1].Pk).IsEqualTo("pk2");
+        await Assert.That(result.Responses["OtherTable"].Count).IsEqualTo(1);
+        await Assert.That(result.Responses["OtherTable"][0].Pk).IsEqualTo("pk3");
+        await Assert.That(result.HasUnprocessedKeys).IsFalse();
+    }
+
+    [Test]
+    public async Task ReadBatchGetItemResponse_ShouldHandleEmptyResponses()
+    {
+        var json = """
+        {
+            "Responses": {}
+        }
+        """u8;
+
+        var result = DynamoResponseReader.ReadBatchGetItemResponse<TestEntity>(json, ReadTestEntity);
+
+        await Assert.That(result.Responses.Count).IsEqualTo(0);
+        await Assert.That(result.HasUnprocessedKeys).IsFalse();
+    }
+
+    [Test]
+    public async Task ReadBatchGetItemResponse_ShouldParseConsumedCapacity()
+    {
+        var json = """
+        {
+            "Responses": {
+                "TestTable": [
+                    {"pk": {"S": "pk1"}, "sk": {"S": "sk1"}}
+                ]
+            },
+            "ConsumedCapacity": [
+                {
+                    "TableName": "TestTable",
+                    "CapacityUnits": 5.0,
+                    "ReadCapacityUnits": 3.0
+                }
+            ]
+        }
+        """u8;
+
+        var result = DynamoResponseReader.ReadBatchGetItemResponse<TestEntity>(json, ReadTestEntity);
+
+        await Assert.That(result.ConsumedCapacity).IsNotNull();
+        await Assert.That(result.ConsumedCapacity!.Count).IsEqualTo(1);
+        await Assert.That(result.ConsumedCapacity![0].TableName).IsEqualTo("TestTable");
+        await Assert.That(result.ConsumedCapacity![0].CapacityUnits).IsEqualTo(5.0);
+        await Assert.That(result.ConsumedCapacity![0].ReadCapacityUnits).IsEqualTo(3.0);
+    }
+
+    // === TransactGetItemResponse parsing ===
+
+    [Test]
+    public async Task ReadTransactGetItemResponse_ShouldDeserializeItems()
+    {
+        var json = """
+        {
+            "Responses": [
+                {"Item": {"pk": {"S": "pk1"}, "sk": {"S": "sk1"}, "data": {"S": "data1"}}},
+                {"Item": {"pk": {"S": "pk2"}, "sk": {"S": "sk2"}, "data": {"S": "data2"}}}
+            ]
+        }
+        """u8;
+
+        var result = DynamoResponseReader.ReadTransactGetItemResponse<TestEntity>(json, ReadTestEntity);
+
+        await Assert.That(result.Items.Count).IsEqualTo(2);
+        await Assert.That(result.Items[0]).IsNotNull();
+        await Assert.That(result.Items[0]!.Pk).IsEqualTo("pk1");
+        await Assert.That(result.Items[0]!.Data).IsEqualTo("data1");
+        await Assert.That(result.Items[1]).IsNotNull();
+        await Assert.That(result.Items[1]!.Pk).IsEqualTo("pk2");
+        await Assert.That(result.Items[1]!.Data).IsEqualTo("data2");
+    }
+
+    [Test]
+    public async Task ReadTransactGetItemResponse_ShouldHandleEmptyItemObjects()
+    {
+        var json = """
+        {
+            "Responses": [
+                {"Item": {"pk": {"S": "pk1"}, "sk": {"S": "sk1"}, "data": {"S": "data1"}}},
+                {},
+                {"Item": {"pk": {"S": "pk3"}, "sk": {"S": "sk3"}, "data": {"S": "data3"}}}
+            ]
+        }
+        """u8;
+
+        var result = DynamoResponseReader.ReadTransactGetItemResponse<TestEntity>(json, ReadTestEntity);
+
+        await Assert.That(result.Items.Count).IsEqualTo(3);
+        await Assert.That(result.Items[0]).IsNotNull();
+        await Assert.That(result.Items[0]!.Pk).IsEqualTo("pk1");
+        await Assert.That(result.Items[1]).IsNull();
+        await Assert.That(result.Items[2]).IsNotNull();
+        await Assert.That(result.Items[2]!.Pk).IsEqualTo("pk3");
+    }
+
     [Test]
     public async Task ReadQueryResponse_ShouldParseFullResponse()
     {

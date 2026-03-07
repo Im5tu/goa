@@ -115,4 +115,14 @@ public interface IDynamoClient
     /// Puts a typed item into a DynamoDB table using a direct item writer for zero-copy serialization.
     /// </summary>
     Task<ErrorOr<PutItemResponse>> PutItemAsync<T>(string tableName, T item, DynamoItemWriter<T> itemWriter, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Gets multiple items from DynamoDB tables with direct typed deserialization.
+    /// </summary>
+    Task<ErrorOr<BatchGetResult<T>>> BatchGetItemAsync<T>(BatchGetItemRequest request, DynamoItemReader<T> itemReader, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Executes a transactional get with direct typed deserialization.
+    /// </summary>
+    Task<ErrorOr<TransactGetResult<T>>> TransactGetItemsAsync<T>(TransactGetRequest request, DynamoItemReader<T> itemReader, CancellationToken cancellationToken = default);
 }

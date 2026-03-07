@@ -1,7 +1,9 @@
 using System.Text.Json;
 using Goa.Clients.Dynamo.Models;
+using Goa.Clients.Dynamo.Operations.Batch;
 using Goa.Clients.Dynamo.Operations.Query;
 using Goa.Clients.Dynamo.Operations.Scan;
+using Goa.Clients.Dynamo.Operations.Transactions;
 
 namespace Goa.Clients.Dynamo.Internal;
 
@@ -281,5 +283,115 @@ internal static class DynamoResponseReader
             map[key] = ReadConsumedCapacity(ref reader);
         }
         return map;
+    }
+
+    public static BatchGetResult<T> ReadBatchGetItemResponse<T>(ReadOnlySpan<byte> utf8Json, DynamoItemReader<T> itemReader)
+    {
+        var result = new BatchGetResult<T>();
+        var reader = new Utf8JsonReader(utf8Json);
+
+        reader.Read(); // StartObject
+        while (reader.Read() && reader.TokenType == JsonTokenType.PropertyName)
+        {
+            var propertyName = reader.GetString();
+            reader.Read();
+
+            switch (propertyName)
+            {
+                case "Responses":
+                    result.Responses = ReadTableResponses(ref reader, itemReader);
+                    break;
+                case "UnprocessedKeys":
+                    // Skip for now - complex structure, users can retry with original request
+                    reader.Skip();
+                    break;
+                case "ConsumedCapacity":
+                    result.ConsumedCapacity = ReadConsumedCapacityList(ref reader);
+                    break;
+                default:
+                    reader.Skip();
+                    break;
+            }
+        }
+
+        return result;
+    }
+
+    public static TransactGetResult<T> ReadTransactGetItemResponse<T>(ReadOnlySpan<byte> utf8Json, DynamoItemReader<T> itemReader)
+    {
+        var result = new TransactGetResult<T>();
+        var reader = new Utf8JsonReader(utf8Json);
+
+        reader.Read(); // StartObject
+        while (reader.Read() && reader.TokenType == JsonTokenType.PropertyName)
+        {
+            var propertyName = reader.GetString();
+            reader.Read();
+
+            switch (propertyName)
+            {
+                case "Responses":
+                    result.Items = ReadTransactGetResponses(ref reader, itemReader);
+                    break;
+                case "ConsumedCapacity":
+                    result.ConsumedCapacity = ReadConsumedCapacityList(ref reader);
+                    break;
+                default:
+                    reader.Skip();
+                    break;
+            }
+        }
+
+        return result;
+    }
+
+    private static Dictionary<string, List<T>> ReadTableResponses<T>(ref Utf8JsonReader reader, DynamoItemReader<T> itemReader)
+    {
+        var responses = new Dictionary<string, List<T>>();
+        // reader is at StartObject
+        while (reader.Read() && reader.TokenType != JsonTokenType.EndObject)
+        {
+            var tableName = reader.GetString()!;
+            reader.Read(); // StartArray
+            responses[tableName] = ReadItems(ref reader, itemReader);
+        }
+        return responses;
+    }
+
+    private static List<ConsumedCapacity> ReadConsumedCapacityList(ref Utf8JsonReader reader)
+    {
+        var list = new List<ConsumedCapacity>();
+        // reader is at StartArray
+        while (reader.Read() && reader.TokenType != JsonTokenType.EndArray)
+        {
+            list.Add(ReadConsumedCapacity(ref reader));
+        }
+        return list;
+    }
+
+    private static List<T?> ReadTransactGetResponses<T>(ref Utf8JsonReader reader, DynamoItemReader<T> itemReader)
+    {
+        var items = new List<T?>();
+        // reader is at StartArray
+        while (reader.Read() && reader.TokenType != JsonTokenType.EndArray)
+        {
+            // Each element is an object like {"Item": {...}}
+            T? item = default;
+            while (reader.Read() && reader.TokenType != JsonTokenType.EndObject)
+            {
+                var propName = reader.GetString();
+                reader.Read();
+                if (propName == "Item")
+                {
+                    item = itemReader(ref reader);
+                }
+                else
+                {
+                    reader.Skip();
+                }
+            }
+            items.Add(item);
+        }
+        return items;
     }
 }
