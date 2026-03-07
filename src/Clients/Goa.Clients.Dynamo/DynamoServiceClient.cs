@@ -2,6 +2,7 @@ using ErrorOr;
 using Goa.Clients.Core;
 using Goa.Clients.Core.Http;
 using Goa.Clients.Dynamo.Errors;
+using Goa.Clients.Dynamo.Internal;
 using Goa.Clients.Dynamo.Operations.Batch;
 using Goa.Clients.Dynamo.Operations.DeleteItem;
 using Goa.Clients.Dynamo.Operations.GetItem;
@@ -12,6 +13,7 @@ using Goa.Clients.Dynamo.Operations.Transactions;
 using Goa.Clients.Dynamo.Operations.UpdateItem;
 using Goa.Clients.Dynamo.Serialization;
 using Microsoft.Extensions.Logging;
+using System.Net.Http.Headers;
 
 namespace Goa.Clients.Dynamo;
 
@@ -28,16 +30,46 @@ public class DynamoServiceClient : JsonAwsServiceClient<DynamoServiceClientConfi
     /// <param name="logger">Logger instance for logging operations.</param>
     /// <param name="configuration">Configuration for the DynamoDB service.</param>
     public DynamoServiceClient(IHttpClientFactory httpClientFactory, ILogger<DynamoServiceClient> logger, DynamoServiceClientConfiguration configuration)
-        : base(httpClientFactory, logger, configuration)
+        : base(httpClientFactory, logger, configuration, Goa.Clients.Core.AwsServiceClientSerializationContext.Default)
     {
     }
 
     /// <inheritdoc />
-    protected override System.Text.Json.Serialization.Metadata.JsonTypeInfo<TValue> ResolveJsonTypeInfo<TValue>()
+    protected override byte[] SerializeToUtf8Bytes<TRequest>(TRequest request)
     {
-        return DynamoJsonContext.Default.GetTypeInfo(typeof(TValue))
-            as System.Text.Json.Serialization.Metadata.JsonTypeInfo<TValue>
-            ?? throw new InvalidOperationException($"Cannot find type {typeof(TValue).Name} in serialization context");
+        var writer = DynamoJsonContext.GetWriter<TRequest>();
+        using var buffer = new System.IO.MemoryStream();
+        using var jsonWriter = new System.Text.Json.Utf8JsonWriter(buffer);
+        writer(jsonWriter, request);
+        jsonWriter.Flush();
+        return buffer.ToArray();
+    }
+
+    /// <inheritdoc />
+    protected override async Task<Core.Http.ApiResponse<TResponse>> ProcessJsonResponseAsync<TResponse>(HttpResponseMessage response)
+    {
+        if (typeof(TResponse) == typeof(string))
+            return await base.ProcessJsonResponseAsync<TResponse>(response);
+
+        if (!response.IsSuccessStatusCode)
+            return await base.ProcessJsonResponseAsync<TResponse>(response);
+
+        try
+        {
+            var reader = DynamoJsonContext.GetReader<TResponse>();
+            using var pooledBuffer = await ReadResponseBytesAsync(response, default);
+            if (pooledBuffer.Length == 0)
+                return new Core.Http.ApiResponse<TResponse>(default(TResponse));
+
+            var jsonReader = new System.Text.Json.Utf8JsonReader(pooledBuffer.Span);
+            var result = reader(ref jsonReader);
+            var headers = Core.Http.ResponseHeaders.FromHttpResponse(response.Headers);
+            return new Core.Http.ApiResponse<TResponse>(result, headers);
+        }
+        catch (InvalidOperationException)
+        {
+            return await base.ProcessJsonResponseAsync<TResponse>(response);
+        }
     }
 
     /// <summary>
@@ -218,6 +250,90 @@ public class DynamoServiceClient : JsonAwsServiceClient<DynamoServiceClientConfi
             cancellationToken);
 
         return ConvertApiResponse(response);
+    }
+
+    /// <inheritdoc/>
+    public async Task<ErrorOr<QueryResult<T>>> QueryAsync<T>(QueryRequest request, DynamoItemReader<T> itemReader, CancellationToken cancellationToken = default)
+    {
+        var content = SerializeToUtf8Bytes(request);
+        var requestMessage = CreateRequestMessage(
+            HttpMethod.Post, "/", content,
+            new MediaTypeHeaderValue("application/x-amz-json-1.0"));
+        requestMessage.Headers.Add("X-Amz-Target", "DynamoDB_20120810.Query");
+
+        using var response = await SendAsync(requestMessage, "DynamoDB_20120810.Query", cancellationToken);
+
+        if (!response.IsSuccessStatusCode)
+            return await HandleTypedErrorAsync(response, cancellationToken);
+
+        using var buffer = await ReadResponseBytesAsync(response, cancellationToken);
+        if (buffer.Length == 0)
+            return new QueryResult<T>();
+
+        return DynamoResponseReader.ReadQueryResponse(buffer.Span, itemReader);
+    }
+
+    /// <inheritdoc/>
+    public async Task<ErrorOr<ScanResult<T>>> ScanAsync<T>(ScanRequest request, DynamoItemReader<T> itemReader, CancellationToken cancellationToken = default)
+    {
+        var content = SerializeToUtf8Bytes(request);
+        var requestMessage = CreateRequestMessage(
+            HttpMethod.Post, "/", content,
+            new MediaTypeHeaderValue("application/x-amz-json-1.0"));
+        requestMessage.Headers.Add("X-Amz-Target", "DynamoDB_20120810.Scan");
+
+        using var response = await SendAsync(requestMessage, "DynamoDB_20120810.Scan", cancellationToken);
+
+        if (!response.IsSuccessStatusCode)
+            return await HandleTypedErrorAsync(response, cancellationToken);
+
+        using var buffer = await ReadResponseBytesAsync(response, cancellationToken);
+        if (buffer.Length == 0)
+            return new ScanResult<T>();
+
+        return DynamoResponseReader.ReadScanResponse(buffer.Span, itemReader);
+    }
+
+    /// <inheritdoc/>
+    public async Task<ErrorOr<T?>> GetItemAsync<T>(GetItemRequest request, DynamoItemReader<T> itemReader, CancellationToken cancellationToken = default)
+    {
+        var content = SerializeToUtf8Bytes(request);
+        var requestMessage = CreateRequestMessage(
+            HttpMethod.Post, "/", content,
+            new MediaTypeHeaderValue("application/x-amz-json-1.0"));
+        requestMessage.Headers.Add("X-Amz-Target", "DynamoDB_20120810.GetItem");
+
+        using var response = await SendAsync(requestMessage, "DynamoDB_20120810.GetItem", cancellationToken);
+
+        if (!response.IsSuccessStatusCode)
+            return await HandleTypedErrorAsync(response, cancellationToken);
+
+        using var buffer = await ReadResponseBytesAsync(response, cancellationToken);
+        if (buffer.Length == 0)
+            return default(T);
+
+        return DynamoResponseReader.ReadGetItemResponse(buffer.Span, itemReader);
+    }
+
+    private async Task<Error> HandleTypedErrorAsync(HttpResponseMessage response, CancellationToken cancellationToken)
+    {
+        var errorPayload = await response.Content.ReadAsStringAsync(cancellationToken);
+        if (string.IsNullOrWhiteSpace(errorPayload))
+        {
+            return Error.Failure("Goa.DynamoDb.Unknown", "Request not successful.");
+        }
+
+        var error = DeserializeJsonError(errorPayload);
+        if (error is not null)
+        {
+            error = error with { Payload = errorPayload, StatusCode = response.StatusCode };
+            error = ProcessAwsErrorHeaders(response, error);
+        }
+
+        var errorType = error?.Type ?? error?.Code ?? "Unknown";
+        return Error.Failure(
+            code: MapErrorCodeToDynamo(errorType),
+            description: error?.Message ?? "An error occurred while processing the request.");
     }
 
     /// <summary>

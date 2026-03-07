@@ -304,7 +304,7 @@ public class BuilderChainingTests
             .WithReturnValuesOnConditionCheckFailure(ReturnValuesOnConditionCheckFailure.ALL_OLD);
 
         var request = builder.Build();
-        var json = JsonSerializer.Serialize(request, DynamoJsonContext.Default.DeleteItemRequest);
+        var json = SerializeWithGeneratedWriter(request);
 
         await Assert.That(json).Contains("\"ReturnValuesOnConditionCheckFailure\":\"ALL_OLD\"");
     }
@@ -317,7 +317,7 @@ public class BuilderChainingTests
             .WithReturnValuesOnConditionCheckFailure(ReturnValuesOnConditionCheckFailure.ALL_OLD);
 
         var request = builder.Build();
-        var json = JsonSerializer.Serialize(request, DynamoJsonContext.Default.PutItemRequest);
+        var json = SerializeWithGeneratedWriter(request);
 
         await Assert.That(json).Contains("\"ReturnValuesOnConditionCheckFailure\":\"ALL_OLD\"");
     }
@@ -331,8 +331,18 @@ public class BuilderChainingTests
             .WithReturnValuesOnConditionCheckFailure(ReturnValuesOnConditionCheckFailure.ALL_OLD);
 
         var request = builder.Build();
-        var json = JsonSerializer.Serialize(request, DynamoJsonContext.Default.UpdateItemRequest);
+        var json = SerializeWithGeneratedWriter(request);
 
         await Assert.That(json).Contains("\"ReturnValuesOnConditionCheckFailure\":\"ALL_OLD\"");
+    }
+
+    private static string SerializeWithGeneratedWriter<T>(T value)
+    {
+        var writer = DynamoJsonContext.GetWriter<T>();
+        using var buffer = new System.IO.MemoryStream();
+        using var jsonWriter = new System.Text.Json.Utf8JsonWriter(buffer);
+        writer(jsonWriter, value);
+        jsonWriter.Flush();
+        return System.Text.Encoding.UTF8.GetString(buffer.ToArray());
     }
 }

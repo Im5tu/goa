@@ -1,4 +1,5 @@
-﻿using Goa.Clients.Dynamo.Models;
+using System.Text.Json.Serialization;
+using Goa.Clients.Dynamo.Models;
 
 namespace Goa.Clients.Dynamo.Operations.Batch;
 
@@ -10,5 +11,6 @@ public class PutRequest
     /// <summary>
     /// A map of attribute names to AttributeValue objects representing the item to be put.
     /// </summary>
+    [JsonPropertyName("Item")]
     public Dictionary<string, AttributeValue> Item { get; set; } = new();
 }

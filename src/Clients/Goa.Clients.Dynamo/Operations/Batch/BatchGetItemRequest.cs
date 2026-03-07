@@ -1,4 +1,5 @@
-﻿using Goa.Clients.Dynamo.Enums;
+using System.Text.Json.Serialization;
+using Goa.Clients.Dynamo.Enums;
 
 namespace Goa.Clients.Dynamo.Operations.Batch;
 
@@ -10,10 +11,12 @@ public class BatchGetItemRequest
     /// <summary>
     /// A map of one or more table names and, for each table, a map that describes one or more items to retrieve from that table.
     /// </summary>
+    [JsonPropertyName("RequestItems")]
     public Dictionary<string, BatchGetRequestItem> RequestItems { get; set; } = new();
-    
+
     /// <summary>
     /// Determines the level of detail about provisioned throughput consumption that is returned in the response.
     /// </summary>
+    [JsonPropertyName("ReturnConsumedCapacity")]
     public ReturnConsumedCapacity ReturnConsumedCapacity { get; set; } = ReturnConsumedCapacity.NONE;
 }

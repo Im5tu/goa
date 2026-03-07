@@ -111,6 +111,8 @@ public class DynamoMapperIncrementalGenerator : IIncrementalGenerator
             var keyFactoryGenerator = new KeyFactoryGenerator(typeHandlerRegistry);
             var mapperGenerator = new MapperGenerator(typeHandlerRegistry);
             var extensionGenerator = new ExtensionGenerator(autoGenerateExtensions);
+            var jsonMapperGenerator = new JsonMapperGenerator(typeHandlerRegistry);
+            var readerRegistrationGenerator = new ReaderRegistrationGenerator();
 
             var keyFactoryCode = keyFactoryGenerator.GenerateCode(analyzedTypes, generationContext);
             var mapperCode = mapperGenerator.GenerateCode(analyzedTypes, generationContext);
@@ -124,6 +126,15 @@ public class DynamoMapperIncrementalGenerator : IIncrementalGenerator
             {
                 context.AddSource("DynamoExtensions.g.cs", SourceText.From(extensionCode, Encoding.UTF8));
             }
+
+            var jsonMapperCode = jsonMapperGenerator.GenerateCode(analyzedTypes, generationContext);
+            var readerRegistrationCode = readerRegistrationGenerator.GenerateCode(analyzedTypes, generationContext);
+
+            if (!string.IsNullOrEmpty(jsonMapperCode))
+                context.AddSource("DynamoJsonMapper.g.cs", SourceText.From(jsonMapperCode, Encoding.UTF8));
+
+            if (!string.IsNullOrEmpty(readerRegistrationCode))
+                context.AddSource("DynamoReaderRegistration.g.cs", SourceText.From(readerRegistrationCode, Encoding.UTF8));
         }
         catch (Exception ex)
         {

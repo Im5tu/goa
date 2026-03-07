@@ -1,3 +1,4 @@
+using System.Text.Json.Serialization;
 using Goa.Clients.Dynamo.Models;
 
 namespace Goa.Clients.Dynamo.Operations.Transactions;
@@ -10,10 +11,12 @@ public class TransactWriteItemResponse
     /// <summary>
     /// The capacity units consumed by the entire TransactWriteItem operation.
     /// </summary>
+    [JsonPropertyName("ConsumedCapacity")]
     public List<ConsumedCapacity>? ConsumedCapacity { get; set; }
-    
+
     /// <summary>
     /// A list of tables that were processed by TransactWriteItem and, for each table, information about any item collections that were affected by individual operations.
     /// </summary>
+    [JsonPropertyName("ItemCollectionMetrics")]
     public Dictionary<string, object>? ItemCollectionMetrics { get; set; }
 }

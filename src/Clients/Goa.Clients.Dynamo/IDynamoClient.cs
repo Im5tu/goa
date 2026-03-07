@@ -95,4 +95,19 @@ public interface IDynamoClient
     /// <param name="cancellationToken">A cancellation token to cancel the operation.</param>
     /// <returns>The transact get response with items in the same order as the requests, or an error if the operation failed.</returns>
     Task<ErrorOr<TransactGetItemResponse>> TransactGetItemsAsync(TransactGetRequest request, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Queries items from a DynamoDB table with direct typed deserialization.
+    /// </summary>
+    Task<ErrorOr<QueryResult<T>>> QueryAsync<T>(QueryRequest request, DynamoItemReader<T> itemReader, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Scans items from a DynamoDB table with direct typed deserialization.
+    /// </summary>
+    Task<ErrorOr<ScanResult<T>>> ScanAsync<T>(ScanRequest request, DynamoItemReader<T> itemReader, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Gets an item from a DynamoDB table with direct typed deserialization.
+    /// </summary>
+    Task<ErrorOr<T?>> GetItemAsync<T>(GetItemRequest request, DynamoItemReader<T> itemReader, CancellationToken cancellationToken = default);
 }

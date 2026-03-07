@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Text.Json.Serialization;
 
 namespace Goa.Clients.Dynamo.Models;
 
@@ -11,42 +12,50 @@ public class AttributeValue
     /// <summary>
     /// An attribute of type String. Strings are UTF-8 encoded and can be up to 400 KB in size.
     /// </summary>
+    [JsonPropertyName("S")]
     public string? S { get; set; }
 
     /// <summary>
     /// An attribute of type Number. Numbers are sent across the network to DynamoDB as strings,
     /// to maximize compatibility across platforms and languages.
     /// </summary>
+    [JsonPropertyName("N")]
     public string? N { get; set; }
 
     /// <summary>
     /// An attribute of type Boolean. For example: "BOOL": true
     /// </summary>
+    [JsonPropertyName("BOOL")]
     public bool? BOOL { get; set; }
 
     /// <summary>
     /// An attribute of type String Set. A set of Strings.
     /// </summary>
+    [JsonPropertyName("SS")]
     public List<string>? SS { get; set; }
 
     /// <summary>
     /// An attribute of type Number Set. A set of Numbers.
     /// </summary>
+    [JsonPropertyName("NS")]
     public List<string>? NS { get; set; }
 
     /// <summary>
     /// An attribute of type List. Lists are ordered collections of values.
     /// </summary>
+    [JsonPropertyName("L")]
     public List<AttributeValue>? L { get; set; }
 
     /// <summary>
     /// An attribute of type Map. Maps are unordered collections of key-value pairs.
     /// </summary>
+    [JsonPropertyName("M")]
     public Dictionary<string, AttributeValue>? M { get; set; }
 
     /// <summary>
     /// An attribute of type Null. When sending a null value, you must send the NULL attribute type.
     /// </summary>
+    [JsonPropertyName("NULL")]
     public bool? NULL { get; set; }
 
     /// <summary>
