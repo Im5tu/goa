@@ -1,4 +1,5 @@
 using ErrorOr;
+using Goa.Clients.Dynamo.Exceptions;
 using Goa.Clients.Dynamo.Models;
 using Goa.Clients.Dynamo.Operations.Batch;
 using Goa.Clients.Dynamo.Operations.DeleteItem;
@@ -162,7 +163,7 @@ public static class DynamoExtensions
             var result = await client.QueryAsync(request, cancellationToken);
             if (result.IsError)
             {
-                yield break;
+                throw new DynamoPaginationException(result.FirstError);
             }
 
             foreach (var item in result.Value.Items)
@@ -199,7 +200,71 @@ public static class DynamoExtensions
             var result = await client.ScanAsync(request, cancellationToken);
             if (result.IsError)
             {
-                yield break;
+                throw new DynamoPaginationException(result.FirstError);
+            }
+
+            foreach (var item in result.Value.Items)
+            {
+                yield return item;
+            }
+
+            if (!result.Value.HasMoreResults)
+            {
+                break;
+            }
+
+            request.ExclusiveStartKey = result.Value.LastEvaluatedKey;
+        }
+        while (true);
+    }
+
+    /// <summary>
+    /// Executes a typed DynamoDB Query operation with automatic pagination using an async iterator.
+    /// </summary>
+    public static async IAsyncEnumerable<T> QueryAllAsync<T>(this IDynamoClient client, string tableName, DynamoItemReader<T> itemReader, Action<QueryBuilder> builder, [EnumeratorCancellation] CancellationToken cancellationToken = default)
+    {
+        var _builder = new QueryBuilder(tableName);
+        builder(_builder);
+        var request = _builder.Build();
+
+        do
+        {
+            var result = await client.QueryAsync(request, itemReader, cancellationToken);
+            if (result.IsError)
+            {
+                throw new DynamoPaginationException(result.FirstError);
+            }
+
+            foreach (var item in result.Value.Items)
+            {
+                yield return item;
+            }
+
+            if (!result.Value.HasMoreResults)
+            {
+                break;
+            }
+
+            request.ExclusiveStartKey = result.Value.LastEvaluatedKey;
+        }
+        while (true);
+    }
+
+    /// <summary>
+    /// Executes a typed DynamoDB Scan operation with automatic pagination using an async iterator.
+    /// </summary>
+    public static async IAsyncEnumerable<T> ScanAllAsync<T>(this IDynamoClient client, string tableName, DynamoItemReader<T> itemReader, Action<ScanBuilder> builder, [EnumeratorCancellation] CancellationToken cancellationToken = default)
+    {
+        var _builder = new ScanBuilder(tableName);
+        builder(_builder);
+        var request = _builder.Build();
+
+        do
+        {
+            var result = await client.ScanAsync(request, itemReader, cancellationToken);
+            if (result.IsError)
+            {
+                throw new DynamoPaginationException(result.FirstError);
             }
 
             foreach (var item in result.Value.Items)
@@ -235,7 +300,7 @@ public static class DynamoExtensions
             var result = await client.BatchGetItemAsync(request, cancellationToken);
             if (result.IsError)
             {
-                yield break;
+                throw new DynamoPaginationException(result.FirstError);
             }
 
             foreach (var tableResponse in result.Value.Responses)
@@ -243,6 +308,42 @@ public static class DynamoExtensions
                 foreach (var item in tableResponse.Value)
                 {
                     yield return new KeyValuePair<string, DynamoRecord>(tableResponse.Key, item);
+                }
+            }
+
+            if (!result.Value.HasUnprocessedKeys)
+            {
+                break;
+            }
+
+            // Retry with unprocessed keys
+            request.RequestItems = result.Value.UnprocessedKeys!;
+        }
+        while (true);
+    }
+
+    /// <summary>
+    /// Executes a typed DynamoDB BatchGetItem operation with automatic retry of unprocessed keys using an async iterator.
+    /// </summary>
+    public static async IAsyncEnumerable<KeyValuePair<string, T>> BatchGetAllAsync<T>(this IDynamoClient client, DynamoItemReader<T> itemReader, Action<BatchGetItemBuilder> builder, [EnumeratorCancellation] CancellationToken cancellationToken = default)
+    {
+        var _builder = new BatchGetItemBuilder();
+        builder(_builder);
+        var request = _builder.Build();
+
+        do
+        {
+            var result = await client.BatchGetItemAsync(request, itemReader, cancellationToken);
+            if (result.IsError)
+            {
+                throw new DynamoPaginationException(result.FirstError);
+            }
+
+            foreach (var tableResponse in result.Value.Responses)
+            {
+                foreach (var item in tableResponse.Value)
+                {
+                    yield return new KeyValuePair<string, T>(tableResponse.Key, item);
                 }
             }
 
