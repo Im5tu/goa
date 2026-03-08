@@ -25,7 +25,7 @@ public class EnumTypeHandler : ITypeHandler
 #pragma warning disable CS8603 // Possible null reference return - intentional for conditional assignment
             ? null // Use conditional assignment instead
 #pragma warning restore CS8603
-            : $"new AttributeValue {{ S = model.{propertyName}.ToString() }}";
+            : $"AttributeValue.String(model.{propertyName}.ToString())";
     }
     
     public string GenerateFromDynamoRecord(PropertyInfo propertyInfo, string recordVariableName, string pkVariable, string skVariable)
@@ -68,7 +68,7 @@ public class EnumTypeHandler : ITypeHandler
         
         return $@"if (model.{propertyName}.HasValue)
 {{
-    {recordVariable}[""{propertyName}""] = new AttributeValue {{ S = model.{propertyName}.Value.ToString() }};
+    {recordVariable}[""{propertyName}""] = AttributeValue.String(model.{propertyName}.Value.ToString());
 }}";
     }
     

@@ -105,7 +105,7 @@ public class TypeHandlerRegistry
     {
         if (depth > MaxRecursionDepth)
         {
-            return "new AttributeValue { NULL = true }"; // Prevent infinite recursion
+            return "AttributeValue.Null()"; // Prevent infinite recursion
         }
         
         // Create a temporary PropertyInfo for the nested type
@@ -114,12 +114,12 @@ public class TypeHandlerRegistry
         
         if (handler == null)
         {
-            return "new AttributeValue { NULL = true }";
+            return "AttributeValue.Null()";
         }
         
         // Replace the property access with the provided value expression
         var attributeValueCode = handler.GenerateToAttributeValue(nestedProperty);
-        return attributeValueCode?.Replace($"model.{nestedProperty.Name}", valueExpression) ?? "new AttributeValue { NULL = true }";
+        return attributeValueCode?.Replace($"model.{nestedProperty.Name}", valueExpression) ?? "AttributeValue.Null()";
     }
     
     /// <summary>

@@ -33,7 +33,7 @@ public class DateTimeTypeHandler : ITypeHandler
 #pragma warning disable CS8603 // Possible null reference return - intentional for conditional assignment
         return isNullable
             ? null  // This will trigger conditional assignment generation in MapperGenerator
-            : $"new AttributeValue {{ S = model.{propertyName}.ToString(\"o\") }}";
+            : $"AttributeValue.String(model.{propertyName}.ToString(\"o\"))";
 #pragma warning restore CS8603
     }
     
@@ -42,7 +42,7 @@ public class DateTimeTypeHandler : ITypeHandler
         var propertyName = propertyInfo.Name;
         return $@"if (model.{propertyName}.HasValue)
             {{
-                {recordVariable}[""{propertyName}""] = new AttributeValue {{ S = model.{propertyName}.Value.ToString(""o"") }};
+                {recordVariable}[""{propertyName}""] = AttributeValue.String(model.{propertyName}.Value.ToString(""o""));
             }}";
     }
     

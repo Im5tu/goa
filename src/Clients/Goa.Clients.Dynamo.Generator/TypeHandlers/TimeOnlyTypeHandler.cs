@@ -24,7 +24,7 @@ public class TimeOnlyTypeHandler : ITypeHandler
 #pragma warning disable CS8603 // Possible null reference return - intentional for conditional assignment
             ? null // Use conditional assignment instead
 #pragma warning restore CS8603
-            : $"new AttributeValue {{ S = model.{propertyName}.ToString(\"HH:mm:ss.fffffff\") }}";
+            : $"AttributeValue.String(model.{propertyName}.ToString(\"HH:mm:ss.fffffff\"))";
     }
     
     public string GenerateFromDynamoRecord(PropertyInfo propertyInfo, string recordVariableName, string pkVariable, string skVariable)
@@ -61,7 +61,7 @@ public class TimeOnlyTypeHandler : ITypeHandler
         
         return $@"if (model.{propertyName}.HasValue)
 {{
-    {recordVariable}[""{propertyName}""] = new AttributeValue {{ S = model.{propertyName}.Value.ToString(""HH:mm:ss.fffffff"") }};
+    {recordVariable}[""{propertyName}""] = AttributeValue.String(model.{propertyName}.Value.ToString(""HH:mm:ss.fffffff""));
 }}";
     }
     

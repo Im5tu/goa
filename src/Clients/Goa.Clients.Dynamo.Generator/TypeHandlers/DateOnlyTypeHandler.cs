@@ -24,7 +24,7 @@ public class DateOnlyTypeHandler : ITypeHandler
 #pragma warning disable CS8603 // Possible null reference return - intentional for conditional assignment
             ? null // Use conditional assignment instead
 #pragma warning restore CS8603
-            : $"new AttributeValue {{ S = model.{propertyName}.ToString(\"yyyy-MM-dd\") }}";
+            : $"AttributeValue.String(model.{propertyName}.ToString(\"yyyy-MM-dd\"))";
     }
     
     public string GenerateFromDynamoRecord(PropertyInfo propertyInfo, string recordVariableName, string pkVariable, string skVariable)
@@ -61,7 +61,7 @@ public class DateOnlyTypeHandler : ITypeHandler
         
         return $@"if (model.{propertyName}.HasValue)
 {{
-    {recordVariable}[""{propertyName}""] = new AttributeValue {{ S = model.{propertyName}.Value.ToString(""yyyy-MM-dd"") }};
+    {recordVariable}[""{propertyName}""] = AttributeValue.String(model.{propertyName}.Value.ToString(""yyyy-MM-dd""));
 }}";
     }
     

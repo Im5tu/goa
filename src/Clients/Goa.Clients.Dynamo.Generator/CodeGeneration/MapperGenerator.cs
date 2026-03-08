@@ -173,7 +173,7 @@ public class MapperGenerator : ICodeGenerator
             var typeNameField = (dynamoModelAttr?.TypeName != "Type" ? dynamoModelAttr?.TypeName : null)
                              ?? GetInheritedDynamoModelAttribute(type)?.TypeName
                              ?? "Type";
-            builder.AppendLine($"record[\"{typeNameField}\"] = new AttributeValue {{ S = \"{type.FullName}\" }};");
+            builder.AppendLine($"record[\"{typeNameField}\"] = AttributeValue.String(\"{type.FullName}\");");
         }
 
         // Add property mappings, excluding properties already emitted as GSI keys
@@ -187,8 +187,8 @@ public class MapperGenerator : ICodeGenerator
         var pkCode = GenerateKeyCode(type, dynamoAttr.PK, "PK");
         var skCode = GenerateKeyCode(type, dynamoAttr.SK, "SK");
 
-        builder.AppendLine($"record[\"{dynamoAttr.PKName}\"] = new AttributeValue {{ S = {pkCode} }};");
-        builder.AppendLine($"record[\"{dynamoAttr.SKName}\"] = new AttributeValue {{ S = {skCode} }};");
+        builder.AppendLine($"record[\"{dynamoAttr.PKName}\"] = AttributeValue.String({pkCode});");
+        builder.AppendLine($"record[\"{dynamoAttr.SKName}\"] = AttributeValue.String({skCode});");
     }
 
     private void GenerateGSIKeyAssignment(CodeBuilder builder, DynamoTypeInfo type, GSIAttributeInfo gsiAttr)
@@ -208,7 +208,7 @@ public class MapperGenerator : ICodeGenerator
         else
         {
             var pkCode = GenerateKeyCode(type, gsiAttr.PK, gsiAttr.PKName!);
-            builder.AppendLine($"record[\"{gsiAttr.PKName}\"] = new AttributeValue {{ S = {pkCode} }};");
+            builder.AppendLine($"record[\"{gsiAttr.PKName}\"] = AttributeValue.String({pkCode});");
         }
 
         // Generate SK assignment - conditional if single nullable property, otherwise direct
@@ -219,7 +219,7 @@ public class MapperGenerator : ICodeGenerator
         else
         {
             var skCode = GenerateKeyCode(type, gsiAttr.SK, gsiAttr.SKName!);
-            builder.AppendLine($"record[\"{gsiAttr.SKName}\"] = new AttributeValue {{ S = {skCode} }};");
+            builder.AppendLine($"record[\"{gsiAttr.SKName}\"] = AttributeValue.String({skCode});");
         }
     }
 
@@ -773,7 +773,7 @@ public class MapperGenerator : ICodeGenerator
         }
 
         builder.OpenBraceWithLine($"if ({nullCheck})");
-        builder.AppendLine($"record[\"{attributeName}\"] = new AttributeValue {{ S = {valueCode} }};");
+        builder.AppendLine($"record[\"{attributeName}\"] = AttributeValue.String({valueCode});");
         builder.CloseBrace();
     }
 

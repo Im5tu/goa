@@ -52,35 +52,35 @@ public class PrimitiveTypeHandler : ITypeHandler
             SpecialType.System_Int32 or SpecialType.System_UInt32 or
             SpecialType.System_Int64 or SpecialType.System_UInt64 or
             SpecialType.System_Decimal or SpecialType.System_Single or SpecialType.System_Double =>
-                $"new AttributeValue {{ N = model.{propertyName}.ToString(CultureInfo.InvariantCulture) }}",
-            SpecialType.System_Boolean when isNullable => 
+                $"AttributeValue.Number(model.{propertyName}.ToString(CultureInfo.InvariantCulture))",
+            SpecialType.System_Boolean when isNullable =>
                 null, // Use conditional assignment instead
-            SpecialType.System_Boolean => 
-                $"new AttributeValue {{ BOOL = model.{propertyName} }}",
-            SpecialType.System_Char when isNullable => 
+            SpecialType.System_Boolean =>
+                $"AttributeValue.Bool(model.{propertyName})",
+            SpecialType.System_Char when isNullable =>
                 null, // Use conditional assignment instead
-            SpecialType.System_Char => 
-                $"new AttributeValue {{ S = model.{propertyName}.ToString() }}",
-            SpecialType.System_DateTime when isNullable => 
+            SpecialType.System_Char =>
+                $"AttributeValue.String(model.{propertyName}.ToString())",
+            SpecialType.System_DateTime when isNullable =>
                 null, // Use conditional assignment instead (handled by DateTimeTypeHandler)
-            SpecialType.System_DateTime => 
-                $"new AttributeValue {{ S = model.{propertyName}.ToString(\\\"o\\\") }}",
-            _ when underlyingType.Name == nameof(Guid) && isNullable => 
+            SpecialType.System_DateTime =>
+                $"AttributeValue.String(model.{propertyName}.ToString(\\\"o\\\"))",
+            _ when underlyingType.Name == nameof(Guid) && isNullable =>
                 null, // Use conditional assignment instead
-            _ when underlyingType.Name == nameof(Guid) => 
-                $"new AttributeValue {{ S = model.{propertyName}.ToString() }}",
-            _ when underlyingType.Name == nameof(TimeSpan) && isNullable => 
+            _ when underlyingType.Name == nameof(Guid) =>
+                $"AttributeValue.String(model.{propertyName}.ToString())",
+            _ when underlyingType.Name == nameof(TimeSpan) && isNullable =>
                 null, // Use conditional assignment instead
-            _ when underlyingType.Name == nameof(TimeSpan) => 
-                $"new AttributeValue {{ S = model.{propertyName}.ToString() }}",
-            _ when underlyingType.Name == nameof(DateTimeOffset) && isNullable => 
+            _ when underlyingType.Name == nameof(TimeSpan) =>
+                $"AttributeValue.String(model.{propertyName}.ToString())",
+            _ when underlyingType.Name == nameof(DateTimeOffset) && isNullable =>
                 null, // Use conditional assignment instead
-            _ when underlyingType.Name == nameof(DateTimeOffset) => 
-                $"new AttributeValue {{ S = model.{propertyName}.ToString(\\\"o\\\") }}",
-            _ when underlyingType.TypeKind == TypeKind.Enum && isNullable => 
+            _ when underlyingType.Name == nameof(DateTimeOffset) =>
+                $"AttributeValue.String(model.{propertyName}.ToString(\\\"o\\\"))",
+            _ when underlyingType.TypeKind == TypeKind.Enum && isNullable =>
                 null, // Use conditional assignment instead
-            _ when underlyingType.TypeKind == TypeKind.Enum => 
-                $"new AttributeValue {{ S = model.{propertyName}.ToString() }}",
+            _ when underlyingType.TypeKind == TypeKind.Enum =>
+                $"AttributeValue.String(model.{propertyName}.ToString())",
             _ => string.Empty
         };
     }
@@ -161,27 +161,27 @@ public class PrimitiveTypeHandler : ITypeHandler
         var attributeValue = underlyingType.SpecialType switch
         {
             SpecialType.System_String =>
-                $"new AttributeValue {{ S = model.{propertyName} }}",
+                $"AttributeValue.String(model.{propertyName})",
             SpecialType.System_Byte or SpecialType.System_SByte or
             SpecialType.System_Int16 or SpecialType.System_UInt16 or
             SpecialType.System_Int32 or SpecialType.System_UInt32 or
             SpecialType.System_Int64 or SpecialType.System_UInt64 or
             SpecialType.System_Decimal or SpecialType.System_Single or SpecialType.System_Double =>
-                $"new AttributeValue {{ N = model.{propertyName}.Value.ToString(CultureInfo.InvariantCulture) }}",
+                $"AttributeValue.Number(model.{propertyName}.Value.ToString(CultureInfo.InvariantCulture))",
             SpecialType.System_Boolean =>
-                $"new AttributeValue {{ BOOL = model.{propertyName}.Value }}",
+                $"AttributeValue.Bool(model.{propertyName}.Value)",
             SpecialType.System_Char =>
-                $"new AttributeValue {{ S = model.{propertyName}.Value.ToString() }}",
+                $"AttributeValue.String(model.{propertyName}.Value.ToString())",
             SpecialType.System_DateTime =>
-                $"new AttributeValue {{ S = model.{propertyName}.Value.ToString(\\\"o\\\") }}",
+                $"AttributeValue.String(model.{propertyName}.Value.ToString(\\\"o\\\"))",
             _ when underlyingType.Name == nameof(Guid) =>
-                $"new AttributeValue {{ S = model.{propertyName}.Value.ToString() }}",
+                $"AttributeValue.String(model.{propertyName}.Value.ToString())",
             _ when underlyingType.Name == nameof(TimeSpan) =>
-                $"new AttributeValue {{ S = model.{propertyName}.Value.ToString() }}",
+                $"AttributeValue.String(model.{propertyName}.Value.ToString())",
             _ when underlyingType.Name == nameof(DateTimeOffset) =>
-                $"new AttributeValue {{ S = model.{propertyName}.Value.ToString(\\\"o\\\") }}",
+                $"AttributeValue.String(model.{propertyName}.Value.ToString(\\\"o\\\"))",
             _ when underlyingType.TypeKind == TypeKind.Enum =>
-                $"new AttributeValue {{ S = model.{propertyName}.Value.ToString() }}",
+                $"AttributeValue.String(model.{propertyName}.Value.ToString())",
             _ => null
         };
 
