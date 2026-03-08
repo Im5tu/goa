@@ -26,14 +26,11 @@ internal static class ContentBlockSerializer
     {
         if (block.Text is not null)
         {
-            return new AttributeValue
+            return AttributeValue.FromMap(new Dictionary<string, AttributeValue>
             {
-                M = new Dictionary<string, AttributeValue>
-                {
-                    [TypeAttribute] = TextType,
-                    ["text"] = block.Text
-                }
-            };
+                [TypeAttribute] = TextType,
+                ["text"] = block.Text
+            });
         }
 
         if (block.Image is not null)
@@ -55,7 +52,7 @@ internal static class ContentBlockSerializer
                     imageMap["s3BucketOwner"] = block.Image.Source.S3Location.BucketOwner;
             }
 
-            return new AttributeValue { M = imageMap };
+            return AttributeValue.FromMap(imageMap);
         }
 
         if (block.Document is not null)
@@ -78,7 +75,7 @@ internal static class ContentBlockSerializer
                     docMap["s3BucketOwner"] = block.Document.Source.S3Location.BucketOwner;
             }
 
-            return new AttributeValue { M = docMap };
+            return AttributeValue.FromMap(docMap);
         }
 
         if (block.ToolUse is not null)
@@ -91,7 +88,7 @@ internal static class ContentBlockSerializer
                 ["input"] = block.ToolUse.Input.GetRawText()
             };
 
-            return new AttributeValue { M = toolUseMap };
+            return AttributeValue.FromMap(toolUseMap);
         }
 
         if (block.ToolResult is not null)
@@ -109,13 +106,13 @@ internal static class ContentBlockSerializer
             {
                 [TypeAttribute] = ToolResultType,
                 ["toolUseId"] = block.ToolResult.ToolUseId,
-                ["content"] = new AttributeValue { L = contentList }
+                ["content"] = AttributeValue.FromList(contentList)
             };
 
             if (block.ToolResult.Status is not null)
                 toolResultMap["status"] = block.ToolResult.Status;
 
-            return new AttributeValue { M = toolResultMap };
+            return AttributeValue.FromMap(toolResultMap);
         }
 
         return Error.Validation(ConversationErrorCodes.ContentBlockEmpty, "ContentBlock must have at least one content type set");
