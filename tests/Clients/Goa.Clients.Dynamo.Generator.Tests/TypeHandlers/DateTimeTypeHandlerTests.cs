@@ -123,7 +123,7 @@ public class DateTimeTypeHandlerTests
         var result = _handler.GenerateToAttributeValue(propertyInfo);
 
         // Assert
-        var expected = "new AttributeValue { S = model.CreatedAt.ToString(\"o\") }";
+        var expected = "AttributeValue.String(model.CreatedAt.ToString(\"o\"))";
         await Assert.That(result)
             .IsEqualTo(expected);
     }
@@ -161,7 +161,7 @@ public class DateTimeTypeHandlerTests
         var result = _handler.GenerateToAttributeValue(propertyInfo);
 
         // Assert
-        var expected = "new AttributeValue { S = model.CreatedAt.ToString(\"o\") }";
+        var expected = "AttributeValue.String(model.CreatedAt.ToString(\"o\"))";
         await Assert.That(result)
             .IsEqualTo(expected);
     }

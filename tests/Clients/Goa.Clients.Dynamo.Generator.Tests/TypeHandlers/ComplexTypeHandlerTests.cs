@@ -209,7 +209,7 @@ public class ComplexTypeHandlerTests
         var result = _handler.GenerateToAttributeValue(propertyInfo);
 
         // Assert
-        var expected = "model.HomeAddress != null ? new AttributeValue { M = DynamoMapper.Address.ToDynamoRecord(model.HomeAddress) } : new AttributeValue { NULL = true }";
+        var expected = "model.HomeAddress != null ? AttributeValue.FromMap(DynamoMapper.Address.ToDynamoRecord(model.HomeAddress)) : AttributeValue.Null()";
         await Assert.That(result)
             .IsEqualTo(expected);
     }
@@ -236,7 +236,7 @@ public class ComplexTypeHandlerTests
         var result = _handler.GenerateToAttributeValue(propertyInfo);
 
         // Assert
-        var expected = "model.Metadata != null ? new AttributeValue { M = model.Metadata.ToDictionary(kvp => kvp.Key, kvp => new AttributeValue { S = kvp.Value }) } : new AttributeValue { NULL = true }";
+        var expected = "model.Metadata != null ? AttributeValue.FromMap(model.Metadata.ToDictionary(kvp => kvp.Key, kvp => AttributeValue.String(kvp.Value))) : AttributeValue.Null()";
         await Assert.That(result)
             .IsEqualTo(expected);
     }
@@ -263,7 +263,7 @@ public class ComplexTypeHandlerTests
         var result = _handler.GenerateToAttributeValue(propertyInfo);
 
         // Assert
-        var expected = "model.Scores != null ? new AttributeValue { M = model.Scores.ToDictionary(kvp => kvp.Key, kvp => new AttributeValue { N = kvp.Value.ToString(CultureInfo.InvariantCulture) }) } : new AttributeValue { NULL = true }";
+        var expected = "model.Scores != null ? AttributeValue.FromMap(model.Scores.ToDictionary(kvp => kvp.Key, kvp => AttributeValue.Number(kvp.Value.ToString(CultureInfo.InvariantCulture)))) : AttributeValue.Null()";
         await Assert.That(result)
             .IsEqualTo(expected);
     }
@@ -296,7 +296,7 @@ public class ComplexTypeHandlerTests
         var result = _handler.GenerateToAttributeValue(propertyInfo);
 
         // Assert
-        var expected = "model.TagsByCategory != null ? new AttributeValue { M = model.TagsByCategory.ToDictionary(kvp => kvp.Key, kvp => new AttributeValue { SS = kvp.Value ?? new List<string>() }) } : new AttributeValue { NULL = true }";
+        var expected = "model.TagsByCategory != null ? AttributeValue.FromMap(model.TagsByCategory.ToDictionary(kvp => kvp.Key, kvp => AttributeValue.FromStringSet(kvp.Value ?? new List<string>()))) : AttributeValue.Null()";
         await Assert.That(result)
             .IsEqualTo(expected);
     }

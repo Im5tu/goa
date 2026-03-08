@@ -80,7 +80,7 @@ public class EnumTypeHandlerTests
         
         var result = _handler.GenerateToAttributeValue(property);
         
-        var expected = "new AttributeValue { S = model.Status.ToString() }";
+        var expected = "AttributeValue.String(model.Status.ToString())";
         await Assert.That(result).IsEqualTo(expected);
     }
 
