@@ -18,20 +18,20 @@ internal static class DynamoResponseReader
     public static QueryResult<T> ReadQueryResponse<T>(ref Utf8JsonReader reader, DynamoItemReader<T> itemReader)
     {
         var result = new QueryResult<T>();
-        int countHint = 0;
 
         reader.Read(); // StartObject
         while (reader.Read() && reader.TokenType == JsonTokenType.PropertyName)
         {
-            if (reader.ValueTextEquals("Count"u8))
+            if (reader.ValueTextEquals("Items"u8))
             {
                 reader.Read();
-                countHint = reader.GetInt32();
+                result.Items = ReadItems(ref reader, itemReader);
             }
-            else if (reader.ValueTextEquals("Items"u8))
+            else if (reader.ValueTextEquals("Count"u8))
             {
                 reader.Read();
-                result.Items = ReadItems(ref reader, itemReader, countHint);
+                // Count is derived from Items.Count, skip
+                reader.GetInt32();
             }
             else if (reader.ValueTextEquals("ScannedCount"u8))
             {
@@ -67,20 +67,19 @@ internal static class DynamoResponseReader
     public static ScanResult<T> ReadScanResponse<T>(ref Utf8JsonReader reader, DynamoItemReader<T> itemReader)
     {
         var result = new ScanResult<T>();
-        int countHint = 0;
 
         reader.Read(); // StartObject
         while (reader.Read() && reader.TokenType == JsonTokenType.PropertyName)
         {
-            if (reader.ValueTextEquals("Count"u8))
+            if (reader.ValueTextEquals("Items"u8))
             {
                 reader.Read();
-                countHint = reader.GetInt32();
+                result.Items = ReadItems(ref reader, itemReader);
             }
-            else if (reader.ValueTextEquals("Items"u8))
+            else if (reader.ValueTextEquals("Count"u8))
             {
                 reader.Read();
-                result.Items = ReadItems(ref reader, itemReader, countHint);
+                reader.GetInt32();
             }
             else if (reader.ValueTextEquals("ScannedCount"u8))
             {
@@ -135,7 +134,7 @@ internal static class DynamoResponseReader
 
     public static DynamoRecord ReadDynamoRecordItem(ref Utf8JsonReader reader)
     {
-        var record = new DynamoRecord(8);
+        var record = new DynamoRecord();
         // reader must be at StartObject
         while (reader.Read() && reader.TokenType != JsonTokenType.EndObject)
         {
@@ -146,22 +145,9 @@ internal static class DynamoResponseReader
         return record;
     }
 
-    internal static DynamoRecord ReadDynamoRecordItemCached(ref Utf8JsonReader reader, ref PropertyNameCache cache)
+    private static List<T> ReadItems<T>(ref Utf8JsonReader reader, DynamoItemReader<T> itemReader)
     {
-        var record = new DynamoRecord(8);
-        // reader must be at StartObject
-        while (reader.Read() && reader.TokenType != JsonTokenType.EndObject)
-        {
-            var key = cache.GetOrAdd(ref reader);
-            reader.Read();
-            record[key] = ReadAttributeValue(ref reader);
-        }
-        return record;
-    }
-
-    private static List<T> ReadItems<T>(ref Utf8JsonReader reader, DynamoItemReader<T> itemReader, int capacityHint = 0)
-    {
-        var items = capacityHint > 0 ? new List<T>(capacityHint) : new List<T>();
+        var items = new List<T>();
         if (reader.TokenType == JsonTokenType.Null)
             return items;
         // reader is at StartArray
@@ -175,7 +161,7 @@ internal static class DynamoResponseReader
 
     private static Dictionary<string, AttributeValue> ReadAttributeMap(ref Utf8JsonReader reader)
     {
-        var map = new Dictionary<string, AttributeValue>(8, StringComparer.Ordinal);
+        var map = new Dictionary<string, AttributeValue>();
         // reader is at StartObject
         while (reader.Read() && reader.TokenType != JsonTokenType.EndObject)
         {
@@ -188,23 +174,62 @@ internal static class DynamoResponseReader
 
     private static AttributeValue ReadAttributeValue(ref Utf8JsonReader reader)
     {
-        // reader is at StartObject — each DynamoDB attribute value has exactly ONE type wrapper.
-        // Contract: exits with reader positioned AT EndObject of the wrapper.
+        var attr = new AttributeValue();
+        // reader is at StartObject
         while (reader.Read() && reader.TokenType != JsonTokenType.EndObject)
         {
-            if (reader.ValueTextEquals("S"u8)) { reader.Read(); var v = reader.GetString()!; reader.Read(); return AttributeValue.String(v); }
-            if (reader.ValueTextEquals("N"u8)) { reader.Read(); var v = reader.GetString()!; reader.Read(); return AttributeValue.Number(v); }
-            if (reader.ValueTextEquals("BOOL"u8)) { reader.Read(); var v = reader.GetBoolean(); reader.Read(); return AttributeValue.Bool(v); }
-            if (reader.ValueTextEquals("NULL"u8)) { reader.Read(); reader.GetBoolean(); reader.Read(); return AttributeValue.Null(); }
-            if (reader.ValueTextEquals("SS"u8)) { reader.Read(); var v = ReadStringArray(ref reader); reader.Read(); return AttributeValue.FromStringSet(v); }
-            if (reader.ValueTextEquals("NS"u8)) { reader.Read(); var v = ReadStringArray(ref reader); reader.Read(); return AttributeValue.FromNumberSet(v); }
-            if (reader.ValueTextEquals("L"u8)) { reader.Read(); var v = ReadAttributeValueList(ref reader); reader.Read(); return AttributeValue.FromList(v); }
-            if (reader.ValueTextEquals("M"u8)) { reader.Read(); var v = ReadAttributeMap(ref reader); reader.Read(); return AttributeValue.FromMap(v); }
-            // Skip unknown (B, BS, etc.)
-            reader.Read();
-            reader.Skip();
+            if (reader.ValueTextEquals("S"u8))
+            {
+                reader.Read();
+                attr.S = reader.GetString();
+            }
+            else if (reader.ValueTextEquals("N"u8))
+            {
+                reader.Read();
+                attr.N = reader.GetString();
+            }
+            else if (reader.ValueTextEquals("BOOL"u8))
+            {
+                reader.Read();
+                attr.BOOL = reader.GetBoolean();
+            }
+            else if (reader.ValueTextEquals("NULL"u8))
+            {
+                reader.Read();
+                attr.NULL = reader.GetBoolean();
+            }
+            else if (reader.ValueTextEquals("SS"u8))
+            {
+                reader.Read();
+                attr.SS = ReadStringArray(ref reader);
+            }
+            else if (reader.ValueTextEquals("NS"u8))
+            {
+                reader.Read();
+                attr.NS = ReadStringArray(ref reader);
+            }
+            else if (reader.ValueTextEquals("L"u8))
+            {
+                reader.Read();
+                attr.L = ReadAttributeValueList(ref reader);
+            }
+            else if (reader.ValueTextEquals("M"u8))
+            {
+                reader.Read();
+                attr.M = ReadAttributeMap(ref reader);
+            }
+            else if (reader.ValueTextEquals("B"u8) || reader.ValueTextEquals("BS"u8))
+            {
+                reader.Read();
+                reader.Skip();
+            }
+            else
+            {
+                reader.Read();
+                reader.Skip();
+            }
         }
-        return default;
+        return attr;
     }
 
     private static List<string> ReadStringArray(ref Utf8JsonReader reader)

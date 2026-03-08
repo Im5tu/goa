@@ -3,7 +3,6 @@ using Goa.Clients.Core;
 using Goa.Clients.Core.Http;
 using Goa.Clients.Dynamo.Errors;
 using Goa.Clients.Dynamo.Internal;
-using Goa.Clients.Dynamo.Models;
 using Goa.Clients.Dynamo.Operations.Batch;
 using Goa.Clients.Dynamo.Operations.DeleteItem;
 using Goa.Clients.Dynamo.Operations.GetItem;
@@ -38,7 +37,7 @@ public class DynamoServiceClient : JsonAwsServiceClient<DynamoServiceClientConfi
     protected override byte[] SerializeToUtf8Bytes<TRequest>(TRequest request)
     {
         var writer = DynamoJsonContext.GetWriter<TRequest>();
-        var bufferWriter = new System.Buffers.ArrayBufferWriter<byte>(1024);
+        var bufferWriter = new System.Buffers.ArrayBufferWriter<byte>(256);
         using var jsonWriter = new System.Text.Json.Utf8JsonWriter(bufferWriter);
         writer(jsonWriter, request);
         jsonWriter.Flush();
@@ -46,8 +45,22 @@ public class DynamoServiceClient : JsonAwsServiceClient<DynamoServiceClientConfi
     }
 
     /// <inheritdoc />
-    protected override TResponse? ReadJsonResponse<TResponse>(ref System.Text.Json.Utf8JsonReader reader) where TResponse : class =>
-        DynamoJsonContext.GetReader<TResponse>()(ref reader);
+    protected override async Task<Core.Http.ApiResponse<TResponse>> ProcessJsonResponseAsync<TResponse>(HttpResponseMessage response)
+    {
+        if (typeof(TResponse) == typeof(string) || !response.IsSuccessStatusCode)
+            return await base.ProcessJsonResponseAsync<TResponse>(response);
+
+        using var pooledBuffer = await ReadResponseBytesAsync(response, default);
+        var headers = Core.Http.ResponseHeaders.FromHttpResponse(response.Headers);
+
+        if (pooledBuffer.Length == 0)
+            return new Core.Http.ApiResponse<TResponse>(DeserializationError);
+
+        var reader = DynamoResponseReaderRegistry.GetReader<TResponse>();
+        var jsonReader = new System.Text.Json.Utf8JsonReader(pooledBuffer.Span);
+        var result = reader(ref jsonReader);
+        return new Core.Http.ApiResponse<TResponse>(result, headers);
+    }
 
     /// <summary>
     /// Gets an item from a DynamoDB table.
@@ -57,12 +70,14 @@ public class DynamoServiceClient : JsonAwsServiceClient<DynamoServiceClientConfi
     /// <returns>The get item response, or an error if the operation failed.</returns>
     public async Task<ErrorOr<GetItemResponse>> GetItemAsync(GetItemRequest request, CancellationToken cancellationToken = default)
     {
-        var cachedReader = new CachedDynamoRecordReader();
-        var result = await GetItemAsync<DynamoRecord>(request, cachedReader.Read, cancellationToken);
-        if (result.IsError)
-            return result.Errors;
+        var response = await SendAsync<GetItemRequest, GetItemResponse>(
+            HttpMethod.Post,
+            "/",
+            request,
+            "DynamoDB_20120810.GetItem",
+            cancellationToken);
 
-        return new GetItemResponse { Item = result.Value };
+        return ConvertApiResponse(response);
     }
 
     /// <summary>
@@ -127,19 +142,14 @@ public class DynamoServiceClient : JsonAwsServiceClient<DynamoServiceClientConfi
     /// <returns>The query response containing items and pagination information, or an error if the operation failed.</returns>
     public async Task<ErrorOr<QueryResponse>> QueryAsync(QueryRequest request, CancellationToken cancellationToken = default)
     {
-        var cachedReader = new CachedDynamoRecordReader();
-        var result = await QueryAsync<DynamoRecord>(request, cachedReader.Read, cancellationToken);
-        if (result.IsError)
-            return result.Errors;
+        var response = await SendAsync<QueryRequest, QueryResponse>(
+            HttpMethod.Post,
+            "/",
+            request,
+            "DynamoDB_20120810.Query",
+            cancellationToken);
 
-        var v = result.Value;
-        return new QueryResponse
-        {
-            Items = v.Items,
-            LastEvaluatedKey = v.LastEvaluatedKey,
-            ScannedCount = v.ScannedCount,
-            ConsumedCapacity = v.ConsumedCapacity
-        };
+        return ConvertApiResponse(response);
     }
 
     /// <summary>
@@ -150,19 +160,14 @@ public class DynamoServiceClient : JsonAwsServiceClient<DynamoServiceClientConfi
     /// <returns>The scan response containing items and pagination information, or an error if the operation failed.</returns>
     public async Task<ErrorOr<ScanResponse>> ScanAsync(ScanRequest request, CancellationToken cancellationToken = default)
     {
-        var cachedReader = new CachedDynamoRecordReader();
-        var result = await ScanAsync<DynamoRecord>(request, cachedReader.Read, cancellationToken);
-        if (result.IsError)
-            return result.Errors;
+        var response = await SendAsync<ScanRequest, ScanResponse>(
+            HttpMethod.Post,
+            "/",
+            request,
+            "DynamoDB_20120810.Scan",
+            cancellationToken);
 
-        var v = result.Value;
-        return new ScanResponse
-        {
-            Items = v.Items,
-            LastEvaluatedKey = v.LastEvaluatedKey,
-            ScannedCount = v.ScannedCount,
-            ConsumedCapacity = v.ConsumedCapacity
-        };
+        return ConvertApiResponse(response);
     }
 
     /// <summary>
@@ -173,18 +178,14 @@ public class DynamoServiceClient : JsonAwsServiceClient<DynamoServiceClientConfi
     /// <returns>The batch get response containing items and unprocessed keys, or an error if the operation failed.</returns>
     public async Task<ErrorOr<BatchGetItemResponse>> BatchGetItemAsync(BatchGetItemRequest request, CancellationToken cancellationToken = default)
     {
-        var cachedReader = new CachedDynamoRecordReader();
-        var result = await BatchGetItemAsync<DynamoRecord>(request, cachedReader.Read, cancellationToken);
-        if (result.IsError)
-            return result.Errors;
+        var response = await SendAsync<BatchGetItemRequest, BatchGetItemResponse>(
+            HttpMethod.Post,
+            "/",
+            request,
+            "DynamoDB_20120810.BatchGetItem",
+            cancellationToken);
 
-        var v = result.Value;
-        return new BatchGetItemResponse
-        {
-            Responses = v.Responses,
-            UnprocessedKeys = v.UnprocessedKeys,
-            ConsumedCapacity = v.ConsumedCapacity
-        };
+        return ConvertApiResponse(response);
     }
 
     /// <summary>
@@ -231,21 +232,14 @@ public class DynamoServiceClient : JsonAwsServiceClient<DynamoServiceClientConfi
     /// <returns>The transact get response with items in the same order as the requests, or an error if the operation failed.</returns>
     public async Task<ErrorOr<TransactGetItemResponse>> TransactGetItemsAsync(TransactGetRequest request, CancellationToken cancellationToken = default)
     {
-        var cachedReader = new CachedDynamoRecordReader();
-        var result = await TransactGetItemsAsync<DynamoRecord>(request, cachedReader.Read, cancellationToken);
-        if (result.IsError)
-            return result.Errors;
+        var response = await SendAsync<TransactGetRequest, TransactGetItemResponse>(
+            HttpMethod.Post,
+            "/",
+            request,
+            "DynamoDB_20120810.TransactGetItems",
+            cancellationToken);
 
-        var v = result.Value;
-        var responses = new List<TransactGetResult>(v.Items.Count);
-        foreach (var item in v.Items)
-            responses.Add(new TransactGetResult { Item = item });
-
-        return new TransactGetItemResponse
-        {
-            Responses = responses,
-            ConsumedCapacity = v.ConsumedCapacity
-        };
+        return ConvertApiResponse(response);
     }
 
     /// <inheritdoc/>
@@ -255,6 +249,8 @@ public class DynamoServiceClient : JsonAwsServiceClient<DynamoServiceClientConfi
         var requestMessage = CreateRequestMessage(
             HttpMethod.Post, "/", content,
             JsonContentType);
+        requestMessage.Headers.Add("X-Amz-Target", "DynamoDB_20120810.Query");
+
         using var response = await SendAsync(requestMessage, "DynamoDB_20120810.Query", cancellationToken);
 
         if (!response.IsSuccessStatusCode)
@@ -274,6 +270,8 @@ public class DynamoServiceClient : JsonAwsServiceClient<DynamoServiceClientConfi
         var requestMessage = CreateRequestMessage(
             HttpMethod.Post, "/", content,
             JsonContentType);
+        requestMessage.Headers.Add("X-Amz-Target", "DynamoDB_20120810.Scan");
+
         using var response = await SendAsync(requestMessage, "DynamoDB_20120810.Scan", cancellationToken);
 
         if (!response.IsSuccessStatusCode)
@@ -293,6 +291,8 @@ public class DynamoServiceClient : JsonAwsServiceClient<DynamoServiceClientConfi
         var requestMessage = CreateRequestMessage(
             HttpMethod.Post, "/", content,
             JsonContentType);
+        requestMessage.Headers.Add("X-Amz-Target", "DynamoDB_20120810.GetItem");
+
         using var response = await SendAsync(requestMessage, "DynamoDB_20120810.GetItem", cancellationToken);
 
         if (!response.IsSuccessStatusCode)
@@ -308,7 +308,7 @@ public class DynamoServiceClient : JsonAwsServiceClient<DynamoServiceClientConfi
     /// <inheritdoc/>
     public async Task<ErrorOr<PutItemResponse>> PutItemAsync<T>(string tableName, T item, DynamoItemWriter<T> itemWriter, CancellationToken cancellationToken = default)
     {
-        var bufferWriter = new System.Buffers.ArrayBufferWriter<byte>(1024);
+        var bufferWriter = new System.Buffers.ArrayBufferWriter<byte>(256);
         using var writer = new System.Text.Json.Utf8JsonWriter(bufferWriter);
         writer.WriteStartObject();
         writer.WriteString("TableName", tableName);
@@ -321,6 +321,8 @@ public class DynamoServiceClient : JsonAwsServiceClient<DynamoServiceClientConfi
         var requestMessage = CreateRequestMessage(
             HttpMethod.Post, "/", content,
             JsonContentType);
+        requestMessage.Headers.Add("X-Amz-Target", "DynamoDB_20120810.PutItem");
+
         using var response = await SendAsync(requestMessage, "DynamoDB_20120810.PutItem", cancellationToken);
 
         if (!response.IsSuccessStatusCode)
@@ -342,6 +344,8 @@ public class DynamoServiceClient : JsonAwsServiceClient<DynamoServiceClientConfi
         var requestMessage = CreateRequestMessage(
             HttpMethod.Post, "/", content,
             JsonContentType);
+        requestMessage.Headers.Add("X-Amz-Target", "DynamoDB_20120810.BatchGetItem");
+
         using var response = await SendAsync(requestMessage, "DynamoDB_20120810.BatchGetItem", cancellationToken);
 
         if (!response.IsSuccessStatusCode)
@@ -361,6 +365,8 @@ public class DynamoServiceClient : JsonAwsServiceClient<DynamoServiceClientConfi
         var requestMessage = CreateRequestMessage(
             HttpMethod.Post, "/", content,
             JsonContentType);
+        requestMessage.Headers.Add("X-Amz-Target", "DynamoDB_20120810.TransactGetItems");
+
         using var response = await SendAsync(requestMessage, "DynamoDB_20120810.TransactGetItems", cancellationToken);
 
         if (!response.IsSuccessStatusCode)
