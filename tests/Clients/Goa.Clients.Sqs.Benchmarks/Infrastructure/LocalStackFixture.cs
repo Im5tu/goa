@@ -105,24 +105,44 @@ public class LocalStackFixture : IAsyncDisposable
     public async Task<ConcurrentQueue<string>> PreReceiveMessagesAsync(int count)
     {
         var receiptHandles = new ConcurrentQueue<string>();
-        var received = 0;
-        while (received < count)
+        var seenMessageIds = new HashSet<string>();
+        var emptyReceives = 0;
+        const int maxEmptyReceives = 3;
+
+        while (receiptHandles.Count < count)
         {
             var response = await AwsSdkClient.ReceiveMessageAsync(new ReceiveMessageRequest
             {
                 QueueUrl = QueueUrl,
                 MaxNumberOfMessages = 10,
                 WaitTimeSeconds = 5,
-                VisibilityTimeout = 0
+                VisibilityTimeout = 1800
             });
 
+            var added = 0;
             foreach (var msg in response.Messages)
             {
-                receiptHandles.Enqueue(msg.ReceiptHandle);
-                received++;
-                if (received >= count) break;
+                if (seenMessageIds.Add(msg.MessageId))
+                {
+                    receiptHandles.Enqueue(msg.ReceiptHandle);
+                    added++;
+                    if (receiptHandles.Count >= count) break;
+                }
+            }
+
+            if (added == 0)
+            {
+                emptyReceives++;
+                if (emptyReceives >= maxEmptyReceives)
+                    throw new InvalidOperationException(
+                        $"Failed to receive enough messages: got {receiptHandles.Count} of {count} after {maxEmptyReceives} consecutive empty receives.");
+            }
+            else
+            {
+                emptyReceives = 0;
             }
         }
+
         return receiptHandles;
     }
 
