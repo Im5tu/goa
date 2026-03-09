@@ -228,16 +228,25 @@ internal sealed class RequestSigner
 
         // ---- Build Canonical Request with precise memory management ----
         // Enumerate headers ONCE into rented arrays to avoid repeated GetEnumeratorCore allocations
-        var reqHeaders = ArrayPool<KeyValuePair<string, IEnumerable<string>>>.Shared.Rent(32);
-        var contentHeaders = ArrayPool<KeyValuePair<string, IEnumerable<string>>>.Shared.Rent(32);
+        const int InitialHeaderCapacity = 16;
+        var reqHeaders = ArrayPool<KeyValuePair<string, IEnumerable<string>>>.Shared.Rent(InitialHeaderCapacity);
+        var contentHeaders = ArrayPool<KeyValuePair<string, IEnumerable<string>>>.Shared.Rent(InitialHeaderCapacity);
         int rhIndex = 0, chIndex = 0;
 
         foreach (var kv in request.Headers)
+        {
+            if (rhIndex == reqHeaders.Length)
+                reqHeaders = GrowArray(reqHeaders, ref rhIndex);
             reqHeaders[rhIndex++] = kv;
+        }
 
         if (request.Content?.Headers is not null)
             foreach (var kv in request.Content.Headers)
+            {
+                if (chIndex == contentHeaders.Length)
+                    contentHeaders = GrowArray(contentHeaders, ref chIndex);
                 contentHeaders[chIndex++] = kv;
+            }
 
         // Compute totals from cached arrays (no re-enumeration)
         var hasTarget = request.Options.TryGetValue(HttpOptions.Target, out var _target) && !string.IsNullOrWhiteSpace(_target);
@@ -1036,11 +1045,25 @@ internal sealed class RequestSigner
 
     // ---- Utility Methods ----
 
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    private static T[] GrowArray<T>(T[] old, ref int count)
+    {
+        var replacement = ArrayPool<T>.Shared.Rent(old.Length * 2);
+        old.AsSpan(0, count).CopyTo(replacement);
+        ArrayPool<T>.Shared.Return(old);
+        return replacement;
+    }
+
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static int WriteLowercase(Span<char> dest, string s)
     {
-        System.Text.Ascii.ToLower(s, dest, out _);
-        return s.Length;
+        if (System.Text.Ascii.ToLower(s, dest, out var written) == System.Buffers.OperationStatus.Done)
+            return written;
+
+        var len = Math.Min(s.Length, dest.Length);
+        for (var i = 0; i < len; i++)
+            dest[i] = char.ToLowerInvariant(s[i]);
+        return len;
     }
 
     /// <summary>
@@ -1061,7 +1084,12 @@ internal sealed class RequestSigner
             {
                 if (i != 0) chars[pos++] = ';';
                 var name = state.headerRefs[i].Name;
-                System.Text.Ascii.ToLower(name, chars.Slice(pos, name.Length), out _);
+                var slice = chars.Slice(pos, name.Length);
+                if (System.Text.Ascii.ToLower(name, slice, out _) != System.Buffers.OperationStatus.Done)
+                {
+                    for (var j = 0; j < name.Length; j++)
+                        slice[j] = char.ToLowerInvariant(name[j]);
+                }
                 pos += name.Length;
             }
         });
