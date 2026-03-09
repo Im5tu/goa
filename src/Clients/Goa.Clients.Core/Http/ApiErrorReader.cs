@@ -39,17 +39,17 @@ internal static class ApiErrorReader
 
                 if (reader.ValueTextEquals("message"u8) || reader.ValueTextEquals("Message"u8))
                 {
-                    reader.Read();
+                    if (!reader.Read()) return null;
                     message = reader.GetString();
                 }
                 else if (reader.ValueTextEquals("__type"u8) || reader.ValueTextEquals("__Type"u8))
                 {
-                    reader.Read();
+                    if (!reader.Read()) return null;
                     type = reader.GetString();
                 }
                 else if (reader.ValueTextEquals("code"u8) || reader.ValueTextEquals("Code"u8))
                 {
-                    reader.Read();
+                    if (!reader.Read()) return null;
                     code = reader.GetString();
                 }
                 else
@@ -63,7 +63,7 @@ internal static class ApiErrorReader
 
             return new ApiError(message ?? string.Empty, type, code);
         }
-        catch (JsonException)
+        catch (Exception ex) when (ex is JsonException or InvalidOperationException)
         {
             return null;
         }
