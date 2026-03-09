@@ -22,10 +22,9 @@ public class LocalStackFixture : IAsyncDisposable
 
     public async Task StartAsync()
     {
-        _container = new ContainerBuilder(new DockerImage("localstack/localstack"))
+        _container = new ContainerBuilder(new DockerImage("localstack/localstack:4.4.0"))
             .WithEnvironment("SERVICES", "lambda")
             .WithEnvironment("LOCALSTACK_HOST", "localhost")
-            .WithEnvironment("LAMBDA_EXECUTOR", "docker")
             .WithPortBinding(4566, true)
             .WithBindMount("/var/run/docker.sock", "/var/run/docker.sock")
             .WithWaitStrategy(Wait.ForUnixContainer()
