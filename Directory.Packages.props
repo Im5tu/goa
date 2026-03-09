@@ -13,6 +13,7 @@
     <PackageVersion Include="AWSSDK.SQS" Version="4.0.2.9" />
 
     <!-- Benchmarking -->
+    <PackageVersion Include="EfficientDynamoDb" Version="0.9.18" />
     <PackageVersion Include="BenchmarkDotNet" Version="0.15.8" />
     <PackageVersion Include="BenchmarkDotNet.Diagnostics.Windows" Version="0.15.8" />
 
