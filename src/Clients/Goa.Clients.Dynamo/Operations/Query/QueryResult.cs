@@ -38,3 +38,30 @@ public class QueryResult
     /// </summary>
     public double ConsumedCapacityUnits { get; set; }
 }
+
+/// <summary>
+/// Typed result wrapper for Query operations with direct deserialization support.
+/// </summary>
+/// <typeparam name="T">The type of the deserialized items.</typeparam>
+public class QueryResult<T>
+{
+    /// <inheritdoc cref="QueryResult.Items"/>
+    public List<T> Items { get; set; } = new();
+
+    /// <inheritdoc cref="QueryResult.LastEvaluatedKey"/>
+    public Dictionary<string, AttributeValue>? LastEvaluatedKey { get; set; }
+
+    /// <inheritdoc cref="QueryResult.Count"/>
+    public int Count => Items.Count;
+
+    /// <inheritdoc cref="QueryResult.HasMoreResults"/>
+    public bool HasMoreResults => LastEvaluatedKey?.Count > 0;
+
+    /// <inheritdoc cref="QueryResult.ScannedCount"/>
+    public int ScannedCount { get; set; }
+
+    /// <summary>
+    /// The capacity consumed by the operation.
+    /// </summary>
+    public ConsumedCapacity? ConsumedCapacity { get; set; }
+}

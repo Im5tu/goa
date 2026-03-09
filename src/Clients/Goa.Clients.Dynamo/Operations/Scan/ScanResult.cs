@@ -38,3 +38,30 @@ public class ScanResult
     /// </summary>
     public double ConsumedCapacityUnits { get; set; }
 }
+
+/// <summary>
+/// Typed result wrapper for Scan operations with direct deserialization support.
+/// </summary>
+/// <typeparam name="T">The type of the deserialized items.</typeparam>
+public class ScanResult<T>
+{
+    /// <inheritdoc cref="ScanResult.Items"/>
+    public List<T> Items { get; set; } = new();
+
+    /// <inheritdoc cref="ScanResult.LastEvaluatedKey"/>
+    public Dictionary<string, AttributeValue>? LastEvaluatedKey { get; set; }
+
+    /// <inheritdoc cref="ScanResult.Count"/>
+    public int Count => Items.Count;
+
+    /// <inheritdoc cref="ScanResult.HasMoreResults"/>
+    public bool HasMoreResults => LastEvaluatedKey?.Count > 0;
+
+    /// <inheritdoc cref="ScanResult.ScannedCount"/>
+    public int ScannedCount { get; set; }
+
+    /// <summary>
+    /// The capacity consumed by the operation.
+    /// </summary>
+    public ConsumedCapacity? ConsumedCapacity { get; set; }
+}

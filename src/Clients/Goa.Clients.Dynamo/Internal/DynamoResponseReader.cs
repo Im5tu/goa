@@ -145,6 +145,19 @@ internal static class DynamoResponseReader
         return record;
     }
 
+    internal static DynamoRecord ReadDynamoRecordItemCached(ref Utf8JsonReader reader, ref PropertyNameCache cache)
+    {
+        var record = new DynamoRecord();
+        // reader must be at StartObject
+        while (reader.Read() && reader.TokenType != JsonTokenType.EndObject)
+        {
+            var key = cache.GetOrAdd(ref reader);
+            reader.Read();
+            record[key] = ReadAttributeValue(ref reader);
+        }
+        return record;
+    }
+
     private static List<T> ReadItems<T>(ref Utf8JsonReader reader, DynamoItemReader<T> itemReader)
     {
         var items = new List<T>();
