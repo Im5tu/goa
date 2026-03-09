@@ -7,6 +7,7 @@ using System.Collections.Concurrent;
 namespace Goa.Clients.Sqs.Benchmarks.Benchmarks;
 
 [MemoryDiagnoser, GroupBenchmarksBy(BenchmarkLogicalGroupRule.ByCategory), Orderer(SummaryOrderPolicy.FastestToSlowest)]
+[WarmupCount(10), IterationCount(50), InvocationCount(1)]
 public class DeleteMessageAsyncBenchmarks
 {
     private LocalStackFixture _fixture = null!;
@@ -27,22 +28,26 @@ public class DeleteMessageAsyncBenchmarks
     [Benchmark(Baseline = true), BenchmarkCategory("Delete Message")]
     public async Task<DeleteMessageResponse> AwsSdk_DeleteMessage()
     {
-        _receiptHandles.TryDequeue(out var receiptHandle);
+        if (!_receiptHandles.TryDequeue(out var receiptHandle))
+            throw new InvalidOperationException("Receipt handle pool exhausted. Increase seed count or reduce iteration count.");
+
         return await _fixture.AwsSdkClient.DeleteMessageAsync(new DeleteMessageRequest
         {
             QueueUrl = _fixture.QueueUrl,
-            ReceiptHandle = receiptHandle ?? "dummy-receipt-handle"
+            ReceiptHandle = receiptHandle
         });
     }
 
     [Benchmark, BenchmarkCategory("Delete Message")]
     public async Task<Operations.DeleteMessage.DeleteMessageResponse> Goa_DeleteMessage()
     {
-        _receiptHandles.TryDequeue(out var receiptHandle);
+        if (!_receiptHandles.TryDequeue(out var receiptHandle))
+            throw new InvalidOperationException("Receipt handle pool exhausted. Increase seed count or reduce iteration count.");
+
         var response = await _fixture.GoaClient.DeleteMessageAsync(new Operations.DeleteMessage.DeleteMessageRequest
         {
             QueueUrl = _fixture.QueueUrl,
-            ReceiptHandle = receiptHandle ?? "dummy-receipt-handle"
+            ReceiptHandle = receiptHandle
         });
         return response.Value;
     }
