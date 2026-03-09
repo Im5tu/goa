@@ -23,9 +23,14 @@ public sealed class ResponseHeaders
     public string? ErrorMessage { get; init; }
 
     /// <summary>
+    /// Gets the Content-Type of the response body.
+    /// </summary>
+    public string? ContentType { get; init; }
+
+    /// <summary>
     /// Extracts key headers from an HTTP response.
     /// </summary>
-    internal static ResponseHeaders FromHttpResponse(HttpResponseHeaders headers)
+    internal static ResponseHeaders FromHttpResponse(HttpResponseHeaders headers, HttpContentHeaders? contentHeaders = null)
     {
         string? requestId = null;
         if (headers.TryGetValues("x-amzn-RequestId", out var values)
@@ -50,7 +55,8 @@ public sealed class ResponseHeaders
         {
             RequestId = requestId,
             ErrorType = errorType,
-            ErrorMessage = errorMessage
+            ErrorMessage = errorMessage,
+            ContentType = contentHeaders?.ContentType?.MediaType
         };
     }
 }

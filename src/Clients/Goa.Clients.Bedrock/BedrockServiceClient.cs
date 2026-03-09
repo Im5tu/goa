@@ -110,7 +110,8 @@ public class BedrockServiceClient : JsonAwsServiceClient<BedrockServiceClientCon
 
         return new InvokeModelResponse
         {
-            Body = response.Value ?? string.Empty
+            Body = response.Value ?? string.Empty,
+            ContentType = response.Headers?.ContentType
         };
     }
 
