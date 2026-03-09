@@ -57,7 +57,7 @@ public abstract class XmlAwsServiceClient<T> : AwsServiceClient<T> where T : Aws
             }
         }
 
-        var requestMessage = CreateRequestMessage(method, requestUri + $"?Action={UrlEncoder.Default.Encode(target)}", content, new MediaTypeHeaderValue("application/xml"), headers);
+        using var requestMessage = CreateRequestMessage(method, requestUri + $"?Action={UrlEncoder.Default.Encode(target)}", content, new MediaTypeHeaderValue("application/xml"), headers);
         var response = await SendAsync(requestMessage, target, cancellationToken);
 
         return await ProcessXmlResponseAsync<TResponse>(response);
@@ -69,7 +69,7 @@ public abstract class XmlAwsServiceClient<T> : AwsServiceClient<T> where T : Aws
     private async Task<ApiResponse<TResponse>> ProcessXmlResponseAsync<TResponse>(HttpResponseMessage response)
         where TResponse : class, IDeserializeFromXml, new()
     {
-        var headers = response.Headers.ToDictionary(h => h.Key, h => h.Value);
+        var headers = ResponseHeaders.FromHttpResponse(response.Headers);
 
         if (!response.IsSuccessStatusCode)
         {

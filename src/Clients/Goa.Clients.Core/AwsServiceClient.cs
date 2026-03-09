@@ -146,7 +146,59 @@ public abstract class AwsServiceClient<T> where T : AwsServiceConfiguration
             if (contentType != null)
                 byteContent.Headers.ContentType = contentType;
             requestMessage.Content = byteContent;
-            requestMessage.Options.Set(HttpOptions.Payload, content);
+            requestMessage.Options.Set(HttpOptions.Payload, content.AsMemory());
+        }
+
+        if (headers != null)
+        {
+            foreach (var header in headers)
+                requestMessage.Headers.Add(header.Key, header.Value);
+        }
+
+        return requestMessage;
+    }
+
+    /// <summary>
+    /// Creates an HTTP request message using a <see cref="PooledBufferWriter"/> for zero-copy content.
+    /// The <see cref="ReadOnlyMemoryContent"/> borrows the buffer writer's memory; the caller must
+    /// ensure the buffer writer outlives the request message.
+    /// </summary>
+    /// <param name="method">The HTTP method to use.</param>
+    /// <param name="requestUri">The API endpoint to target.</param>
+    /// <param name="bufferWriter">The pooled buffer writer containing the serialized request body.</param>
+    /// <param name="contentType">The content type for the request.</param>
+    /// <param name="headers">Additional headers to add to the request.</param>
+    /// <returns>A configured HTTP request message.</returns>
+    protected HttpRequestMessage CreateRequestMessage(HttpMethod method, string requestUri, PooledBufferWriter bufferWriter, MediaTypeHeaderValue? contentType = null, Dictionary<string, string>? headers = null)
+    {
+        var baseUri = _cachedBaseUri ??= new Uri(
+            Configuration.ServiceUrl ?? $"https://{Configuration.Service.ToLower()}.{Configuration.Region}.amazonaws.com/");
+
+        Uri finalUri;
+        if (requestUri == "/")
+        {
+            finalUri = baseUri;
+        }
+        else
+        {
+            requestUri = requestUri.TrimStart('/');
+            finalUri = new Uri(baseUri, requestUri);
+        }
+
+        var requestMessage = new HttpRequestMessage
+        {
+            RequestUri = finalUri,
+            Method = method
+        };
+
+        var memory = bufferWriter.WrittenMemory;
+        if (memory.Length > 0 && method != HttpMethod.Get)
+        {
+            var content = new ReadOnlyMemoryContent(memory);
+            if (contentType != null)
+                content.Headers.ContentType = contentType;
+            requestMessage.Content = content;
+            requestMessage.Options.Set(HttpOptions.Payload, memory);
         }
 
         if (headers != null)

@@ -88,9 +88,9 @@ internal sealed class RequestSigner
             return ValueTask.FromResult(signature);
         }
 
-        if (request.Options.TryGetValue(HttpOptions.Payload, out var payload) && payload?.Length > 0)
+        if (request.Options.TryGetValue(HttpOptions.Payload, out var payload) && payload.Length > 0)
         {
-            var payloadHash = ComputePayloadHashFromBytes(payload);
+            var payloadHash = ComputePayloadHashFromBytes(payload.Span);
             var (signature, _) = ComputeSignatureCore(request, time, region, serviceName, credentials, payloadHash);
             return ValueTask.FromResult(signature);
         }
@@ -481,9 +481,9 @@ internal sealed class RequestSigner
         }
 
         // Check for pre-computed payload option first - can complete synchronously
-        if (request.Options.TryGetValue(HttpOptions.Payload, out var payload) && payload?.Length > 0)
+        if (request.Options.TryGetValue(HttpOptions.Payload, out var payload) && payload.Length > 0)
         {
-            return ValueTask.FromResult(ComputePayloadHashFromBytes(payload));
+            return ValueTask.FromResult(ComputePayloadHashFromBytes(payload.Span));
         }
 
         // Stream large content asynchronously
@@ -494,7 +494,7 @@ internal sealed class RequestSigner
     /// Computes payload hash synchronously from pre-computed UTF-8 bytes.
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static Sha256Hash ComputePayloadHashFromBytes(byte[] payload)
+    private static Sha256Hash ComputePayloadHashFromBytes(ReadOnlySpan<byte> payload)
     {
         Span<byte> hash = stackalloc byte[32];
         SHA256.HashData(payload, hash);
