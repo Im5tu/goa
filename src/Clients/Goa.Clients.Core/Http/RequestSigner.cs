@@ -1,6 +1,5 @@
 using Goa.Clients.Core.Credentials;
 using System.Buffers;
-using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
@@ -68,7 +67,7 @@ internal sealed class RequestSigner
         var payloadHash = await ComputePayloadHashAsync(request).ConfigureAwait(false);
 
         // All span-heavy work happens here synchronously to maintain high performance.
-        return ComputeSignatureCore(request, time, region, serviceName, credentials, payloadHash);
+        return ComputeSignatureCore(request, time, region, serviceName, credentials, payloadHash).Signature;
     }
 
     /// <summary>
@@ -85,14 +84,14 @@ internal sealed class RequestSigner
         if (request.Content is null)
         {
             var payloadHash = ComputeEmptyPayloadHash();
-            var signature = ComputeSignatureCore(request, time, region, serviceName, credentials, payloadHash);
+            var (signature, _) = ComputeSignatureCore(request, time, region, serviceName, credentials, payloadHash);
             return ValueTask.FromResult(signature);
         }
 
         if (request.Options.TryGetValue(HttpOptions.Payload, out var payload) && payload?.Length > 0)
         {
             var payloadHash = ComputePayloadHashFromBytes(payload);
-            var signature = ComputeSignatureCore(request, time, region, serviceName, credentials, payloadHash);
+            var (signature, _) = ComputeSignatureCore(request, time, region, serviceName, credentials, payloadHash);
             return ValueTask.FromResult(signature);
         }
 
@@ -122,7 +121,7 @@ internal sealed class RequestSigner
         string serviceName)
     {
         var payloadHash = await ComputePayloadHashFromStreamAsync(request).ConfigureAwait(false);
-        return ComputeSignatureCore(request, time, region, serviceName, credentials, payloadHash);
+        return ComputeSignatureCore(request, time, region, serviceName, credentials, payloadHash).Signature;
     }
 
     /// <summary>
@@ -166,7 +165,7 @@ internal sealed class RequestSigner
         request.Headers.TryAddWithoutValidation(RequestHeaders.AmzDate, new string(longDate));
 
         Span<char> payloadHex = stackalloc char[64];
-        BytesToHex(payloadHash.AsBytes, payloadHex);
+        Convert.TryToHexStringLower(payloadHash.AsBytes, payloadHex, out _);
         request.Headers.TryAddWithoutValidation(RequestHeaders.AmzContentSha256, new string(payloadHex));
 
         if (request.Options.TryGetValue(HttpOptions.Target, out var target) && !string.IsNullOrWhiteSpace(target))
@@ -184,22 +183,36 @@ internal sealed class RequestSigner
             request.Headers.TryAddWithoutValidation(RequestHeaders.AmzSecurityToken, credentials.SessionToken);
         }
 
-        // Now compute the signature
-        var signature = ComputeSignatureCore(request, time, region, serviceName, credentials, payloadHash);
+        // Now compute the signature and signed headers list in a single pass
+        var (signature, signedHeaders) = ComputeSignatureCore(request, time, region, serviceName, credentials, payloadHash);
 
-        // Build credential scope and signed headers list
+        // Build credential scope
         var scope = CreateCredentialScope(shortDate, region, serviceName);
-        var signedHeaders = BuildSignedHeadersList(request, credentials);
 
-        // Build final authorization header
-        return ("AWS4-HMAC-SHA256", $"Credential={credentials.AccessKeyId}/{scope}, SignedHeaders={signedHeaders}, Signature={signature}");
+        // Build final authorization header — use string.Create to avoid DefaultInterpolatedStringHandler buffer growth
+        // "Credential=" (11) + accessKeyId + "/" (1) + scope + ", SignedHeaders=" (16) + signedHeaders + ", Signature=" (12) + signature (64)
+        var accessKeyId = credentials.AccessKeyId;
+        var tokenLen = 11 + accessKeyId.Length + 1 + scope.Length + 16 + signedHeaders.Length + 12 + signature.Length;
+        var token = string.Create(tokenLen, (accessKeyId, scope, signedHeaders, signature), static (chars, state) =>
+        {
+            var pos = 0;
+            "Credential=".AsSpan().CopyTo(chars.Slice(pos)); pos += 11;
+            state.accessKeyId.AsSpan().CopyTo(chars.Slice(pos)); pos += state.accessKeyId.Length;
+            chars[pos++] = '/';
+            state.scope.AsSpan().CopyTo(chars.Slice(pos)); pos += state.scope.Length;
+            ", SignedHeaders=".AsSpan().CopyTo(chars.Slice(pos)); pos += 16;
+            state.signedHeaders.AsSpan().CopyTo(chars.Slice(pos)); pos += state.signedHeaders.Length;
+            ", Signature=".AsSpan().CopyTo(chars.Slice(pos)); pos += 12;
+            state.signature.AsSpan().CopyTo(chars.Slice(pos));
+        });
+        return ("AWS4-HMAC-SHA256", token);
     }
 
     /// <summary>
     /// Core synchronous signature computation using span-based operations for maximum performance.
     /// Uses precise size calculations and ArrayPool for efficient memory usage.
     /// </summary>
-    private string ComputeSignatureCore(
+    private (string Signature, string SignedHeaders) ComputeSignatureCore(
         HttpRequestMessage request,
         DateTime time,
         string region,
@@ -214,18 +227,44 @@ internal sealed class RequestSigner
         time.TryFormat(longDate,  out _, "yyyyMMdd'T'HHmmss'Z'".AsSpan());
 
         // ---- Build Canonical Request with precise memory management ----
-        CountHeaders(request, out var reqCount, out var contentCount);
+        // Enumerate headers ONCE into rented arrays to avoid repeated GetEnumeratorCore allocations
+        const int InitialHeaderCapacity = 16;
+        var reqHeaders = ArrayPool<KeyValuePair<string, IEnumerable<string>>>.Shared.Rent(InitialHeaderCapacity);
+        var contentHeaders = ArrayPool<KeyValuePair<string, IEnumerable<string>>>.Shared.Rent(InitialHeaderCapacity);
+        int rhIndex = 0, chIndex = 0;
+
+        foreach (var kv in request.Headers)
+        {
+            if (rhIndex == reqHeaders.Length)
+                reqHeaders = GrowArray(reqHeaders, ref rhIndex);
+            reqHeaders[rhIndex++] = kv;
+        }
+
+        if (request.Content?.Headers is not null)
+            foreach (var kv in request.Content.Headers)
+            {
+                if (chIndex == contentHeaders.Length)
+                    contentHeaders = GrowArray(contentHeaders, ref chIndex);
+                contentHeaders[chIndex++] = kv;
+            }
+
+        // Compute totals from cached arrays (no re-enumeration)
         var hasTarget = request.Options.TryGetValue(HttpOptions.Target, out var _target) && !string.IsNullOrWhiteSpace(_target);
         var hasApiVersion = request.Options.TryGetValue(HttpOptions.ApiVersion, out var _apiv) && !string.IsNullOrWhiteSpace(_apiv);
 
-        var totalHeaders = ComputeHeaderTotal(request, credentials.SessionToken, hasTarget, hasApiVersion, reqCount, contentCount);
+        var filteredReqCount = 0;
+        for (var i = 0; i < rhIndex; i++)
+            if (!IsAwsManagedHeader(reqHeaders[i].Key))
+                filteredReqCount++;
 
-        // Rent arrays for header processing - returned at method end
+        var totalHeaders = (request.RequestUri != null ? 1 : 0) + 2
+            + (hasApiVersion ? 1 : 0)
+            + (!string.IsNullOrWhiteSpace(credentials.SessionToken) ? 1 : 0)
+            + (hasTarget ? 1 : 0)
+            + filteredReqCount + chIndex;
+
         var headerRefs = ArrayPool<HeaderRef>.Shared.Rent(totalHeaders);
-        var reqHeaders = ArrayPool<KeyValuePair<string, IEnumerable<string>>>.Shared.Rent(reqCount);
-        var contentHeaders = ArrayPool<KeyValuePair<string, IEnumerable<string>>>.Shared.Rent(contentCount);
-
-        int rhIndex = 0, chIndex = 0, hrefIndex = 0;
+        int hrefIndex = 0;
 
         // Build AWS required headers first
         if (request.RequestUri is not null)
@@ -237,27 +276,22 @@ internal sealed class RequestSigner
         if (!string.IsNullOrWhiteSpace(credentials.SessionToken)) headerRefs[hrefIndex++] = HeaderRef.Create("x-amz-security-token", HeaderKind.AmzSecurityToken, -1);
         if (hasTarget) headerRefs[hrefIndex++] = HeaderRef.Create("x-amz-target", HeaderKind.AmzTarget, -1);
 
-        // Add request headers, skipping AWS-managed headers to avoid duplicates
-        foreach (var kv in request.Headers)
+        // Add request headers from cached array, skipping AWS-managed headers
+        var filteredIndex = 0;
+        for (var i = 0; i < rhIndex; i++)
         {
-            // Skip headers that are already handled by AWS-specific HeaderKind values
-            if (IsAwsManagedHeader(kv.Key))
+            if (IsAwsManagedHeader(reqHeaders[i].Key))
                 continue;
 
-            reqHeaders[rhIndex] = kv;
-            headerRefs[hrefIndex++] = HeaderRef.Create(kv.Key, HeaderKind.Request, rhIndex);
-            rhIndex++;
+            reqHeaders[filteredIndex] = reqHeaders[i];
+            headerRefs[hrefIndex++] = HeaderRef.Create(reqHeaders[i].Key, HeaderKind.Request, filteredIndex);
+            filteredIndex++;
         }
 
-        // Add content headers
-        if (request.Content?.Headers is not null)
+        // Add content headers from cached array
+        for (var i = 0; i < chIndex; i++)
         {
-            foreach (var kv in request.Content.Headers)
-            {
-                contentHeaders[chIndex] = kv;
-                headerRefs[hrefIndex++] = HeaderRef.Create(kv.Key, HeaderKind.Content, chIndex);
-                chIndex++;
-            }
+            headerRefs[hrefIndex++] = HeaderRef.Create(contentHeaders[i].Key, HeaderKind.Content, i);
         }
 
         // Use insertion sort for small collections to avoid IComparer allocation overhead
@@ -371,9 +405,7 @@ internal sealed class RequestSigner
         canonical[pos++] = '\n';
 
         // Write payload hash hex directly from bytes - no intermediate string
-        Span<char> payloadHex = stackalloc char[64];
-        BytesToHex(payloadHash.AsBytes, payloadHex);
-        payloadHex.CopyTo(canonical.Slice(pos)); pos += 64;
+        Convert.TryToHexStringLower(payloadHash.AsBytes, canonical.Slice(pos, 64), out _); pos += 64;
 
         // Debug: Output the complete canonical request
 #if DEBUG
@@ -417,6 +449,9 @@ internal sealed class RequestSigner
         // Generate final signature
         var signature = GetSignatureFromSpan(shortDate, sts.Slice(0, sp), credentials.SecretAccessKey, region, serviceName);
 
+        // Build signed headers string from already-sorted headerRefs (no re-enumeration)
+        var signedHeaders = BuildSignedHeadersFromRefs(headerRefs, totalHeaders);
+
         // Debug: Output final signature
 #if DEBUG
         Console.WriteLine($"=== GOA FINAL SIGNATURE: {signature} ===");
@@ -429,7 +464,7 @@ internal sealed class RequestSigner
         ArrayPool<KeyValuePair<string, IEnumerable<string>>>.Shared.Return(reqHeaders);
         ArrayPool<KeyValuePair<string, IEnumerable<string>>>.Shared.Return(contentHeaders);
 
-        return signature;
+        return (signature, signedHeaders);
     }
 
     /// <summary>
@@ -648,8 +683,7 @@ internal sealed class RequestSigner
             case HeaderKind.AmzSha256:
             {
                 // Write hex directly from bytes - no string intermediate
-                var tmp = dest.Slice(pos, 64);
-                BytesToHex(payloadHashBytes, tmp);
+                Convert.TryToHexStringLower(payloadHashBytes, dest.Slice(pos, 64), out _);
                 pos += 64;
                 break;
             }
@@ -819,13 +853,13 @@ internal sealed class RequestSigner
     {
         var byteCount = Encoding.UTF8.GetByteCount(input);
         Span<byte> hash = stackalloc byte[32];
-        if (byteCount <= 1024) // Use stackalloc for small strings
+        if (byteCount <= 2048) // Use stackalloc for typical canonical requests (ASCII, byteCount == charCount)
         {
             Span<byte> bytes = stackalloc byte[byteCount];
             Encoding.UTF8.GetBytes(input, bytes);
             SHA256.HashData(bytes, hash);
         }
-        else // Use ArrayPool for larger strings
+        else // Use ArrayPool for unusually large requests
         {
             var rented = ArrayPool<byte>.Shared.Rent(byteCount);
             try
@@ -839,23 +873,7 @@ internal sealed class RequestSigner
                 ArrayPool<byte>.Shared.Return(rented, clearArray: true);
             }
         }
-        BytesToHex(hash, hexOutput);
-    }
-
-    /// <summary>
-    /// High-performance bytes-to-hex conversion using bit manipulation.
-    /// Produces lowercase hex output as required by AWS.
-    /// </summary>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static void BytesToHex(ReadOnlySpan<byte> input, Span<char> hexOut)
-    {
-        for (var i = 0; i < input.Length; i++)
-        {
-            var b = input[i];
-            // Bit manipulation formula for lowercase hex: avoids branching
-            hexOut[i << 1] = (char)(87 + (b >> 4) + ((((b >> 4) - 10) >> 31) & -39));
-            hexOut[(i << 1) + 1] = (char)(87 + (b & 0xF) + ((((b & 0xF) - 10) >> 31) & -39));
-        }
+        Convert.TryToHexStringLower(hash, hexOutput, out _);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -882,77 +900,42 @@ internal sealed class RequestSigner
     private static string GetSignatureFromSpan(ReadOnlySpan<char> dateStamp, ReadOnlySpan<char> stringToSign,
         string secretAccessKey, string region, string service)
     {
-        var prefix = "AWS4"u8;
-        var request = "aws4_request"u8;
-        var aws4KeyLength = prefix.Length + Encoding.UTF8.GetByteCount(secretAccessKey);
+        const string prefix = "AWS4";
+        var aws4KeyLength = prefix.Length + secretAccessKey.Length;
 
-        // Build AWS4 + secret key on stack
+        // Build AWS4 + secret key on stack (AWS keys are always ASCII)
         Span<byte> kSecret = stackalloc byte[aws4KeyLength];
-        prefix.CopyTo(kSecret);
-        Encoding.UTF8.GetBytes(secretAccessKey, kSecret.Slice(prefix.Length));
+        Ascii.FromUtf16(prefix, kSecret, out _);
+        Ascii.FromUtf16(secretAccessKey, kSecret.Slice(prefix.Length), out _);
 
         // HMAC chain: kSecret -> kDate -> kRegion -> kService -> kSigning -> signature
         Span<byte> key = stackalloc byte[32];
-        HmacSHA256FromSpan(key, kSecret, dateStamp);
-        HmacSHA256Utf8(key, key, region);
-        HmacSHA256Utf8(key, key, service);
-        HmacSHA256(key, key, request);
-        HmacSHA256FromSpan(key, key, stringToSign);
+        HmacSHA256(key, kSecret, dateStamp);
+        HmacSHA256(key, key, region);
+        HmacSHA256(key, key, service);
+        HmacSHA256(key, key, "aws4_request");
+        HmacSHA256(key, key, stringToSign);
 
-        // string.Create avoids intermediate char buffer allocation
-        return string.Create(64, key.ToArray(), static (dst, bytes) =>
-        {
-            BytesToHex(bytes, dst);
-        });
+        return Convert.ToHexStringLower(key);
     }
 
     /// <summary>
-    /// HMAC-SHA256 with span-based UTF-8 conversion.
-    /// Uses stackalloc for small strings, ArrayPool for large strings.
+    /// HMAC-SHA256 with char data. Uses SIMD ASCII narrowing for the common case,
+    /// falls back to UTF-8 encoding for non-ASCII strings.
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static void HmacSHA256FromSpan(in Span<byte> destination, in ReadOnlySpan<byte> key, in ReadOnlySpan<char> data)
+    private static void HmacSHA256(Span<byte> destination, ReadOnlySpan<byte> key, ReadOnlySpan<char> data)
     {
-        var byteCount = Encoding.UTF8.GetByteCount(data);
-        if (byteCount <= 512) // Use stackalloc for small data
-        {
-            Span<byte> bytes = stackalloc byte[byteCount];
-            Encoding.UTF8.GetBytes(data, bytes);
-            HMACSHA256.HashData(key, bytes, destination);
-        }
-        else // Use ArrayPool for large data
-        {
-            var rented = ArrayPool<byte>.Shared.Rent(byteCount);
-            try
-            {
-                var bytes = rented.AsSpan(0, byteCount);
-                Encoding.UTF8.GetBytes(data, bytes);
-                HMACSHA256.HashData(key, bytes, destination);
-            }
-            finally
-            {
-                ArrayPool<byte>.Shared.Return(rented, clearArray: true);
-            }
-        }
-    }
-
-    /// <summary>
-    /// HMAC-SHA256 with ASCII fast-path optimization.
-    /// Most AWS service names and regions are ASCII, so this optimization is frequently used.
-    /// </summary>
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static void HmacSHA256Utf8(in Span<byte> destination, in ReadOnlySpan<byte> key, string data)
-    {
-        // ASCII fast-path: avoid UTF-8 encoding for ASCII-only strings
-        if (IsAscii(data))
+        // ASCII fast-path: SIMD narrowing from char to byte
+        if (Ascii.IsValid(data))
         {
             Span<byte> bytes = stackalloc byte[data.Length];
-            for (var i = 0; i < data.Length; i++) bytes[i] = (byte)data[i];
+            Ascii.FromUtf16(data, bytes, out _);
             HMACSHA256.HashData(key, bytes, destination);
             return;
         }
 
-        // UTF-8 path for non-ASCII strings
+        // UTF-8 path for non-ASCII data
         var byteCount = Encoding.UTF8.GetByteCount(data);
         if (byteCount <= 512)
         {
@@ -975,17 +958,6 @@ internal sealed class RequestSigner
             }
         }
     }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static bool IsAscii(string s)
-    {
-        for (var i = 0; i < s.Length; i++) if (s[i] > 0x7F) return false;
-        return true;
-    }
-
-    [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static void HmacSHA256(in Span<byte> destination, in ReadOnlySpan<byte> key, in ReadOnlySpan<byte> data)
-        => HMACSHA256.HashData(key, data, destination);
 
     /// <summary>
     /// Insertion sort optimized for small header collections (≤16 items).
@@ -1073,48 +1045,54 @@ internal sealed class RequestSigner
 
     // ---- Utility Methods ----
 
+    [MethodImpl(MethodImplOptions.NoInlining)]
+    private static T[] GrowArray<T>(T[] old, ref int count)
+    {
+        var replacement = ArrayPool<T>.Shared.Rent(old.Length * 2);
+        old.AsSpan(0, count).CopyTo(replacement);
+        ArrayPool<T>.Shared.Return(old);
+        return replacement;
+    }
+
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static int WriteLowercase(Span<char> dest, string s)
     {
-        var i = 0;
-        for (; i < s.Length; i++) dest[i] = char.ToLowerInvariant(s[i]);
-        return i;
+        if (System.Text.Ascii.ToLower(s, dest, out var written) == System.Buffers.OperationStatus.Done)
+            return written;
+
+        var len = Math.Min(s.Length, dest.Length);
+        for (var i = 0; i < len; i++)
+            dest[i] = char.ToLowerInvariant(s[i]);
+        return len;
     }
 
     /// <summary>
-    /// Counts request and content headers efficiently without allocation.
+    /// Builds signed headers string from an already-sorted HeaderRef array.
+    /// Avoids re-enumerating HttpHeaders by reusing the sorted references.
     /// </summary>
-    private static void CountHeaders(HttpRequestMessage request, out int reqCount, out int contentCount)
+    private static string BuildSignedHeadersFromRefs(HeaderRef[] headerRefs, int count)
     {
-        reqCount = 0; contentCount = 0;
-        foreach (var _ in request.Headers) reqCount++;
-        if (request.Content?.Headers is not null)
-            foreach (var _ in request.Content.Headers) contentCount++;
-    }
+        var len = 0;
+        for (var i = 0; i < count; i++)
+            len += headerRefs[i].Name.Length;
+        len += count - 1; // semicolons
 
-    /// <summary>
-    /// Computes total header count including AWS required headers.
-    /// Used for precise ArrayPool sizing.
-    /// </summary>
-    private static int ComputeHeaderTotal(HttpRequestMessage req, string? sessionToken, bool hasTarget, bool hasApiVersion, int reqCount, int contentCount)
-    {
-        var total = 0;
-        if (req.RequestUri != null) total++;     // host header
-        total += 2;                              // x-amz-content-sha256, x-amz-date (always present)
-        if (hasApiVersion) total++;              // x-amz-api-version
-        if (!string.IsNullOrWhiteSpace(sessionToken)) total++; // x-amz-security-token
-        if (hasTarget) total++;                  // x-amz-target
-
-        // Count only non-AWS-managed headers from request headers
-        var filteredReqCount = 0;
-        foreach (var header in req.Headers)
+        return string.Create(len, (headerRefs, count), static (chars, state) =>
         {
-            if (!IsAwsManagedHeader(header.Key))
-                filteredReqCount++;
-        }
-
-        total += filteredReqCount + contentCount;  // filtered user-provided headers
-        return total;
+            var pos = 0;
+            for (var i = 0; i < state.count; i++)
+            {
+                if (i != 0) chars[pos++] = ';';
+                var name = state.headerRefs[i].Name;
+                var slice = chars.Slice(pos, name.Length);
+                if (System.Text.Ascii.ToLower(name, slice, out _) != System.Buffers.OperationStatus.Done)
+                {
+                    for (var j = 0; j < name.Length; j++)
+                        slice[j] = char.ToLowerInvariant(name[j]);
+                }
+                pos += name.Length;
+            }
+        });
     }
 
     /// <summary>
@@ -1170,49 +1148,4 @@ internal sealed class RequestSigner
             });
     }
 
-    /// <summary>
-    /// Builds the signed headers list for the authorization header.
-    /// </summary>
-    private static string BuildSignedHeadersList(HttpRequestMessage request, AwsCredentials credentials)
-    {
-        var signedHeaders = new SortedSet<string>(StringComparer.OrdinalIgnoreCase);
-
-        // Add required AWS headers
-        if (request.RequestUri != null) signedHeaders.Add("host");
-        signedHeaders.Add("x-amz-date");
-        signedHeaders.Add("x-amz-content-sha256");
-
-        if (request.Options.TryGetValue(HttpOptions.Target, out var target) && !string.IsNullOrWhiteSpace(target))
-        {
-            signedHeaders.Add("x-amz-target");
-        }
-
-        if (request.Options.TryGetValue(HttpOptions.ApiVersion, out var apiVersion) && !string.IsNullOrWhiteSpace(apiVersion))
-        {
-            signedHeaders.Add("x-amz-api-version");
-        }
-
-        if (!string.IsNullOrWhiteSpace(credentials.SessionToken))
-        {
-            signedHeaders.Add("x-amz-security-token");
-        }
-
-        // Add request headers, skipping AWS-managed headers to match canonical request construction
-        foreach (var header in request.Headers)
-        {
-            if (!IsAwsManagedHeader(header.Key))
-                signedHeaders.Add(header.Key.ToLowerInvariant());
-        }
-
-        // Add content headers
-        if (request.Content?.Headers != null)
-        {
-            foreach (var header in request.Content.Headers)
-            {
-                signedHeaders.Add(header.Key.ToLowerInvariant());
-            }
-        }
-
-        return string.Join(";", signedHeaders);
-    }
 }
