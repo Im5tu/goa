@@ -117,7 +117,7 @@ public abstract class JsonAwsServiceClient<T> : AwsServiceClient<T> where T : Aw
             return new ApiResponse<TResponse>(error);
         }
 
-        var headers = ResponseHeaders.FromHttpResponse(response.Headers);
+        var headers = ResponseHeaders.FromHttpResponse(response.Headers, response.Content.Headers);
         using var pooledBuffer = await ReadResponseBytesAsync(response, cancellationToken);
 
         if (typeof(TResponse) == typeof(string))
@@ -215,35 +215,67 @@ public abstract class JsonAwsServiceClient<T> : AwsServiceClient<T> where T : Aw
                 throw new InvalidOperationException($"Response Content-Length {headerLength} exceeds maximum {MaxResponseSize} bytes.");
 
             var contentLength = (int)headerLength;
-            var buffer = System.Buffers.ArrayPool<byte>.Shared.Rent(contentLength);
+            var knownBuffer = System.Buffers.ArrayPool<byte>.Shared.Rent(contentLength);
             try
             {
                 var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
                 var totalRead = 0;
                 while (totalRead < contentLength)
                 {
-                    var read = await stream.ReadAsync(buffer.AsMemory(totalRead, contentLength - totalRead), cancellationToken);
+                    var read = await stream.ReadAsync(knownBuffer.AsMemory(totalRead, contentLength - totalRead), cancellationToken);
                     if (read == 0) break;
                     totalRead += read;
                 }
-                return new PooledBuffer(buffer, totalRead);
+                return new PooledBuffer(knownBuffer, totalRead);
             }
             catch
             {
-                System.Buffers.ArrayPool<byte>.Shared.Return(buffer);
+                System.Buffers.ArrayPool<byte>.Shared.Return(knownBuffer);
                 throw;
             }
         }
 
-        var bytes = await response.Content.ReadAsByteArrayAsync(cancellationToken);
-        if (bytes.Length > MaxResponseSize)
-            throw new InvalidOperationException($"Response size {bytes.Length} exceeds maximum {MaxResponseSize} bytes.");
-        if (bytes.Length == 0)
-            return default;
+        const int initialSize = 4096;
+        var buffer = System.Buffers.ArrayPool<byte>.Shared.Rent(initialSize);
+        try
+        {
+            var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
+            var totalRead = 0;
+            while (true)
+            {
+                if (totalRead == buffer.Length)
+                {
+                    var newSize = buffer.Length * 2;
+                    if (newSize > MaxResponseSize)
+                        newSize = MaxResponseSize + 1; // allow one more read to detect overflow
 
-        var pooledBuf = System.Buffers.ArrayPool<byte>.Shared.Rent(bytes.Length);
-        bytes.CopyTo(pooledBuf, 0);
-        return new PooledBuffer(pooledBuf, bytes.Length);
+                    var newBuffer = System.Buffers.ArrayPool<byte>.Shared.Rent(newSize);
+                    buffer.AsSpan(0, totalRead).CopyTo(newBuffer);
+                    System.Buffers.ArrayPool<byte>.Shared.Return(buffer);
+                    buffer = newBuffer;
+                }
+
+                var read = await stream.ReadAsync(buffer.AsMemory(totalRead, buffer.Length - totalRead), cancellationToken);
+                if (read == 0) break;
+                totalRead += read;
+
+                if (totalRead > MaxResponseSize)
+                    throw new InvalidOperationException($"Response size exceeds maximum {MaxResponseSize} bytes.");
+            }
+
+            if (totalRead == 0)
+            {
+                System.Buffers.ArrayPool<byte>.Shared.Return(buffer);
+                return default;
+            }
+
+            return new PooledBuffer(buffer, totalRead);
+        }
+        catch
+        {
+            System.Buffers.ArrayPool<byte>.Shared.Return(buffer);
+            throw;
+        }
     }
 
     /// <summary>

@@ -58,7 +58,7 @@ public abstract class XmlAwsServiceClient<T> : AwsServiceClient<T> where T : Aws
         }
 
         using var requestMessage = CreateRequestMessage(method, requestUri + $"?Action={UrlEncoder.Default.Encode(target)}", content, new MediaTypeHeaderValue("application/xml"), headers);
-        var response = await SendAsync(requestMessage, target, cancellationToken);
+        using var response = await SendAsync(requestMessage, target, cancellationToken);
 
         return await ProcessXmlResponseAsync<TResponse>(response);
     }
