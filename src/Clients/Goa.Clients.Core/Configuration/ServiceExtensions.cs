@@ -1,5 +1,4 @@
-﻿using System.Collections.Concurrent;
-using Goa.Clients.Core.Credentials;
+﻿using Goa.Clients.Core.Credentials;
 using Goa.Clients.Core.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -12,8 +11,6 @@ namespace Goa.Clients.Core.Configuration;
 /// </summary>
 public static class ServiceExtensions
 {
-    private static readonly ConcurrentDictionary<string, byte> RegisteredServices = new();
-
     /// <summary>
     /// Adds static AWS credentials to the service collection.
     /// </summary>
@@ -34,8 +31,11 @@ public static class ServiceExtensions
 
     internal static IServiceCollection AddGoaService(this IServiceCollection services, string serviceName, TimeSpan? httpTimeout = null)
     {
-        if (!RegisteredServices.TryAdd(serviceName, 0))
+        // Check for a marker descriptor to prevent duplicate registration within the same ServiceCollection,
+        // while allowing re-registration when a new ServiceCollection is created (e.g., benchmarks, tests).
+        if (services.Any(d => d.ServiceType == typeof(GoaServiceMarker) && d.ImplementationInstance is GoaServiceMarker m && m.ServiceName == serviceName))
             return services;
+        services.AddSingleton(new GoaServiceMarker(serviceName));
 
         var timeout = httpTimeout ?? TimeSpan.FromSeconds(10);
 
@@ -63,5 +63,11 @@ public static class ServiceExtensions
         services.TryAddSingleton<ICredentialProviderChain, CredentialProviderChain>();
 
         return services;
+    }
+
+    private sealed class GoaServiceMarker
+    {
+        public string ServiceName { get; }
+        public GoaServiceMarker(string serviceName) => ServiceName = serviceName;
     }
 }
