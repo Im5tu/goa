@@ -16,8 +16,25 @@ internal sealed class SqsServiceClient : JsonAwsServiceClient<SqsServiceClientCo
         IHttpClientFactory httpClientFactory,
         SqsServiceClientConfiguration configuration,
         ILogger<SqsServiceClient> logger)
-        : base(httpClientFactory, logger, configuration, SqsJsonContext.Default)
+        : base(httpClientFactory, logger, configuration)
     {
+    }
+
+    protected override void WriteRequestBody<TRequest>(System.Buffers.IBufferWriter<byte> buffer, TRequest request)
+    {
+        var typeInfo = SqsJsonContext.Default.GetTypeInfo(typeof(TRequest))
+            as System.Text.Json.Serialization.Metadata.JsonTypeInfo<TRequest>
+            ?? throw new InvalidOperationException($"Cannot find type {typeof(TRequest).Name} in serialization context");
+        using var writer = new System.Text.Json.Utf8JsonWriter(buffer);
+        System.Text.Json.JsonSerializer.Serialize(writer, request, typeInfo);
+    }
+
+    protected override TResponse? ReadJsonResponse<TResponse>(ref System.Text.Json.Utf8JsonReader reader) where TResponse : class
+    {
+        var typeInfo = SqsJsonContext.Default.GetTypeInfo(typeof(TResponse))
+            as System.Text.Json.Serialization.Metadata.JsonTypeInfo<TResponse>
+            ?? throw new InvalidOperationException($"Cannot find type {typeof(TResponse).Name} in serialization context");
+        return System.Text.Json.JsonSerializer.Deserialize(ref reader, typeInfo);
     }
 
     public async Task<ErrorOr<SendMessageResponse>> SendMessageAsync(SendMessageRequest request, CancellationToken cancellationToken = default)

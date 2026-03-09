@@ -26,8 +26,27 @@ public class BedrockServiceClient : JsonAwsServiceClient<BedrockServiceClientCon
     /// <param name="logger">Logger instance for logging operations.</param>
     /// <param name="configuration">Configuration for the Bedrock service.</param>
     public BedrockServiceClient(IHttpClientFactory httpClientFactory, ILogger<BedrockServiceClient> logger, BedrockServiceClientConfiguration configuration)
-        : base(httpClientFactory, logger, configuration, BedrockJsonContext.Default)
+        : base(httpClientFactory, logger, configuration)
     {
+    }
+
+    /// <inheritdoc />
+    protected override void WriteRequestBody<TRequest>(System.Buffers.IBufferWriter<byte> buffer, TRequest request)
+    {
+        var typeInfo = BedrockJsonContext.Default.GetTypeInfo(typeof(TRequest))
+            as System.Text.Json.Serialization.Metadata.JsonTypeInfo<TRequest>
+            ?? throw new InvalidOperationException($"Cannot find type {typeof(TRequest).Name} in serialization context");
+        using var writer = new System.Text.Json.Utf8JsonWriter(buffer);
+        System.Text.Json.JsonSerializer.Serialize(writer, request, typeInfo);
+    }
+
+    /// <inheritdoc />
+    protected override TResponse? ReadJsonResponse<TResponse>(ref System.Text.Json.Utf8JsonReader reader) where TResponse : class
+    {
+        var typeInfo = BedrockJsonContext.Default.GetTypeInfo(typeof(TResponse))
+            as System.Text.Json.Serialization.Metadata.JsonTypeInfo<TResponse>
+            ?? throw new InvalidOperationException($"Cannot find type {typeof(TResponse).Name} in serialization context");
+        return System.Text.Json.JsonSerializer.Deserialize(ref reader, typeInfo);
     }
 
     /// <summary>
@@ -100,16 +119,9 @@ public class BedrockServiceClient : JsonAwsServiceClient<BedrockServiceClientCon
             return bedrockError;
         }
 
-        string? contentType = null;
-        if (response.Headers != null && response.Headers.TryGetValue("Content-Type", out var contentTypeValues))
-        {
-            contentType = string.Join(", ", contentTypeValues);
-        }
-
         return new InvokeModelResponse
         {
-            Body = response.Value ?? string.Empty,
-            ContentType = contentType
+            Body = response.Value ?? string.Empty
         };
     }
 

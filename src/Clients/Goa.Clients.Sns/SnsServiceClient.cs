@@ -43,7 +43,7 @@ internal sealed class SnsServiceClient : AwsServiceClient<SnsServiceClientConfig
             var content = Encoding.UTF8.GetBytes(queryParameters);
 
             // Create request message
-            var requestMessage = CreateRequestMessage(
+            using var requestMessage = CreateRequestMessage(
                 HttpMethod.Post,
                 "/",
                 content,
@@ -129,7 +129,7 @@ internal sealed class SnsServiceClient : AwsServiceClient<SnsServiceClientConfig
     private async Task<ApiResponse<TResponse>> ProcessSnsResponseAsync<TResponse>(HttpResponseMessage response)
         where TResponse : class, IDeserializeFromXml, new()
     {
-        var headers = response.Headers.ToDictionary(h => h.Key, h => h.Value);
+        var headers = ResponseHeaders.FromHttpResponse(response.Headers);
 
         if (!response.IsSuccessStatusCode)
         {
