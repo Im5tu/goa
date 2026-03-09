@@ -1,6 +1,6 @@
 using BenchmarkDotNet.Toolchains.InProcess.Emit;
 
-namespace Goa.Performance.Benchmarks;
+namespace Goa.Clients.Sqs.Benchmarks;
 
 public class Program
 {
@@ -8,7 +8,6 @@ public class Program
     {
         var config = DefaultConfig.Instance
             .WithOptions(ConfigOptions.DisableOptimizationsValidator)
-            .AddDiagnoser(MemoryDiagnoser.Default)
             .AddExporter(MarkdownExporter.GitHub)
             .AddJob(Job.Default.WithToolchain(InProcessEmitToolchain.Instance));
 
