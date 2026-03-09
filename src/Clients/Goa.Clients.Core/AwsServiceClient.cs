@@ -4,7 +4,6 @@ using Goa.Clients.Core.Logging;
 using Microsoft.Extensions.Logging;
 using System.Diagnostics;
 using System.Net.Http.Headers;
-using System.Text;
 
 namespace Goa.Clients.Core;
 
@@ -26,6 +25,7 @@ public abstract class AwsServiceClient<T> where T : AwsServiceConfiguration
 
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly string _clientType;
+    private Uri? _cachedBaseUri;
 
     /// <summary>
     /// Gets the logger instance for this service client.
@@ -67,38 +67,38 @@ public abstract class AwsServiceClient<T> where T : AwsServiceConfiguration
         request.Options.Set(HttpOptions.Target, target);
         request.Options.Set(HttpOptions.ApiVersion, Configuration.ApiVersion);
 
-        using var logContext = Logger.BeginScope(new Dictionary<string, object>
-        {
-            ["Client"] = _clientType,
-            ["Region"] = Configuration.Region,
-            ["Service"] = Configuration.Service,
-            ["SigningService"] = Configuration.SigningService,
-            ["Target"] = target,
-            ["ApiVersion"] = Configuration.ApiVersion,
-            ["Method"] = request.Method.ToString(),
-            ["Uri"] = request.RequestUri?.ToString() ?? "Unknown"
-        });
+        using var logContext = Logger.BeginScope(new LogScope8(
+            new("Client", _clientType),
+            new("Region", Configuration.Region),
+            new("Service", Configuration.Service),
+            new("SigningService", Configuration.SigningService),
+            new("Target", target),
+            new("ApiVersion", Configuration.ApiVersion),
+            new("Method", request.Method.Method),
+            new("Uri", request.RequestUri?.AbsoluteUri ?? "Unknown")
+        ));
 
         try
         {
             Logger.RequestStart(Configuration.LogLevel);
 
-            var sw = Stopwatch.StartNew();
+            var start = Stopwatch.GetTimestamp();
             var response = await client.SendAsync(request, cancellationToken);
 
             // Ensure that we log the applicable response headers and status code
             var context = new Dictionary<string, object>
             {
-                ["StatusCode"] = (int)response.StatusCode,
+                ["StatusCode"] = ((int)response.StatusCode).ToString(),
                 ["ReasonPhrase"] = response.ReasonPhrase ?? response.StatusCode.ToString()
             };
-            foreach (var header in response.Headers.Where(x => x.Key.StartsWith("x-amz", StringComparison.OrdinalIgnoreCase) || x.Key.StartsWith("x-amzn", StringComparison.OrdinalIgnoreCase)))
+            foreach (var header in response.Headers)
             {
-                context[header.Key] = string.Join(", ", header.Value);
+                if (header.Key.StartsWith("x-amz", StringComparison.OrdinalIgnoreCase))
+                    context[header.Key] = string.Join(", ", header.Value);
             }
             using var responseLogContext = Logger.BeginScope(context);
 
-            Logger.RequestComplete(Configuration.LogLevel, sw.Elapsed.TotalMilliseconds);
+            Logger.RequestComplete(Configuration.LogLevel, Stopwatch.GetElapsedTime(start).TotalMilliseconds);
 
             return response;
         }
@@ -120,30 +120,28 @@ public abstract class AwsServiceClient<T> where T : AwsServiceConfiguration
     /// <returns>A configured HTTP request message.</returns>
     protected HttpRequestMessage CreateRequestMessage(HttpMethod method, string requestUri, byte[]? content = null, MediaTypeHeaderValue? contentType = null, Dictionary<string, string>? headers = null)
     {
-        var uri = Configuration.ServiceUrl ?? $"https://{Configuration.Service.ToLower()}.{Configuration.Region}.amazonaws.com/";
+        var baseUri = _cachedBaseUri ??= new Uri(
+            Configuration.ServiceUrl ?? $"https://{Configuration.Service.ToLower()}.{Configuration.Region}.amazonaws.com/");
 
-        if (requestUri != "/")
+        Uri finalUri;
+        if (requestUri == "/")
+        {
+            finalUri = baseUri;
+        }
+        else
         {
             requestUri = requestUri.TrimStart('/');
-            if (!uri.EndsWith('/'))
-            {
-                uri = $"{uri}/{requestUri}";
-            }
-            else
-            {
-                uri = $"{uri}{requestUri}";
-            }
+            finalUri = new Uri(baseUri, requestUri);
         }
 
         var requestMessage = new HttpRequestMessage
         {
-            RequestUri = new Uri(uri),
+            RequestUri = finalUri,
             Method = method
         };
 
         if (content != null && content.Length > 0 && method != HttpMethod.Get)
         {
-            Debug.WriteLine("REQUEST: " + Encoding.UTF8.GetString(content));
             var byteContent = new ByteArrayContent(content);
             if (contentType != null)
                 byteContent.Headers.ContentType = contentType;
