@@ -31,22 +31,11 @@ public class BedrockServiceClient : JsonAwsServiceClient<BedrockServiceClientCon
     }
 
     /// <inheritdoc />
-    protected override void WriteRequestBody<TRequest>(System.Buffers.IBufferWriter<byte> buffer, TRequest request)
+    protected override System.Text.Json.Serialization.Metadata.JsonTypeInfo<TValue> ResolveJsonTypeInfo<TValue>()
     {
-        var typeInfo = BedrockJsonContext.Default.GetTypeInfo(typeof(TRequest))
-            as System.Text.Json.Serialization.Metadata.JsonTypeInfo<TRequest>
-            ?? throw new InvalidOperationException($"Cannot find type {typeof(TRequest).Name} in serialization context");
-        using var writer = new System.Text.Json.Utf8JsonWriter(buffer);
-        System.Text.Json.JsonSerializer.Serialize(writer, request, typeInfo);
-    }
-
-    /// <inheritdoc />
-    protected override TResponse? ReadJsonResponse<TResponse>(ref System.Text.Json.Utf8JsonReader reader) where TResponse : class
-    {
-        var typeInfo = BedrockJsonContext.Default.GetTypeInfo(typeof(TResponse))
-            as System.Text.Json.Serialization.Metadata.JsonTypeInfo<TResponse>
-            ?? throw new InvalidOperationException($"Cannot find type {typeof(TResponse).Name} in serialization context");
-        return System.Text.Json.JsonSerializer.Deserialize(ref reader, typeInfo);
+        return BedrockJsonContext.Default.GetTypeInfo(typeof(TValue))
+            as System.Text.Json.Serialization.Metadata.JsonTypeInfo<TValue>
+            ?? throw new InvalidOperationException($"Cannot find type {typeof(TValue).Name} in serialization context");
     }
 
     /// <summary>
