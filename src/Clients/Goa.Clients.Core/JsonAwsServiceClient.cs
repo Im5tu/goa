@@ -3,8 +3,11 @@ using Goa.Clients.Core.Http;
 using Goa.Clients.Core.Logging;
 using Microsoft.Extensions.Logging;
 using System.Buffers;
+
 using System.Net.Http.Headers;
 using System.Text;
+using System.Text.Json;
+using System.Text.Json.Serialization.Metadata;
 
 namespace Goa.Clients.Core;
 
@@ -53,7 +56,7 @@ public abstract class JsonAwsServiceClient<T> : AwsServiceClient<T> where T : Aw
         if (request is null || method == HttpMethod.Get)
         {
             using var requestMessage = CreateRequestMessage(method, requestUri, content: null, JsonContentType, headers);
-            var response = await SendAsync(requestMessage, target, cancellationToken);
+            using var response = await SendAsync(requestMessage, target, cancellationToken);
             return await ProcessJsonResponseAsync<TResponse>(response, cancellationToken);
         }
 
@@ -66,18 +69,20 @@ public abstract class JsonAwsServiceClient<T> : AwsServiceClient<T> where T : Aw
         }
         else
         {
-            WriteRequestBody(bufferWriter, request);
+            var typeInfo = ResolveJsonTypeInfo<TRequest>();
+            using var writer = new Utf8JsonWriter(bufferWriter);
+            JsonSerializer.Serialize(writer, request, typeInfo);
         }
 
         using var msg = CreateRequestMessage(method, requestUri, bufferWriter, JsonContentType, headers);
-        var resp = await SendAsync(msg, target, cancellationToken);
+        using var resp = await SendAsync(msg, target, cancellationToken);
         return await ProcessJsonResponseAsync<TResponse>(resp, cancellationToken);
     }
 
     /// <summary>
     /// Processes an HTTP response and converts it to an API response with JSON deserialization.
     /// Uses pooled byte buffers for zero-copy deserialization on the success path
-    /// and delegates type-specific reading to <see cref="ReadJsonResponse{TResponse}"/>.
+    /// and delegates type resolution to <see cref="ResolveJsonTypeInfo{TValue}"/>.
     /// </summary>
     protected async Task<ApiResponse<TResponse>> ProcessJsonResponseAsync<TResponse>(HttpResponseMessage response, CancellationToken cancellationToken) where TResponse : class
     {
@@ -124,24 +129,19 @@ public abstract class JsonAwsServiceClient<T> : AwsServiceClient<T> where T : Aw
         if (pooledBuffer.Length == 0)
             return new ApiResponse<TResponse>(default(TResponse), headers);
 
-        var jsonReader = new System.Text.Json.Utf8JsonReader(pooledBuffer.Span);
-        var result = ReadJsonResponse<TResponse>(ref jsonReader);
+        var typeInfo = ResolveJsonTypeInfo<TResponse>();
+        var jsonReader = new Utf8JsonReader(pooledBuffer.Span);
+        var result = JsonSerializer.Deserialize(ref jsonReader, typeInfo);
         return new ApiResponse<TResponse>(result, headers);
     }
 
     /// <summary>
-    /// Deserializes a JSON response into the specified type using a <see cref="System.Text.Json.Utf8JsonReader"/>.
-    /// Each service client implements this to provide its own generated JSON reader.
+    /// Resolves the <see cref="JsonTypeInfo{T}"/> for the specified type from the service-specific JSON context.
+    /// Each service client implements this to return type info from its generated <see cref="System.Text.Json.Serialization.JsonSerializerContext"/>.
     /// </summary>
-    /// <typeparam name="TResponse">The response type to deserialize.</typeparam>
-    /// <param name="reader">The UTF-8 JSON reader positioned at the start of the response.</param>
-    /// <returns>The deserialized response object.</returns>
-    protected abstract TResponse? ReadJsonResponse<TResponse>(ref System.Text.Json.Utf8JsonReader reader) where TResponse : class;
-
-    /// <summary>
-    /// Writes the serialized request body into the provided buffer.
-    /// </summary>
-    protected abstract void WriteRequestBody<TRequest>(IBufferWriter<byte> buffer, TRequest request);
+    /// <typeparam name="TValue">The type to resolve serialization metadata for.</typeparam>
+    /// <returns>The resolved JSON type info.</returns>
+    protected abstract JsonTypeInfo<TValue> ResolveJsonTypeInfo<TValue>();
 
     /// <summary>
     /// Applies AWS-specific error header processing to the error object.
