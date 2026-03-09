@@ -11,6 +11,7 @@ namespace Goa.Clients.Dynamo.Benchmarks.Benchmarks;
 [MemoryDiagnoser, GroupBenchmarksBy(BenchmarkLogicalGroupRule.ByCategory), Orderer(SummaryOrderPolicy.FastestToSlowest)]
 public class DeleteItemAsyncBenchmarks
 {
+    private const int PoolSize = 10_000;
     private LocalStackFixture _fixture = null!;
     private int _counter;
 
@@ -19,6 +20,9 @@ public class DeleteItemAsyncBenchmarks
     {
         _fixture = new LocalStackFixture();
         _fixture.StartAsync().GetAwaiter().GetResult();
+        _fixture.SeedItemsByPkPrefixAsync("del-aws-", "item", PoolSize).GetAwaiter().GetResult();
+        _fixture.SeedItemsByPkPrefixAsync("del-goa-", "item", PoolSize).GetAwaiter().GetResult();
+        _fixture.SeedItemsByPkPrefixAsync("del-eff-", "item", PoolSize).GetAwaiter().GetResult();
     }
 
     [GlobalCleanup]

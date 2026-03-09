@@ -85,6 +85,21 @@ public class LocalStackFixture : IAsyncDisposable
             ],
             BillingMode = BillingMode.PAY_PER_REQUEST
         });
+
+        // Wait for table to be active
+        for (var i = 0; i < 10; i++)
+        {
+            var response = await AwsSdkClient.DescribeTableAsync(new DescribeTableRequest
+            {
+                TableName = TableName
+            });
+
+            if (response.Table.TableStatus == TableStatus.ACTIVE) return;
+
+            await Task.Delay(1000);
+        }
+
+        throw new TimeoutException($"DynamoDB table '{TableName}' did not reach Active state within 10 seconds.");
     }
 
     public async Task SeedItemsAsync(string pk, int count)
@@ -103,13 +118,67 @@ public class LocalStackFixture : IAsyncDisposable
 
             if (items.Count == 25 || i == count - 1)
             {
-                await AwsSdkClient.BatchWriteItemAsync(new BatchWriteItemRequest
+                var requestItems = new Dictionary<string, List<WriteRequest>>
                 {
-                    RequestItems = new Dictionary<string, List<WriteRequest>>
+                    [TableName] = new(items)
+                };
+
+                var delay = 50;
+                for (var attempt = 0; attempt < 5; attempt++)
+                {
+                    var response = await AwsSdkClient.BatchWriteItemAsync(new BatchWriteItemRequest
                     {
-                        [TableName] = new(items)
-                    }
-                });
+                        RequestItems = requestItems
+                    });
+
+                    if (response.UnprocessedItems == null || response.UnprocessedItems.Count == 0)
+                        break;
+
+                    requestItems = response.UnprocessedItems;
+                    await Task.Delay(delay);
+                    delay *= 2;
+                }
+
+                items.Clear();
+            }
+        }
+    }
+
+    public async Task SeedItemsByPkPrefixAsync(string pkPrefix, string sk, int count)
+    {
+        var items = new List<WriteRequest>();
+        for (var i = 1; i <= count; i++)
+        {
+            items.Add(new WriteRequest(new PutRequest(new Dictionary<string, Amazon.DynamoDBv2.Model.AttributeValue>
+            {
+                ["pk"] = new($"{pkPrefix}{i}"),
+                ["sk"] = new(sk),
+                ["data"] = new($"value-{i}")
+            })));
+
+            if (items.Count == 25 || i == count)
+            {
+                var requestItems = new Dictionary<string, List<WriteRequest>>
+                {
+                    [TableName] = new(items)
+                };
+
+                var delay = 50;
+                for (var attempt = 0; attempt < 5; attempt++)
+                {
+                    var response = await AwsSdkClient.BatchWriteItemAsync(new BatchWriteItemRequest
+                    {
+                        RequestItems = requestItems
+                    });
+
+                    if (response.UnprocessedItems == null || response.UnprocessedItems.Count == 0)
+                        break;
+
+                    requestItems = response.UnprocessedItems;
+                    await Task.Delay(delay);
+                    delay *= 2;
+                }
+
                 items.Clear();
             }
         }
