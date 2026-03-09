@@ -19,7 +19,7 @@ public sealed class ApiResponse<T>
     /// <summary>
     /// Gets the HTTP response headers.
     /// </summary>
-    public IReadOnlyDictionary<string, IEnumerable<string>>? Headers { get; }
+    public ResponseHeaders? Headers { get; }
 
     /// <summary>
     /// Gets a value indicating whether the operation was successful.
@@ -40,7 +40,7 @@ public sealed class ApiResponse<T>
     /// </summary>
     /// <param name="value">The successful response value.</param>
     /// <param name="headers">The HTTP response headers.</param>
-    public ApiResponse(T? value, IReadOnlyDictionary<string, IEnumerable<string>>? headers)
+    public ApiResponse(T? value, ResponseHeaders? headers)
     {
         Value = value;
         Headers = headers;

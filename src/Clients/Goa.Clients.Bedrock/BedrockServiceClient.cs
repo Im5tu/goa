@@ -26,8 +26,16 @@ public class BedrockServiceClient : JsonAwsServiceClient<BedrockServiceClientCon
     /// <param name="logger">Logger instance for logging operations.</param>
     /// <param name="configuration">Configuration for the Bedrock service.</param>
     public BedrockServiceClient(IHttpClientFactory httpClientFactory, ILogger<BedrockServiceClient> logger, BedrockServiceClientConfiguration configuration)
-        : base(httpClientFactory, logger, configuration, BedrockJsonContext.Default)
+        : base(httpClientFactory, logger, configuration)
     {
+    }
+
+    /// <inheritdoc />
+    protected override System.Text.Json.Serialization.Metadata.JsonTypeInfo<TValue> ResolveJsonTypeInfo<TValue>()
+    {
+        return BedrockJsonContext.Default.GetTypeInfo(typeof(TValue))
+            as System.Text.Json.Serialization.Metadata.JsonTypeInfo<TValue>
+            ?? throw new InvalidOperationException($"Cannot find type {typeof(TValue).Name} in serialization context");
     }
 
     /// <summary>
@@ -100,16 +108,10 @@ public class BedrockServiceClient : JsonAwsServiceClient<BedrockServiceClientCon
             return bedrockError;
         }
 
-        string? contentType = null;
-        if (response.Headers != null && response.Headers.TryGetValue("Content-Type", out var contentTypeValues))
-        {
-            contentType = string.Join(", ", contentTypeValues);
-        }
-
         return new InvokeModelResponse
         {
             Body = response.Value ?? string.Empty,
-            ContentType = contentType
+            ContentType = response.Headers?.ContentType
         };
     }
 

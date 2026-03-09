@@ -28,5 +28,5 @@ public static class HttpOptions
     /// <summary>
     /// HTTP request option key for specifying the request payload as UTF-8 bytes.
     /// </summary>
-    public static HttpRequestOptionsKey<byte[]> Payload = new(nameof(Payload));
+    public static HttpRequestOptionsKey<ReadOnlyMemory<byte>> Payload = new(nameof(Payload));
 }

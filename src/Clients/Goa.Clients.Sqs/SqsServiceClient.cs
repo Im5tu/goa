@@ -16,8 +16,15 @@ internal sealed class SqsServiceClient : JsonAwsServiceClient<SqsServiceClientCo
         IHttpClientFactory httpClientFactory,
         SqsServiceClientConfiguration configuration,
         ILogger<SqsServiceClient> logger)
-        : base(httpClientFactory, logger, configuration, SqsJsonContext.Default)
+        : base(httpClientFactory, logger, configuration)
     {
+    }
+
+    protected override System.Text.Json.Serialization.Metadata.JsonTypeInfo<TValue> ResolveJsonTypeInfo<TValue>()
+    {
+        return SqsJsonContext.Default.GetTypeInfo(typeof(TValue))
+            as System.Text.Json.Serialization.Metadata.JsonTypeInfo<TValue>
+            ?? throw new InvalidOperationException($"Cannot find type {typeof(TValue).Name} in serialization context");
     }
 
     public async Task<ErrorOr<SendMessageResponse>> SendMessageAsync(SendMessageRequest request, CancellationToken cancellationToken = default)

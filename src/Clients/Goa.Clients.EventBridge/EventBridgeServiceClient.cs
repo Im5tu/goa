@@ -13,8 +13,15 @@ internal sealed class EventBridgeServiceClient : JsonAwsServiceClient<EventBridg
         IHttpClientFactory httpClientFactory,
         EventBridgeServiceClientConfiguration configuration,
         ILogger<EventBridgeServiceClient> logger)
-        : base(httpClientFactory, logger, configuration, EventBridgeJsonContext.Default)
+        : base(httpClientFactory, logger, configuration)
     {
+    }
+
+    protected override System.Text.Json.Serialization.Metadata.JsonTypeInfo<TValue> ResolveJsonTypeInfo<TValue>()
+    {
+        return EventBridgeJsonContext.Default.GetTypeInfo(typeof(TValue))
+            as System.Text.Json.Serialization.Metadata.JsonTypeInfo<TValue>
+            ?? throw new InvalidOperationException($"Cannot find type {typeof(TValue).Name} in serialization context");
     }
 
     public async Task<ErrorOr<PutEventsResponse>> PutEventsAsync(PutEventsRequest request, CancellationToken cancellationToken = default)

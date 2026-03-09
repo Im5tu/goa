@@ -152,7 +152,7 @@ public class SignRequestAsyncBenchmarks
         request.Options.Set(HttpOptions.Region, BenchmarkConfig.Region);
         request.Options.Set(HttpOptions.Service, "sqs");
         request.Options.Set(HttpOptions.Target, "AmazonSQS.SendMessage");
-        request.Options.Set(HttpOptions.Payload, payload);
+        request.Options.Set(HttpOptions.Payload, payload.AsMemory());
 
         return request;
     }

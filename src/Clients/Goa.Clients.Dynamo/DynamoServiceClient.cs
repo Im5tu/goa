@@ -28,8 +28,16 @@ public class DynamoServiceClient : JsonAwsServiceClient<DynamoServiceClientConfi
     /// <param name="logger">Logger instance for logging operations.</param>
     /// <param name="configuration">Configuration for the DynamoDB service.</param>
     public DynamoServiceClient(IHttpClientFactory httpClientFactory, ILogger<DynamoServiceClient> logger, DynamoServiceClientConfiguration configuration)
-        : base(httpClientFactory, logger, configuration, DynamoJsonContext.Default)
+        : base(httpClientFactory, logger, configuration)
     {
+    }
+
+    /// <inheritdoc />
+    protected override System.Text.Json.Serialization.Metadata.JsonTypeInfo<TValue> ResolveJsonTypeInfo<TValue>()
+    {
+        return DynamoJsonContext.Default.GetTypeInfo(typeof(TValue))
+            as System.Text.Json.Serialization.Metadata.JsonTypeInfo<TValue>
+            ?? throw new InvalidOperationException($"Cannot find type {typeof(TValue).Name} in serialization context");
     }
 
     /// <summary>
