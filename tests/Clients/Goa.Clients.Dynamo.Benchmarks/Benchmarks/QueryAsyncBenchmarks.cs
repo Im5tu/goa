@@ -3,7 +3,6 @@ using BenchmarkDotNet.Order;
 using EfficientDynamoDb;
 using EfficientDynamoDb.Attributes;
 using Goa.Clients.Dynamo.Benchmarks.Infrastructure;
-using Goa.Clients.Dynamo.Benchmarks.Models;
 using EfficientAttributeValue = EfficientDynamoDb.DocumentModel.AttributeValue;
 using GoaModels = Goa.Clients.Dynamo.Models;
 using GoaQueryRequest = Goa.Clients.Dynamo.Operations.Query.QueryRequest;
@@ -99,29 +98,6 @@ public class QueryAsyncBenchmarks
 
             count += response.Value.Items.Count;
             lastKey = response.Value.HasMoreResults ? response.Value.LastEvaluatedKey : null;
-        } while (lastKey != null);
-        return count;
-    }
-
-    [Benchmark, BenchmarkCategory("1 Item")]
-    public async Task<int> Goa_Query_1Item_Typed()
-    {
-        var count = 0;
-        Dictionary<string, GoaModels.AttributeValue>? lastKey = null;
-        do
-        {
-            var result = await _fixture.GoaClient.QueryAsync<BenchmarkItem>(new GoaQueryRequest
-            {
-                TableName = _fixture.TableName,
-                KeyConditionExpression = "pk = :pk",
-                ExpressionAttributeValues = new Dictionary<string, GoaModels.AttributeValue>
-                {
-                    [":pk"] = GoaModels.AttributeValue.String("query-1")
-                },
-                ExclusiveStartKey = lastKey
-            }, DynamoItemReaderRegistry.Get<BenchmarkItem>());
-            count += result.Value.Items.Count;
-            lastKey = result.Value.HasMoreResults ? result.Value.LastEvaluatedKey : null;
         } while (lastKey != null);
         return count;
     }

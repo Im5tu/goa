@@ -2,7 +2,6 @@ using Amazon.DynamoDBv2.Model;
 using BenchmarkDotNet.Order;
 using EfficientDynamoDb.DocumentModel;
 using Goa.Clients.Dynamo.Benchmarks.Infrastructure;
-using Goa.Clients.Dynamo.Benchmarks.Models;
 using GoaModels = Goa.Clients.Dynamo.Models;
 using GoaScanRequest = Goa.Clients.Dynamo.Operations.Scan.ScanRequest;
 using EfficientScanRequest = EfficientDynamoDb.Operations.Scan.ScanRequest;
@@ -69,25 +68,6 @@ public class ScanAsyncBenchmarks
             });
             count += response.Value.Items.Count;
             lastKey = response.Value.HasMoreResults ? response.Value.LastEvaluatedKey : null;
-        } while (lastKey != null);
-        return count;
-    }
-
-    [Benchmark, BenchmarkCategory("Scan")]
-    public async Task<int> Goa_Scan_Typed()
-    {
-        var count = 0;
-        Dictionary<string, GoaModels.AttributeValue>? lastKey = null;
-        do
-        {
-            var result = await _fixture.GoaClient.ScanAsync<BenchmarkItem>(new GoaScanRequest
-            {
-                TableName = _fixture.TableName,
-                Limit = 25,
-                ExclusiveStartKey = lastKey
-            }, DynamoItemReaderRegistry.Get<BenchmarkItem>());
-            count += result.Value.Items.Count;
-            lastKey = result.Value.HasMoreResults ? result.Value.LastEvaluatedKey : null;
         } while (lastKey != null);
         return count;
     }
@@ -164,31 +144,6 @@ public class ScanAsyncBenchmarks
     }
 
     [Benchmark, BenchmarkCategory("Scan With Filter")]
-    public async Task<int> Goa_Scan_WithFilter_Typed()
-    {
-        var count = 0;
-        Dictionary<string, GoaModels.AttributeValue>? lastKey = null;
-        do
-        {
-            var result = await _fixture.GoaClient.ScanAsync<BenchmarkItem>(new GoaScanRequest
-            {
-                TableName = _fixture.TableName,
-                FilterExpression = "#n > :minNum",
-                ExpressionAttributeNames = new Dictionary<string, string> { ["#n"] = "number" },
-                ExpressionAttributeValues = new Dictionary<string, GoaModels.AttributeValue>
-                {
-                    [":minNum"] = GoaModels.AttributeValue.Number("25")
-                },
-                Limit = 25,
-                ExclusiveStartKey = lastKey
-            }, DynamoItemReaderRegistry.Get<BenchmarkItem>());
-            count += result.Value.Items.Count;
-            lastKey = result.Value.HasMoreResults ? result.Value.LastEvaluatedKey : null;
-        } while (lastKey != null);
-        return count;
-    }
-
-    [Benchmark, BenchmarkCategory("Scan With Filter")]
     public async Task<int> Efficient_Scan_WithFilter()
     {
         var count = 0;
@@ -249,25 +204,6 @@ public class ScanAsyncBenchmarks
             });
             count += response.Value.Items.Count;
             lastKey = response.Value.HasMoreResults ? response.Value.LastEvaluatedKey : null;
-        } while (lastKey != null);
-        return count;
-    }
-
-    [Benchmark, BenchmarkCategory("Scan With Limit")]
-    public async Task<int> Goa_Scan_WithLimit_Typed()
-    {
-        var count = 0;
-        Dictionary<string, GoaModels.AttributeValue>? lastKey = null;
-        do
-        {
-            var result = await _fixture.GoaClient.ScanAsync<BenchmarkItem>(new GoaScanRequest
-            {
-                TableName = _fixture.TableName,
-                Limit = 10,
-                ExclusiveStartKey = lastKey
-            }, DynamoItemReaderRegistry.Get<BenchmarkItem>());
-            count += result.Value.Items.Count;
-            lastKey = result.Value.HasMoreResults ? result.Value.LastEvaluatedKey : null;
         } while (lastKey != null);
         return count;
     }
