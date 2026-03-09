@@ -72,11 +72,31 @@ public class LocalStackFixture : IAsyncDisposable
 
             if (entries.Count == 10 || i == count - 1)
             {
-                await AwsSdkClient.SendMessageBatchAsync(new SendMessageBatchRequest
+                var batch = new List<SendMessageBatchRequestEntry>(entries);
+                var delay = 50;
+                for (var attempt = 0; attempt < 5; attempt++)
                 {
-                    QueueUrl = QueueUrl,
-                    Entries = new List<SendMessageBatchRequestEntry>(entries)
-                });
+                    var response = await AwsSdkClient.SendMessageBatchAsync(new SendMessageBatchRequest
+                    {
+                        QueueUrl = QueueUrl,
+                        Entries = batch
+                    });
+
+                    if (response.Failed.Count == 0)
+                        break;
+
+                    if (attempt == 4)
+                    {
+                        var failedIds = string.Join(", ", response.Failed.Select(f => $"{f.Id}: {f.Code} - {f.Message}"));
+                        throw new InvalidOperationException($"Failed to send {response.Failed.Count} message(s) after 5 attempts: {failedIds}");
+                    }
+
+                    var failedIdSet = new HashSet<string>(response.Failed.Select(f => f.Id));
+                    batch = batch.Where(e => failedIdSet.Contains(e.Id)).ToList();
+                    await Task.Delay(delay);
+                    delay *= 2;
+                }
+
                 entries.Clear();
             }
         }
