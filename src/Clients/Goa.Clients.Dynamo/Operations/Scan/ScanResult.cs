@@ -19,20 +19,23 @@ public class ScanResult
     public Dictionary<string, AttributeValue>? LastEvaluatedKey { get; set; }
     
     /// <summary>
-    /// Gets the number of items in the response.
+    /// Gets the number of items in the response. This is deliberately computed from <see cref="Items"/>
+    /// because DynamoDB's Count always equals the number of items returned (post-filter).
+    /// See <see cref="ScannedCount"/> for the pre-filter total.
     /// </summary>
     public int Count => Items.Count;
-    
+
     /// <summary>
     /// Gets a value indicating whether there are more results to retrieve.
     /// </summary>
     public bool HasMoreResults => LastEvaluatedKey?.Count > 0;
-    
+
     /// <summary>
-    /// The number of items evaluated, before applying any ScanFilter.
+    /// The number of items evaluated before any filter expression was applied.
+    /// If no filter was used, this equals <see cref="Count"/>.
     /// </summary>
     public int ScannedCount { get; set; }
-    
+
     /// <summary>
     /// The number of capacity units consumed by the operation.
     /// </summary>

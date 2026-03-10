@@ -30,7 +30,7 @@ internal static class DynamoResponseReader
             else if (reader.ValueTextEquals("Count"u8))
             {
                 reader.Read();
-                // Count is derived from Items.Count, skip
+                // DynamoDB Count always equals Items.Count (post-filter); ScannedCount is the pre-filter total
                 reader.GetInt32();
             }
             else if (reader.ValueTextEquals("ScannedCount"u8))
@@ -79,6 +79,7 @@ internal static class DynamoResponseReader
             else if (reader.ValueTextEquals("Count"u8))
             {
                 reader.Read();
+                // DynamoDB Count always equals Items.Count (post-filter); ScannedCount is the pre-filter total
                 reader.GetInt32();
             }
             else if (reader.ValueTextEquals("ScannedCount"u8))
@@ -114,13 +115,15 @@ internal static class DynamoResponseReader
 
     public static T? ReadGetItemResponse<T>(ref Utf8JsonReader reader, DynamoItemReader<T> itemReader)
     {
+        T? item = default;
+
         reader.Read(); // StartObject
         while (reader.Read() && reader.TokenType == JsonTokenType.PropertyName)
         {
             if (reader.ValueTextEquals("Item"u8))
             {
                 reader.Read();
-                return itemReader(ref reader);
+                item = itemReader(ref reader);
             }
             else
             {
@@ -129,7 +132,7 @@ internal static class DynamoResponseReader
             }
         }
 
-        return default;
+        return item;
     }
 
     public static DynamoRecord ReadDynamoRecordItem(ref Utf8JsonReader reader)
@@ -231,10 +234,15 @@ internal static class DynamoResponseReader
                 reader.Read();
                 attr.M = ReadAttributeMap(ref reader);
             }
-            else if (reader.ValueTextEquals("B"u8) || reader.ValueTextEquals("BS"u8))
+            else if (reader.ValueTextEquals("B"u8))
             {
                 reader.Read();
-                reader.Skip();
+                attr.B = Convert.FromBase64String(reader.GetString()!);
+            }
+            else if (reader.ValueTextEquals("BS"u8))
+            {
+                reader.Read();
+                attr.BS = ReadBinaryArray(ref reader);
             }
             else
             {
@@ -252,6 +260,17 @@ internal static class DynamoResponseReader
         while (reader.Read() && reader.TokenType != JsonTokenType.EndArray)
         {
             list.Add(reader.GetString()!);
+        }
+        return list;
+    }
+
+    private static List<byte[]> ReadBinaryArray(ref Utf8JsonReader reader)
+    {
+        var list = new List<byte[]>();
+        // reader is at StartArray
+        while (reader.Read() && reader.TokenType != JsonTokenType.EndArray)
+        {
+            list.Add(Convert.FromBase64String(reader.GetString()!));
         }
         return list;
     }

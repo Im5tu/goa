@@ -830,4 +830,53 @@ public class DynamoResponseReaderTests
         await Assert.That(result).IsNull();
     }
 
+    // === Binary attribute parsing ===
+
+    [Test]
+    public async Task ReadQueryResponse_ShouldParseLastEvaluatedKeyWithBinaryType()
+    {
+        var json = """
+        {
+            "Items": [],
+            "Count": 0,
+            "ScannedCount": 0,
+            "LastEvaluatedKey": {
+                "pk": {"S": "partition"},
+                "bin": {"B": "SGVsbG8="}
+            }
+        }
+        """u8;
+
+        var result = DynamoResponseReader.ReadQueryResponse<TestEntity>(json, ReadTestEntity);
+
+        await Assert.That(result.LastEvaluatedKey).IsNotNull();
+        await Assert.That(result.LastEvaluatedKey!["pk"].S).IsEqualTo("partition");
+        await Assert.That(result.LastEvaluatedKey!["bin"].B).IsNotNull();
+        await Assert.That(Convert.ToBase64String(result.LastEvaluatedKey!["bin"].B!)).IsEqualTo("SGVsbG8=");
+    }
+
+    [Test]
+    public async Task ReadQueryResponse_ShouldParseLastEvaluatedKeyWithBinarySetType()
+    {
+        var json = """
+        {
+            "Items": [],
+            "Count": 0,
+            "ScannedCount": 0,
+            "LastEvaluatedKey": {
+                "pk": {"S": "partition"},
+                "bins": {"BS": ["SGVsbG8=", "V29ybGQ="]}
+            }
+        }
+        """u8;
+
+        var result = DynamoResponseReader.ReadQueryResponse<TestEntity>(json, ReadTestEntity);
+
+        await Assert.That(result.LastEvaluatedKey).IsNotNull();
+        await Assert.That(result.LastEvaluatedKey!["bins"].BS).IsNotNull();
+        await Assert.That(result.LastEvaluatedKey!["bins"].BS!.Count).IsEqualTo(2);
+        await Assert.That(Convert.ToBase64String(result.LastEvaluatedKey!["bins"].BS![0])).IsEqualTo("SGVsbG8=");
+        await Assert.That(Convert.ToBase64String(result.LastEvaluatedKey!["bins"].BS![1])).IsEqualTo("V29ybGQ=");
+    }
+
 }
