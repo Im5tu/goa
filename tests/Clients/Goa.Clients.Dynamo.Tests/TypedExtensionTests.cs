@@ -1,4 +1,5 @@
 using ErrorOr;
+using Goa.Clients.Dynamo.Exceptions;
 using Goa.Clients.Dynamo.Models;
 using Goa.Clients.Dynamo.Operations.Query;
 using Goa.Clients.Dynamo.Operations.Scan;
