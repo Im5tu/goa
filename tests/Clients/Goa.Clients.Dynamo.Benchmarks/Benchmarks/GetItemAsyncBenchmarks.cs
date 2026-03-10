@@ -2,7 +2,7 @@ using Amazon.DynamoDBv2.Model;
 using BenchmarkDotNet.Order;
 using EfficientDynamoDb.Operations.Shared;
 using Goa.Clients.Dynamo.Benchmarks.Infrastructure;
-using Goa.Clients.Dynamo.Benchmarks.Models;
+
 using GoaModels = Goa.Clients.Dynamo.Models;
 using EfficientGetItemResponse = EfficientDynamoDb.Operations.GetItem.GetItemResponse;
 
@@ -59,21 +59,6 @@ public class GetItemAsyncBenchmarks
     }
 
     [Benchmark, BenchmarkCategory("Get Item")]
-    public async Task<BenchmarkItem?> Goa_GetItem_Typed()
-    {
-        var result = await _fixture.GoaClient.GetItemAsync<BenchmarkItem>(new Goa.Clients.Dynamo.Operations.GetItem.GetItemRequest
-        {
-            TableName = _fixture.TableName,
-            Key = new Dictionary<string, GoaModels.AttributeValue>
-            {
-                ["pk"] = GoaModels.AttributeValue.String("get-bench"),
-                ["sk"] = GoaModels.AttributeValue.String("item-0000")
-            }
-        }, DynamoItemReaderRegistry.Get<BenchmarkItem>());
-        return result.Value;
-    }
-
-    [Benchmark, BenchmarkCategory("Get Item")]
     public async Task<EfficientGetItemResponse> Efficient_GetItem()
     {
         return await _fixture.EfficientClient.GetItemAsync(new EfficientDynamoDb.Operations.GetItem.GetItemRequest
@@ -110,21 +95,6 @@ public class GetItemAsyncBenchmarks
             }
         });
         return response.Value.Item;
-    }
-
-    [Benchmark, BenchmarkCategory("Get Item Miss")]
-    public async Task<BenchmarkItem?> Goa_GetItem_Miss_Typed()
-    {
-        var result = await _fixture.GoaClient.GetItemAsync<BenchmarkItem>(new Goa.Clients.Dynamo.Operations.GetItem.GetItemRequest
-        {
-            TableName = _fixture.TableName,
-            Key = new Dictionary<string, GoaModels.AttributeValue>
-            {
-                ["pk"] = GoaModels.AttributeValue.String("nonexistent"),
-                ["sk"] = GoaModels.AttributeValue.String("nonexistent")
-            }
-        }, DynamoItemReaderRegistry.Get<BenchmarkItem>());
-        return result.Value;
     }
 
     [Benchmark, BenchmarkCategory("Get Item Miss")]
@@ -166,22 +136,6 @@ public class GetItemAsyncBenchmarks
             ConsistentRead = true
         });
         return response.Value.Item;
-    }
-
-    [Benchmark, BenchmarkCategory("Get Item Consistent Read")]
-    public async Task<BenchmarkItem?> Goa_GetItem_ConsistentRead_Typed()
-    {
-        var result = await _fixture.GoaClient.GetItemAsync<BenchmarkItem>(new Goa.Clients.Dynamo.Operations.GetItem.GetItemRequest
-        {
-            TableName = _fixture.TableName,
-            Key = new Dictionary<string, GoaModels.AttributeValue>
-            {
-                ["pk"] = GoaModels.AttributeValue.String("get-bench"),
-                ["sk"] = GoaModels.AttributeValue.String("item-0000")
-            },
-            ConsistentRead = true
-        }, DynamoItemReaderRegistry.Get<BenchmarkItem>());
-        return result.Value;
     }
 
     [Benchmark, BenchmarkCategory("Get Item Consistent Read")]
