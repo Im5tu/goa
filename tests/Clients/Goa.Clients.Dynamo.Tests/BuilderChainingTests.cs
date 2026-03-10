@@ -338,10 +338,12 @@ public class BuilderChainingTests
 
     private static string SerializeWithGeneratedWriter<T>(T value)
     {
-        var writer = DynamoJsonContext.GetWriter<T>();
+        var typeInfo = DynamoJsonContext.Default.GetTypeInfo(typeof(T))
+            as System.Text.Json.Serialization.Metadata.JsonTypeInfo<T>
+            ?? throw new System.InvalidOperationException($"Cannot find type {typeof(T).Name} in serialization context");
         using var buffer = new System.IO.MemoryStream();
         using var jsonWriter = new System.Text.Json.Utf8JsonWriter(buffer);
-        writer(jsonWriter, value);
+        System.Text.Json.JsonSerializer.Serialize(jsonWriter, value, typeInfo);
         jsonWriter.Flush();
         return System.Text.Encoding.UTF8.GetString(buffer.ToArray());
     }

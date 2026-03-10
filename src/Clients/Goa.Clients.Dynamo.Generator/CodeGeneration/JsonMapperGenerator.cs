@@ -138,7 +138,7 @@ public class JsonMapperGenerator : ICodeGenerator
 
         var allProperties = GetAllProperties(type);
         var supportedProperties = allProperties
-            .Where(p => _typeHandlerRegistry.CanHandle(p) && !p.IsIgnored(IgnoreDirection.WhenWriting));
+            .Where(p => (p.ConverterTypeName != null || _typeHandlerRegistry.CanHandle(p)) && !p.IsIgnored(IgnoreDirection.WhenWriting));
 
         foreach (var property in supportedProperties)
         {
@@ -154,6 +154,14 @@ public class JsonMapperGenerator : ICodeGenerator
         var accessExpr = $"{modelVar}.{property.Name}";
         var underlyingType = property.UnderlyingType;
         var isNullable = property.IsNullable;
+
+        // Custom converter handling - delegate entirely to the converter
+        if (property.ConverterTypeName != null)
+        {
+            builder.AppendLine($"writer.WritePropertyName(\"{attrName}\");");
+            builder.AppendLine($"new {property.ConverterTypeName}().Write(writer, {accessExpr});");
+            return;
+        }
 
         // Check for [UnixTimestamp] attribute
         var hasUnixTimestamp = property.Attributes.Any(a => a is UnixTimestampAttributeInfo);
@@ -545,6 +553,23 @@ public class JsonMapperGenerator : ICodeGenerator
         builder.AppendLine("if (reader.TokenType != JsonTokenType.StartObject)");
         builder.Indent().AppendLine("reader.Read();").Unindent();
         builder.AppendLine();
+
+        var constructor = FindBestConstructor(type);
+        var hasInitOnlyProperties = GetAllProperties(type)
+            .Any(p => p.Symbol?.SetMethod is { IsInitOnly: true });
+
+        if (constructor != null && (constructor.Parameters.Any() || hasInitOnlyProperties))
+        {
+            GenerateConstructorReadFromJson(builder, type, constructor);
+        }
+        else
+        {
+            GenerateParameterlessReadFromJson(builder, type);
+        }
+    }
+
+    private void GenerateParameterlessReadFromJson(CodeBuilder builder, DynamoTypeInfo type)
+    {
         builder.AppendLine($"var result = new {type.FullName}();");
         builder.OpenBraceWithLine("while (reader.Read())");
         builder.AppendLine("if (reader.TokenType == JsonTokenType.EndObject) break;");
@@ -552,7 +577,7 @@ public class JsonMapperGenerator : ICodeGenerator
 
         var allProperties = GetAllProperties(type);
         var readableProperties = allProperties
-            .Where(p => _typeHandlerRegistry.CanHandle(p) && !p.IsIgnored(IgnoreDirection.WhenReading) && p.Symbol?.SetMethod != null)
+            .Where(p => (p.ConverterTypeName != null || _typeHandlerRegistry.CanHandle(p)) && !p.IsIgnored(IgnoreDirection.WhenReading) && p.Symbol?.SetMethod != null && IsSupportedForJsonRead(p))
             .ToList();
 
         var isFirst = true;
@@ -581,30 +606,146 @@ public class JsonMapperGenerator : ICodeGenerator
         builder.AppendLine("return result;");
     }
 
-    private void GenerateReadProperty(CodeBuilder builder, PropertyInfo property, string resultVar)
+    private void GenerateConstructorReadFromJson(CodeBuilder builder, DynamoTypeInfo type, IMethodSymbol constructor)
+    {
+        var allProperties = GetAllProperties(type);
+
+        // Build mapping of constructor parameters to properties
+        var ctorParams = constructor.Parameters;
+        var ctorParamProperties = new List<(IParameterSymbol Param, PropertyInfo? Property)>();
+        var ctorParamNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var param in ctorParams)
+        {
+            var matchedProperty = FindPropertyIgnoreCase(type, param.Name);
+            ctorParamProperties.Add((param, matchedProperty));
+            if (matchedProperty != null)
+                ctorParamNames.Add(matchedProperty.Name);
+        }
+
+        // Readable properties: include properties that match constructor params (even without setter)
+        // or properties that have a setter
+        var readableProperties = allProperties
+            .Where(p => (p.ConverterTypeName != null || _typeHandlerRegistry.CanHandle(p))
+                        && !p.IsIgnored(IgnoreDirection.WhenReading)
+                        && (p.Symbol?.SetMethod != null || ctorParamNames.Contains(p.Name))
+                        && IsSupportedForJsonRead(p))
+            .ToList();
+
+        // Additional settable properties: not matched to constructor params, and have a setter
+        var additionalProperties = readableProperties
+            .Where(p => !ctorParamNames.Contains(p.Name) && p.Symbol?.SetMethod != null)
+            .ToList();
+
+        // Declare local variables for all readable properties
+        foreach (var property in readableProperties)
+        {
+            var varName = GetLocalVarName(property.Name);
+            var typeName = GetFullyQualifiedTypeName(property);
+            var defaultExpr = GetDefaultValueExpression(property.Type, property.IsNullable);
+            builder.AppendLine($"{typeName} {varName} = {defaultExpr};");
+        }
+
+        builder.AppendLine();
+        builder.OpenBraceWithLine("while (reader.Read())");
+        builder.AppendLine("if (reader.TokenType == JsonTokenType.EndObject) break;");
+        builder.AppendLine();
+
+        var isFirst = true;
+        foreach (var property in readableProperties)
+        {
+            var attrName = property.GetDynamoAttributeName();
+            var keyword = isFirst ? "if" : "else if";
+            builder.OpenBraceWithLine($"{keyword} (reader.ValueTextEquals(\"{attrName}\"u8))");
+            GenerateReadProperty(builder, property, "result", assignmentTarget: GetLocalVarName(property.Name));
+            builder.CloseBrace();
+            isFirst = false;
+        }
+
+        if (readableProperties.Count > 0)
+        {
+            builder.OpenBraceWithLine("else");
+        }
+        builder.AppendLine("reader.Read(); // Move past property name to value");
+        builder.AppendLine("reader.Skip(); // Skip the type wrapper object");
+        if (readableProperties.Count > 0)
+        {
+            builder.CloseBrace();
+        }
+
+        builder.CloseBrace(); // while
+
+        // Build constructor arguments
+        var readablePropertyNames = new HashSet<string>(readableProperties.Select(p => p.Name));
+        var ctorArgs = new List<string>();
+        foreach (var (param, matchedProperty) in ctorParamProperties)
+        {
+            if (matchedProperty != null && readablePropertyNames.Contains(matchedProperty.Name))
+            {
+                ctorArgs.Add(GetLocalVarName(matchedProperty.Name));
+            }
+            else
+            {
+                // Use default! for non-nullable reference types to suppress nullable warnings
+                var paramType = param.Type;
+                var isParamNullable = paramType.NullableAnnotation == NullableAnnotation.Annotated;
+                ctorArgs.Add(!paramType.IsValueType && !isParamNullable ? "default!" : "default");
+            }
+        }
+
+        var ctorArgString = string.Join(", ", ctorArgs);
+
+        if (additionalProperties.Count > 0)
+        {
+            builder.AppendLine($"return new {type.FullName}({ctorArgString})");
+            builder.AppendLine("{");
+            builder.Indent();
+            foreach (var prop in additionalProperties)
+            {
+                builder.AppendLine($"{prop.Name} = {GetLocalVarName(prop.Name)},");
+            }
+            builder.Unindent();
+            builder.AppendLine("};");
+        }
+        else
+        {
+            builder.AppendLine($"return new {type.FullName}({ctorArgString});");
+        }
+    }
+
+    private void GenerateReadProperty(CodeBuilder builder, PropertyInfo property, string resultVar, string? assignmentTarget = null)
     {
         var underlyingType = property.UnderlyingType;
         var isNullable = property.IsNullable;
         var hasUnixTimestamp = property.Attributes.Any(a => a is UnixTimestampAttributeInfo);
 
+        // Custom converter handling - delegate entirely to the converter
+        if (property.ConverterTypeName != null)
+        {
+            var target = assignmentTarget ?? $"{resultVar}.{property.Name}";
+            builder.AppendLine("reader.Read(); // Move past property name to value");
+            builder.AppendLine($"{target} = new {property.ConverterTypeName}().Read(ref reader);");
+            return;
+        }
+
         // Dictionary handling
         if (property.IsDictionary && property.DictionaryTypes.HasValue)
         {
-            GenerateReadDictionary(builder, property, resultVar);
+            GenerateReadDictionary(builder, property, resultVar, assignmentTarget);
             return;
         }
 
         // Collection handling
         if (property.IsCollection && property.ElementType != null)
         {
-            GenerateReadCollection(builder, property, resultVar);
+            GenerateReadCollection(builder, property, resultVar, assignmentTarget);
             return;
         }
 
         // Complex type handling
         if (IsComplexType(underlyingType))
         {
-            GenerateReadComplexType(builder, property, resultVar);
+            GenerateReadComplexType(builder, property, resultVar, assignmentTarget);
             return;
         }
 
@@ -614,29 +755,30 @@ public class JsonMapperGenerator : ICodeGenerator
 
         if (isNullable)
         {
+            var target = assignmentTarget ?? $"{resultVar}.{property.Name}";
             // Check if NULL descriptor using zero-allocation UTF-8 comparison
             builder.OpenBraceWithLine("if (reader.ValueTextEquals(\"NULL\"u8))");
             builder.AppendLine("reader.Read(); // value (true)");
-            builder.AppendLine($"{resultVar}.{property.Name} = null;");
+            builder.AppendLine($"{target} = null;");
             builder.CloseBrace();
             builder.OpenBraceWithLine("else");
             builder.AppendLine("reader.Read(); // value");
-            EmitReadPrimitiveAssignment(builder, property, resultVar, hasUnixTimestamp);
+            EmitReadPrimitiveAssignment(builder, property, resultVar, hasUnixTimestamp, assignmentTarget);
             builder.CloseBrace();
         }
         else
         {
             builder.AppendLine("reader.Read(); // value");
-            EmitReadPrimitiveAssignment(builder, property, resultVar, hasUnixTimestamp);
+            EmitReadPrimitiveAssignment(builder, property, resultVar, hasUnixTimestamp, assignmentTarget);
         }
 
         builder.AppendLine("reader.Read(); // EndObject of type wrapper");
     }
 
-    private void EmitReadPrimitiveAssignment(CodeBuilder builder, PropertyInfo property, string resultVar, bool hasUnixTimestamp)
+    private void EmitReadPrimitiveAssignment(CodeBuilder builder, PropertyInfo property, string resultVar, bool hasUnixTimestamp, string? assignmentTarget = null)
     {
         var underlyingType = property.UnderlyingType;
-        var propAccess = $"{resultVar}.{property.Name}";
+        var propAccess = assignmentTarget ?? $"{resultVar}.{property.Name}";
 
         // UnixTimestamp DateTime/DateTimeOffset -> read N as number
         if (hasUnixTimestamp)
@@ -698,25 +840,26 @@ public class JsonMapperGenerator : ICodeGenerator
         }
     }
 
-    private void GenerateReadComplexType(CodeBuilder builder, PropertyInfo property, string resultVar)
+    private void GenerateReadComplexType(CodeBuilder builder, PropertyInfo property, string resultVar, string? assignmentTarget = null)
     {
         var normalizedTypeName = NamingHelpers.NormalizeTypeName(property.UnderlyingType.Name);
+        var target = assignmentTarget ?? $"{resultVar}.{property.Name}";
 
         builder.AppendLine("reader.Read(); // StartObject of type wrapper");
         builder.AppendLine("reader.Read(); // type descriptor (M or NULL)");
         builder.OpenBraceWithLine("if (reader.ValueTextEquals(\"M\"u8))");
         builder.AppendLine("reader.Read(); // StartObject of the nested entity");
-        builder.AppendLine($"{resultVar}.{property.Name} = DynamoJsonMapper.{normalizedTypeName}.ReadFromJson(ref reader);");
+        builder.AppendLine($"{target} = DynamoJsonMapper.{normalizedTypeName}.ReadFromJson(ref reader);");
         builder.CloseBrace();
         builder.OpenBraceWithLine("else");
         builder.AppendLine("reader.Read(); // value (true for NULL)");
         if (property.IsNullable)
-            builder.AppendLine($"{resultVar}.{property.Name} = null;");
+            builder.AppendLine($"{target} = null;");
         builder.CloseBrace();
         builder.AppendLine("reader.Read(); // EndObject of type wrapper");
     }
 
-    private void GenerateReadCollection(CodeBuilder builder, PropertyInfo property, string resultVar)
+    private void GenerateReadCollection(CodeBuilder builder, PropertyInfo property, string resultVar, string? assignmentTarget = null)
     {
         var elementType = property.ElementType!;
         var isSetType = IsSetType(property.Type);
@@ -726,25 +869,27 @@ public class JsonMapperGenerator : ICodeGenerator
         if (isSetType && elementType.SpecialType == SpecialType.System_String)
         {
             // SS type
-            GenerateReadStringSet(builder, property, resultVar);
+            GenerateReadStringSet(builder, property, resultVar, assignmentTarget);
             return;
         }
 
         if (isSetType && IsNumericType(elementType))
         {
             // NS type
-            GenerateReadNumberSet(builder, property, resultVar, elementType);
+            GenerateReadNumberSet(builder, property, resultVar, elementType, assignmentTarget);
             return;
         }
 
-        // L type (general list)
-        GenerateReadList(builder, property, resultVar, elementType);
+        // L type (general list) — for set types with non-string/non-numeric elements,
+        // wrap in HashSet<T> to satisfy the target type constraint.
+        GenerateReadList(builder, property, resultVar, elementType, assignmentTarget, wrapAsSet: isSetType);
     }
 
-    private void GenerateReadStringSet(CodeBuilder builder, PropertyInfo property, string resultVar)
+    private void GenerateReadStringSet(CodeBuilder builder, PropertyInfo property, string resultVar, string? assignmentTarget = null)
     {
         var collectionTypeName = GetCollectionTypeName(property.Type);
         var varName = GetUniqueVarName("ss");
+        var target = assignmentTarget ?? $"{resultVar}.{property.Name}";
 
         builder.AppendLine("reader.Read(); // StartObject of type wrapper");
         builder.AppendLine("reader.Read(); // type descriptor (SS or NULL)");
@@ -754,20 +899,21 @@ public class JsonMapperGenerator : ICodeGenerator
         builder.OpenBraceWithLine($"while (reader.Read() && reader.TokenType != JsonTokenType.EndArray)");
         builder.AppendLine($"{varName}Set.Add(reader.GetString()!);");
         builder.CloseBrace();
-        builder.AppendLine($"{resultVar}.{property.Name} = {ConvertToTargetCollection(property.Type, property.ElementType!, $"{varName}Set")};");
+        builder.AppendLine($"{target} = {ConvertToTargetCollection(property.Type, property.ElementType!, $"{varName}Set")};");
         builder.CloseBrace();
         builder.OpenBraceWithLine("else");
         builder.AppendLine("reader.Read(); // value (true for NULL)");
         if (property.IsNullable)
-            builder.AppendLine($"{resultVar}.{property.Name} = null;");
+            builder.AppendLine($"{target} = null;");
         builder.CloseBrace();
         builder.AppendLine("reader.Read(); // EndObject of type wrapper");
     }
 
-    private void GenerateReadNumberSet(CodeBuilder builder, PropertyInfo property, string resultVar, ITypeSymbol elementType)
+    private void GenerateReadNumberSet(CodeBuilder builder, PropertyInfo property, string resultVar, ITypeSymbol elementType, string? assignmentTarget = null)
     {
         var elementTypeName = elementType.ToDisplayString();
         var varName = GetUniqueVarName("ns");
+        var target = assignmentTarget ?? $"{resultVar}.{property.Name}";
 
         builder.AppendLine("reader.Read(); // StartObject of type wrapper");
         builder.AppendLine("reader.Read(); // type descriptor (NS or NULL)");
@@ -788,20 +934,21 @@ public class JsonMapperGenerator : ICodeGenerator
             builder.AppendLine($"{varName}Set.Add({parseExpr});");
         }
         builder.CloseBrace();
-        builder.AppendLine($"{resultVar}.{property.Name} = {ConvertToTargetCollection(property.Type, elementType, $"{varName}Set")};");
+        builder.AppendLine($"{target} = {ConvertToTargetCollection(property.Type, elementType, $"{varName}Set")};");
         builder.CloseBrace();
         builder.OpenBraceWithLine("else");
         builder.AppendLine("reader.Read(); // value (true for NULL)");
         if (property.IsNullable)
-            builder.AppendLine($"{resultVar}.{property.Name} = null;");
+            builder.AppendLine($"{target} = null;");
         builder.CloseBrace();
         builder.AppendLine("reader.Read(); // EndObject of type wrapper");
     }
 
-    private void GenerateReadList(CodeBuilder builder, PropertyInfo property, string resultVar, ITypeSymbol elementType)
+    private void GenerateReadList(CodeBuilder builder, PropertyInfo property, string resultVar, ITypeSymbol elementType, string? assignmentTarget = null, bool wrapAsSet = false)
     {
         var elementTypeName = elementType.ToDisplayString();
         var varName = GetUniqueVarName("l");
+        var target = assignmentTarget ?? $"{resultVar}.{property.Name}";
 
         builder.AppendLine("reader.Read(); // StartObject of type wrapper");
         builder.AppendLine("reader.Read(); // type descriptor (L or NULL)");
@@ -814,12 +961,21 @@ public class JsonMapperGenerator : ICodeGenerator
         EmitReadElementValue(builder, elementType, $"{varName}List");
 
         builder.CloseBrace(); // while
-        builder.AppendLine($"{resultVar}.{property.Name} = {ConvertToTargetCollection(property.Type, elementType, $"{varName}List")};");
+        if (wrapAsSet)
+        {
+            // Target is a set type but elements are not string/numeric,
+            // so we need to wrap the list in a HashSet to match the target type.
+            builder.AppendLine($"{target} = new HashSet<{elementTypeName}>({varName}List);");
+        }
+        else
+        {
+            builder.AppendLine($"{target} = {ConvertToTargetCollection(property.Type, elementType, $"{varName}List")};");
+        }
         builder.CloseBrace(); // if L
         builder.OpenBraceWithLine("else");
         builder.AppendLine("reader.Read(); // value (true for NULL)");
         if (property.IsNullable)
-            builder.AppendLine($"{resultVar}.{property.Name} = null;");
+            builder.AppendLine($"{target} = null;");
         builder.CloseBrace();
         builder.AppendLine("reader.Read(); // EndObject of type wrapper");
     }
@@ -904,7 +1060,7 @@ public class JsonMapperGenerator : ICodeGenerator
         builder.AppendLine("reader.Read(); // EndObject of element wrapper");
     }
 
-    private void GenerateReadDictionary(CodeBuilder builder, PropertyInfo property, string resultVar)
+    private void GenerateReadDictionary(CodeBuilder builder, PropertyInfo property, string resultVar, string? assignmentTarget = null)
     {
         var dictionaryTypes = property.DictionaryTypes!.Value;
         var keyType = dictionaryTypes.KeyType;
@@ -912,6 +1068,7 @@ public class JsonMapperGenerator : ICodeGenerator
         var keyTypeName = keyType.ToDisplayString();
         var valueTypeName = valueType.ToDisplayString();
         var varName = GetUniqueVarName("dict");
+        var target = assignmentTarget ?? $"{resultVar}.{property.Name}";
 
         builder.AppendLine("reader.Read(); // StartObject of type wrapper");
         builder.AppendLine("reader.Read(); // type descriptor (M or NULL)");
@@ -925,12 +1082,12 @@ public class JsonMapperGenerator : ICodeGenerator
         EmitReadDictionaryValue(builder, valueType, $"{varName}Map", $"{varName}Key");
 
         builder.CloseBrace(); // while
-        builder.AppendLine($"{resultVar}.{property.Name} = {varName}Map;");
+        builder.AppendLine($"{target} = {varName}Map;");
         builder.CloseBrace(); // if M
         builder.OpenBraceWithLine("else");
         builder.AppendLine("reader.Read(); // value (true for NULL)");
         if (property.IsNullable)
-            builder.AppendLine($"{resultVar}.{property.Name} = null;");
+            builder.AppendLine($"{target} = null;");
         builder.CloseBrace();
         builder.AppendLine("reader.Read(); // EndObject of type wrapper");
     }
@@ -999,6 +1156,111 @@ public class JsonMapperGenerator : ICodeGenerator
     }
 
     // ─── Helper methods ─────────────────────────────────────────────────
+
+    private static IMethodSymbol? FindBestConstructor(DynamoTypeInfo type)
+    {
+        var constructors = type.Symbol.Constructors
+            .Where(c => c.DeclaredAccessibility == Accessibility.Public)
+            // Exclude the synthesized record copy constructor (single parameter of the same type)
+            .Where(c => !(c.Parameters.Length == 1 &&
+                          SymbolEqualityComparer.Default.Equals(c.Parameters[0].Type, type.Symbol)))
+            .ToList();
+
+        // Prefer constructor with parameters (primary constructor)
+        var paramConstructor = constructors.FirstOrDefault(c => c.Parameters.Any());
+        if (paramConstructor != null)
+            return paramConstructor;
+
+        // Fallback to parameterless constructor
+        return constructors.FirstOrDefault(c => !c.Parameters.Any());
+    }
+
+    private static PropertyInfo? FindPropertyIgnoreCase(DynamoTypeInfo type, string propertyName)
+    {
+        var current = type;
+        while (current != null)
+        {
+            var property = current.Properties.FirstOrDefault(p =>
+                string.Equals(p.Name, propertyName, StringComparison.OrdinalIgnoreCase));
+            if (property != null)
+                return property;
+
+            current = current.BaseType;
+        }
+        return null;
+    }
+
+    private static string GetLocalVarName(string propertyName)
+    {
+        return "__" + char.ToLowerInvariant(propertyName[0]) + propertyName.Substring(1);
+    }
+
+    /// <summary>
+    /// Checks whether a property type is supported for JSON wire format reading.
+    /// Nested collections and dictionaries with non-string keys are not yet supported.
+    /// </summary>
+    private static bool IsSupportedForJsonRead(PropertyInfo property)
+    {
+        // Nested collections (e.g., IEnumerable<IEnumerable<string>>) are not supported
+        if (property.IsCollection && property.ElementType != null)
+        {
+            var elementType = property.ElementType;
+            if (elementType is IArrayTypeSymbol)
+                return false;
+            if (elementType is INamedTypeSymbol namedElem && namedElem.IsGenericType)
+            {
+                var name = namedElem.Name;
+                if (name is "List" or "IList" or "ICollection" or "IEnumerable" or
+                    "HashSet" or "ISet" or "IReadOnlyCollection" or
+                    "IReadOnlyList" or "IReadOnlySet" or "Collection" or
+                    "Dictionary" or "IDictionary" or "IReadOnlyDictionary")
+                    return false;
+            }
+        }
+
+        // Dictionaries with non-string keys (e.g., Dictionary<Guid, string>) are not supported
+        if (property.IsDictionary && property.DictionaryTypes.HasValue)
+        {
+            var keyType = property.DictionaryTypes.Value.KeyType;
+            if (keyType.SpecialType != SpecialType.System_String)
+                return false;
+
+            // Also check for nested collection/dictionary values
+            var valueType = property.DictionaryTypes.Value.ValueType;
+            if (valueType is INamedTypeSymbol namedVal && namedVal.IsGenericType)
+            {
+                var name = namedVal.Name;
+                if (name is "List" or "IList" or "ICollection" or "IEnumerable" or
+                    "HashSet" or "ISet" or "IReadOnlyCollection" or
+                    "IReadOnlyList" or "IReadOnlySet" or "Collection" or
+                    "Dictionary" or "IDictionary" or "IReadOnlyDictionary")
+                    return false;
+            }
+            if (valueType is IArrayTypeSymbol)
+                return false;
+        }
+
+        return true;
+    }
+
+    private static string GetFullyQualifiedTypeName(PropertyInfo property)
+    {
+        var typeName = property.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat);
+        // FullyQualifiedFormat does not include nullable reference type annotations,
+        // so we need to append '?' manually for nullable reference types.
+        if (property.IsNullable && !property.Type.IsValueType && !typeName.EndsWith("?"))
+            typeName += "?";
+        return typeName;
+    }
+
+    private static string GetDefaultValueExpression(ITypeSymbol type, bool isNullable)
+    {
+        if (isNullable)
+            return "default";
+        if (type.IsValueType)
+            return "default";
+        return "default!";
+    }
 
     private List<PropertyInfo> GetAllProperties(DynamoTypeInfo type)
     {

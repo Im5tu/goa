@@ -50,6 +50,11 @@ public class PropertyInfo
     /// For non-dictionary types, returns null.
     /// </summary>
     public (ITypeSymbol KeyType, ITypeSymbol ValueType)? DictionaryTypes { get; set; }
+
+    /// <summary>
+    /// The fully qualified type name of a custom DynamoConverter for this property, if any.
+    /// </summary>
+    public string? ConverterTypeName { get; set; }
     
     /// <summary>
     /// Gets the effective name for this property in DynamoDB records.
