@@ -118,6 +118,7 @@ public class AttributeValue
             var t when t == typeof(bool) => (T?)(object?)BOOL,
             var t when t == typeof(List<string>) => (T?)(object?)SS,
             var t when t == typeof(byte[]) => (T?)(object?)B,
+            var t when t == typeof(List<byte[]>) => (T?)(object?)BS,
             _ => default
         };
     }
