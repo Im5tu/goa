@@ -1,4 +1,5 @@
 using ErrorOr;
+using Goa.Clients.Dynamo.Exceptions;
 using Goa.Clients.Dynamo.Models;
 using Goa.Clients.Dynamo.Operations.Batch;
 using Goa.Clients.Dynamo.Operations.DeleteItem;
@@ -162,7 +163,7 @@ public static class DynamoExtensions
             var result = await client.QueryAsync(request, cancellationToken);
             if (result.IsError)
             {
-                yield break;
+                throw new DynamoPaginationException(result.FirstError);
             }
 
             foreach (var item in result.Value.Items)
@@ -199,7 +200,7 @@ public static class DynamoExtensions
             var result = await client.ScanAsync(request, cancellationToken);
             if (result.IsError)
             {
-                yield break;
+                throw new DynamoPaginationException(result.FirstError);
             }
 
             foreach (var item in result.Value.Items)
@@ -235,7 +236,7 @@ public static class DynamoExtensions
             var result = await client.BatchGetItemAsync(request, cancellationToken);
             if (result.IsError)
             {
-                yield break;
+                throw new DynamoPaginationException(result.FirstError);
             }
 
             foreach (var tableResponse in result.Value.Responses)
