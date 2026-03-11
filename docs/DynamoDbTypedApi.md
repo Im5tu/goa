@@ -297,12 +297,12 @@ if (result.Value.HasUnprocessedKeys)
 var reader = DynamoItemReaderRegistry.Get<UserProfile>();
 
 var result = await client.TransactGetItemsAsync(
-    new TransactGetRequest
+    new TransactGetItemRequest
     {
         TransactItems = new List<TransactGetItem>
         {
-            new() { Get = new TransactGetRequest { TableName = "Users", Key = key1 } },
-            new() { Get = new TransactGetRequest { TableName = "Users", Key = key2 } }
+            new() { Get = new TransactGetItemRequest { TableName = "Users", Key = key1 } },
+            new() { Get = new TransactGetItemRequest { TableName = "Users", Key = key2 } }
         }
     },
     reader);
