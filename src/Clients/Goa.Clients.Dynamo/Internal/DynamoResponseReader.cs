@@ -268,7 +268,7 @@ internal static class DynamoResponseReader
             reader.Read();
             reader.Skip();
         }
-        return default;
+        throw new JsonException("Unrecognized DynamoDB attribute type: no recognized type property found in attribute value object");
     }
 
     private static List<string> ReadStringArray(ref Utf8JsonReader reader)
