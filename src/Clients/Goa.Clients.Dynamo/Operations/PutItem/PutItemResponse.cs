@@ -25,5 +25,5 @@ public class PutItemResponse
     /// Information about item collections, if any, that were affected by the operation.
     /// </summary>
     [JsonPropertyName("ItemCollectionMetrics")]
-    public Dictionary<string, List<ItemCollectionMetrics>>? ItemCollectionMetrics { get; set; }
+    public ItemCollectionMetrics? ItemCollectionMetrics { get; set; }
 }

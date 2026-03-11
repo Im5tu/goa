@@ -15,14 +15,14 @@ public class UpdateItemResponse
     public DynamoRecord? Attributes { get; set; }
 
     /// <summary>
-    /// The number of capacity units consumed by the operation.
+    /// The capacity units consumed by the operation.
     /// </summary>
-    [JsonPropertyName("ConsumedCapacityUnits")]
-    public double? ConsumedCapacityUnits { get; set; }
+    [JsonPropertyName("ConsumedCapacity")]
+    public ConsumedCapacity? ConsumedCapacity { get; set; }
 
     /// <summary>
     /// Information about item collections, if any, that were affected by the operation.
     /// </summary>
     [JsonPropertyName("ItemCollectionMetrics")]
-    public Dictionary<string, List<ItemCollectionMetrics>>? ItemCollectionMetrics { get; set; }
+    public ItemCollectionMetrics? ItemCollectionMetrics { get; set; }
 }

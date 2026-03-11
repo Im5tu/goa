@@ -18,5 +18,5 @@ public class TransactWriteItemResponse
     /// A list of tables that were processed by TransactWriteItem and, for each table, information about any item collections that were affected by individual operations.
     /// </summary>
     [JsonPropertyName("ItemCollectionMetrics")]
-    public Dictionary<string, object>? ItemCollectionMetrics { get; set; }
+    public Dictionary<string, List<ItemCollectionMetrics>>? ItemCollectionMetrics { get; set; }
 }
