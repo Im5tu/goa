@@ -232,7 +232,7 @@ public static class DynamoExtensions
             var result = await client.QueryAsync(request, itemReader, cancellationToken);
             if (result.IsError)
             {
-                yield break;
+                throw new DynamoPaginationException(result.FirstError);
             }
 
             foreach (var item in result.Value.Items)
@@ -264,7 +264,7 @@ public static class DynamoExtensions
             var result = await client.ScanAsync(request, itemReader, cancellationToken);
             if (result.IsError)
             {
-                yield break;
+                throw new DynamoPaginationException(result.FirstError);
             }
 
             foreach (var item in result.Value.Items)
@@ -336,7 +336,7 @@ public static class DynamoExtensions
             var result = await client.BatchGetItemAsync(request, itemReader, cancellationToken);
             if (result.IsError)
             {
-                yield break;
+                throw new DynamoPaginationException(result.FirstError);
             }
 
             foreach (var tableResponse in result.Value.Responses)

@@ -81,7 +81,7 @@ public class TypedExtensionTests
 
     // Test for error mid-pagination
     [Test]
-    public async Task QueryAllAsync_T_StopsOnError_MidPagination()
+    public async Task QueryAllAsync_T_ThrowsOnError_MidPagination()
     {
         var mock = new Mock<IDynamoClient>();
         var lastKey = new Dictionary<string, AttributeValue>
@@ -101,11 +101,8 @@ public class TypedExtensionTests
         mock.Setup(c => c.QueryAsync(It.Is<QueryRequest>(r => r.ExclusiveStartKey != null), It.IsAny<DynamoItemReader<TestModel>>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(secondPage);
 
-        var items = await mock.Object.QueryAllAsync("TestTable", TestReader, _ => { }).ToListAsync();
-
-        await Assert.That(items).Count().IsEqualTo(1);
-        await Assert.That(items[0].Id).IsEqualTo("1");
-        await Assert.That(items[0].Name).IsEqualTo("Alice");
+        await Assert.ThrowsAsync<DynamoPaginationException>(
+            async () => await mock.Object.QueryAllAsync("TestTable", TestReader, _ => { }).ToListAsync());
     }
 
     // Tests for non-generic pagination
