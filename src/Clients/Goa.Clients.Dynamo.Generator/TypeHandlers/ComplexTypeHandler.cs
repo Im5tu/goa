@@ -113,7 +113,7 @@ public class ComplexTypeHandler : ICompositeTypeHandler
     
     public string GenerateFromDynamoRecord(PropertyInfo propertyInfo, string recordVariableName, string pkVariable, string skVariable)
     {
-        var memberName = propertyInfo.Name;
+        var memberName = propertyInfo.GetDynamoAttributeName();
         var typeName = propertyInfo.Type.ToDisplayString();
         
         // Check for dictionary types
@@ -343,7 +343,7 @@ public class ComplexTypeHandler : ICompositeTypeHandler
     {
         if (valueType.SpecialType == SpecialType.System_String)
         {
-            return $"model.{propertyName} != null ? AttributeValue.FromMap(model.{propertyName}.ToDictionary(kvp => kvp.Key, kvp => AttributeValue.String(kvp.Value))) : AttributeValue.Null()";
+            return $"model.{propertyName} != null ? AttributeValue.FromMap(model.{propertyName}.ToDictionary(kvp => kvp.Key, kvp => kvp.Value != null ? AttributeValue.String(kvp.Value) : AttributeValue.Null())) : AttributeValue.Null()";
         }
         else if (IsNumericType(valueType))
         {

@@ -29,7 +29,7 @@ public class TimeOnlyTypeHandler : ITypeHandler
     
     public string GenerateFromDynamoRecord(PropertyInfo propertyInfo, string recordVariableName, string pkVariable, string skVariable)
     {
-        var memberName = propertyInfo.Name;
+        var memberName = propertyInfo.GetDynamoAttributeName();
         var isNullable = propertyInfo.IsNullable;
         
         // Avoid variable name conflicts with pk/sk extraction variables

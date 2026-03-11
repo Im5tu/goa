@@ -49,7 +49,7 @@ public class DateTimeTypeHandler : ITypeHandler
     
     public string GenerateFromDynamoRecord(PropertyInfo propertyInfo, string recordVariableName, string pkVariable, string skVariable)
     {
-        var memberName = propertyInfo.Name;
+        var memberName = propertyInfo.GetDynamoAttributeName();
         var underlyingType = propertyInfo.UnderlyingType;
         var isNullable = propertyInfo.IsNullable;
         

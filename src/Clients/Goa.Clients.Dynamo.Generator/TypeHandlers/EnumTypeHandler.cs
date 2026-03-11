@@ -30,7 +30,7 @@ public class EnumTypeHandler : ITypeHandler
     
     public string GenerateFromDynamoRecord(PropertyInfo propertyInfo, string recordVariableName, string pkVariable, string skVariable)
     {
-        var memberName = propertyInfo.Name;
+        var memberName = propertyInfo.GetDynamoAttributeName();
         var enumType = propertyInfo.UnderlyingType.ToDisplayString();
         var isNullable = propertyInfo.IsNullable;
         
@@ -59,16 +59,17 @@ public class EnumTypeHandler : ITypeHandler
     public string? GenerateConditionalAssignment(PropertyInfo propertyInfo, string recordVariable)
     {
         var propertyName = propertyInfo.Name;
+        var dynamoAttributeName = propertyInfo.GetDynamoAttributeName();
         var isNullable = propertyInfo.IsNullable;
-        
+
         if (!isNullable)
         {
             return null;
         }
-        
+
         return $@"if (model.{propertyName}.HasValue)
 {{
-    {recordVariable}[""{propertyName}""] = AttributeValue.String(model.{propertyName}.Value.ToString());
+    {recordVariable}[""{dynamoAttributeName}""] = AttributeValue.String(model.{propertyName}.Value.ToString());
 }}";
     }
     
