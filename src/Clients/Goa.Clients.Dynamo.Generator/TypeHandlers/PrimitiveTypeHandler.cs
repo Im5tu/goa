@@ -64,7 +64,7 @@ public class PrimitiveTypeHandler : ITypeHandler
             SpecialType.System_DateTime when isNullable =>
                 null, // Use conditional assignment instead (handled by DateTimeTypeHandler)
             SpecialType.System_DateTime =>
-                $"AttributeValue.String(model.{propertyName}.ToString(\\\"o\\\"))",
+                $"AttributeValue.String(model.{propertyName}.ToString(\"o\"))",
             _ when underlyingType.Name == nameof(Guid) && isNullable =>
                 null, // Use conditional assignment instead
             _ when underlyingType.Name == nameof(Guid) =>
@@ -76,7 +76,7 @@ public class PrimitiveTypeHandler : ITypeHandler
             _ when underlyingType.Name == nameof(DateTimeOffset) && isNullable =>
                 null, // Use conditional assignment instead
             _ when underlyingType.Name == nameof(DateTimeOffset) =>
-                $"AttributeValue.String(model.{propertyName}.ToString(\\\"o\\\"))",
+                $"AttributeValue.String(model.{propertyName}.ToString(\"o\"))",
             _ when underlyingType.TypeKind == TypeKind.Enum && isNullable =>
                 null, // Use conditional assignment instead
             _ when underlyingType.TypeKind == TypeKind.Enum =>
@@ -173,13 +173,13 @@ public class PrimitiveTypeHandler : ITypeHandler
             SpecialType.System_Char =>
                 $"AttributeValue.String(model.{propertyName}.Value.ToString())",
             SpecialType.System_DateTime =>
-                $"AttributeValue.String(model.{propertyName}.Value.ToString(\\\"o\\\"))",
+                $"AttributeValue.String(model.{propertyName}.Value.ToString(\"o\"))",
             _ when underlyingType.Name == nameof(Guid) =>
                 $"AttributeValue.String(model.{propertyName}.Value.ToString())",
             _ when underlyingType.Name == nameof(TimeSpan) =>
                 $"AttributeValue.String(model.{propertyName}.Value.ToString())",
             _ when underlyingType.Name == nameof(DateTimeOffset) =>
-                $"AttributeValue.String(model.{propertyName}.Value.ToString(\\\"o\\\"))",
+                $"AttributeValue.String(model.{propertyName}.Value.ToString(\"o\"))",
             _ when underlyingType.TypeKind == TypeKind.Enum =>
                 $"AttributeValue.String(model.{propertyName}.Value.ToString())",
             _ => null

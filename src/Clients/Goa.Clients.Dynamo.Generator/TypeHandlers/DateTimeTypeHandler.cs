@@ -40,9 +40,10 @@ public class DateTimeTypeHandler : ITypeHandler
     public string GenerateConditionalAssignment(PropertyInfo propertyInfo, string recordVariable)
     {
         var propertyName = propertyInfo.Name;
+        var dynamoAttributeName = propertyInfo.GetDynamoAttributeName();
         return $@"if (model.{propertyName}.HasValue)
             {{
-                {recordVariable}[""{propertyName}""] = AttributeValue.String(model.{propertyName}.Value.ToString(""o""));
+                {recordVariable}[""{dynamoAttributeName}""] = AttributeValue.String(model.{propertyName}.Value.ToString(""o""));
             }}";
     }
     

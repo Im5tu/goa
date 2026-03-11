@@ -52,16 +52,17 @@ public class TimeOnlyTypeHandler : ITypeHandler
     public string? GenerateConditionalAssignment(PropertyInfo propertyInfo, string recordVariable)
     {
         var propertyName = propertyInfo.Name;
+        var dynamoAttributeName = propertyInfo.GetDynamoAttributeName();
         var isNullable = propertyInfo.IsNullable;
-        
+
         if (!isNullable)
         {
             return null;
         }
-        
+
         return $@"if (model.{propertyName}.HasValue)
 {{
-    {recordVariable}[""{propertyName}""] = AttributeValue.String(model.{propertyName}.Value.ToString(""HH:mm:ss.fffffff""));
+    {recordVariable}[""{dynamoAttributeName}""] = AttributeValue.String(model.{propertyName}.Value.ToString(""HH:mm:ss.fffffff""));
 }}";
     }
     

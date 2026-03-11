@@ -91,7 +91,24 @@ public class ComplexTypeHandler : ICompositeTypeHandler
         
         // Handle complex types (nested objects)
         var normalizedTypeName = propertyInfo.UnderlyingType.Name.Replace(".", "_").Replace("`", "_");
-        return $"model.{propertyName} != null ? AttributeValue.FromMap(DynamoMapper.{normalizedTypeName}.ToDynamoRecord(model.{propertyName})) : AttributeValue.Null()";
+        var isNullable = propertyInfo.IsNullable;
+        var isValueType = propertyInfo.Type.IsValueType;
+
+        if (isValueType && !isNullable)
+        {
+            // Non-nullable struct: always has a value, no null check needed
+            return $"AttributeValue.FromMap(DynamoMapper.{normalizedTypeName}.ToDynamoRecord(model.{propertyName}))";
+        }
+        else if (isValueType && isNullable)
+        {
+            // Nullable struct: check for null, unwrap with .Value
+            return $"model.{propertyName} != null ? AttributeValue.FromMap(DynamoMapper.{normalizedTypeName}.ToDynamoRecord(model.{propertyName}.Value)) : AttributeValue.Null()";
+        }
+        else
+        {
+            // Reference type: standard null check
+            return $"model.{propertyName} != null ? AttributeValue.FromMap(DynamoMapper.{normalizedTypeName}.ToDynamoRecord(model.{propertyName})) : AttributeValue.Null()";
+        }
     }
     
     public string GenerateFromDynamoRecord(PropertyInfo propertyInfo, string recordVariableName, string pkVariable, string skVariable)
