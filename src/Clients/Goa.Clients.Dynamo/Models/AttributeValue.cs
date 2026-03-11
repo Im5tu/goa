@@ -177,7 +177,7 @@ public sealed class AttributeValueJsonConverter : JsonConverter<AttributeValue>
     public override AttributeValue Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
     {
         if (reader.TokenType != JsonTokenType.StartObject)
-            return default;
+            throw new JsonException($"Invalid AttributeValue JSON: expected StartObject but got {reader.TokenType}");
 
         while (reader.Read() && reader.TokenType != JsonTokenType.EndObject)
         {
@@ -274,7 +274,7 @@ public sealed class AttributeValueJsonConverter : JsonConverter<AttributeValue>
             reader.Skip();
         }
 
-        return default;
+        throw new JsonException("Invalid AttributeValue JSON: no recognized DynamoDB type property found");
     }
 
     /// <inheritdoc />

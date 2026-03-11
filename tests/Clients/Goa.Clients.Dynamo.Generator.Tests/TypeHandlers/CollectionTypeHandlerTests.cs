@@ -685,7 +685,7 @@ public class CollectionTypeHandlerTests
 
         // Assert - The inner primitive collection mapping should use "item" (the outer lambda var),
         // not a hard-coded identifier that doesn't match the lambda parameter
-        var expected = "model.Tags != null ? new AttributeValue { L = model.Tags.Select(item => (item != null && item.Any() ? new AttributeValue { SS = item.ToList() } : new AttributeValue { NULL = true })).ToList() } : new AttributeValue { NULL = true }";
+        var expected = "model.Tags != null ? AttributeValue.FromList(model.Tags.Select(item => (item != null && item.Any() ? AttributeValue.FromStringSet(item.ToList()) : AttributeValue.Null())).ToList()) : AttributeValue.Null()";
         await Assert.That(result)
             .IsEqualTo(expected)
             .Because("Nested string collection should use the lambda variable 'item' in the inner SS mapping");
@@ -712,7 +712,7 @@ public class CollectionTypeHandlerTests
 
         // Assert - The inner primitive collection mapping should use "item" (the outer lambda var),
         // not a hard-coded identifier that doesn't match the lambda parameter
-        var expected = "model.Scores != null ? new AttributeValue { L = model.Scores.Select(item => (item != null && item.Any() ? new AttributeValue { NS = item.Select(x => x.ToString(CultureInfo.InvariantCulture)).ToList() } : new AttributeValue { NULL = true })).ToList() } : new AttributeValue { NULL = true }";
+        var expected = "model.Scores != null ? AttributeValue.FromList(model.Scores.Select(item => (item != null && item.Any() ? AttributeValue.FromNumberSet(item.Select(x => x.ToString(CultureInfo.InvariantCulture)).ToList()) : AttributeValue.Null())).ToList()) : AttributeValue.Null()";
         await Assert.That(result)
             .IsEqualTo(expected)
             .Because("Nested int collection should use the lambda variable 'item' in the inner NS mapping");
