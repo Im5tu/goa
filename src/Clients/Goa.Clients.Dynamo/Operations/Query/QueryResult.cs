@@ -41,10 +41,10 @@ public class QueryResult
     public int ScannedCount { get; set; }
 
     /// <summary>
-    /// The number of capacity units consumed by the operation.
+    /// The capacity consumed by the operation.
     /// </summary>
-    [JsonPropertyName("ConsumedCapacityUnits")]
-    public double ConsumedCapacityUnits { get; set; }
+    [JsonPropertyName("ConsumedCapacity")]
+    public ConsumedCapacity? ConsumedCapacity { get; set; }
 }
 
 /// <summary>
