@@ -765,8 +765,25 @@ public class JsonMapperGenerator : ICodeGenerator
         }
         else
         {
-            builder.AppendLine("reader.Read(); // value");
-            EmitReadPrimitiveAssignment(builder, property, resultVar, hasUnixTimestamp, assignmentTarget);
+            // Non-nullable strings are reference types that could still be null at runtime.
+            // The write path emits {"NULL":true} for these, so the read path must handle it.
+            if (underlyingType.SpecialType == SpecialType.System_String)
+            {
+                var target = assignmentTarget ?? $"{resultVar}.{property.Name}";
+                builder.OpenBraceWithLine("if (reader.ValueTextEquals(\"NULL\"u8))");
+                builder.AppendLine("reader.Read(); // value (true)");
+                builder.AppendLine($"{target} = string.Empty;");
+                builder.CloseBrace();
+                builder.OpenBraceWithLine("else");
+                builder.AppendLine("reader.Read(); // value");
+                EmitReadPrimitiveAssignment(builder, property, resultVar, hasUnixTimestamp, assignmentTarget);
+                builder.CloseBrace();
+            }
+            else
+            {
+                builder.AppendLine("reader.Read(); // value");
+                EmitReadPrimitiveAssignment(builder, property, resultVar, hasUnixTimestamp, assignmentTarget);
+            }
         }
 
         builder.AppendLine("reader.Read(); // EndObject of type wrapper");
