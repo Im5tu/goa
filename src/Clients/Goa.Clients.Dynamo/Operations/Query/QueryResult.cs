@@ -54,9 +54,11 @@ public class QueryResult
 public class QueryResult<T>
 {
     /// <inheritdoc cref="QueryResult.Items"/>
+    [JsonPropertyName("Items")]
     public List<T> Items { get; set; } = new();
 
     /// <inheritdoc cref="QueryResult.LastEvaluatedKey"/>
+    [JsonPropertyName("LastEvaluatedKey")]
     public Dictionary<string, AttributeValue>? LastEvaluatedKey { get; set; }
 
     /// <inheritdoc cref="QueryResult.Count"/>
@@ -66,10 +68,12 @@ public class QueryResult<T>
     public bool HasMoreResults => LastEvaluatedKey?.Count > 0;
 
     /// <inheritdoc cref="QueryResult.ScannedCount"/>
+    [JsonPropertyName("ScannedCount")]
     public int ScannedCount { get; set; }
 
     /// <summary>
     /// The capacity consumed by the operation.
     /// </summary>
+    [JsonPropertyName("ConsumedCapacity")]
     public ConsumedCapacity? ConsumedCapacity { get; set; }
 }
