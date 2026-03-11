@@ -15,5 +15,6 @@
   
   <ItemGroup>
     <InternalsVisibleTo Include="Goa.Performance.Benchmarks" />
+    <InternalsVisibleTo Include="Goa.Clients.Dynamo.Tests" />
   </ItemGroup>
 </Project>

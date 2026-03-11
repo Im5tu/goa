@@ -67,6 +67,7 @@ namespace Goa.Clients.Dynamo.Serialization;
 [JsonSerializable(typeof(List<AttributeValue>))]
 [JsonSerializable(typeof(List<DynamoRecord>))]
 [JsonSerializable(typeof(List<string>))]
+[JsonSerializable(typeof(List<byte[]>))]
 [JsonSerializable(typeof(List<ConsumedCapacity>))]
 [JsonSerializable(typeof(ApiError))]
 public partial class DynamoJsonContext : JsonSerializerContext
