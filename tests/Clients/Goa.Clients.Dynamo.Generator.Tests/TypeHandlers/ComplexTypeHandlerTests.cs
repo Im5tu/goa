@@ -236,7 +236,7 @@ public class ComplexTypeHandlerTests
         var result = _handler.GenerateToAttributeValue(propertyInfo);
 
         // Assert
-        var expected = "model.Metadata != null ? AttributeValue.FromMap(model.Metadata.ToDictionary(kvp => kvp.Key, kvp => AttributeValue.String(kvp.Value))) : AttributeValue.Null()";
+        var expected = "model.Metadata != null ? AttributeValue.FromMap(model.Metadata.ToDictionary(kvp => kvp.Key, kvp => kvp.Value != null ? AttributeValue.String(kvp.Value) : AttributeValue.Null())) : AttributeValue.Null()";
         await Assert.That(result)
             .IsEqualTo(expected);
     }

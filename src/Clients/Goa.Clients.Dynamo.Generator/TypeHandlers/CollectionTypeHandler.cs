@@ -213,7 +213,18 @@ public class CollectionTypeHandler : ICompositeTypeHandler
         {
             var normalizedTypeName = elementType.Name.Replace(".", "_").Replace("`", "_");
             var varName = memberName.ToLowerInvariant();
-            var sourceExpression = $"{recordVariableName}.TryGetList(\"{memberName}\", out var {varName}List) && {varName}List != null ? {varName}List.Where(item => item.M != null).Select(item => DynamoMapper.{normalizedTypeName}.FromDynamoRecord(new DynamoRecord(item.M!), {pkVariable}, {skVariable})) : null";
+            // When element type is explicitly nullable (e.g., List<MyClass?>), preserve NULL entries as null
+            // instead of filtering them out. Non-nullable element types keep the filter to avoid type mismatches.
+            var isElementNullable = elementType.NullableAnnotation == NullableAnnotation.Annotated;
+            string sourceExpression;
+            if (isElementNullable)
+            {
+                sourceExpression = $"{recordVariableName}.TryGetList(\"{memberName}\", out var {varName}List) && {varName}List != null ? {varName}List.Select(item => item.M != null ? DynamoMapper.{normalizedTypeName}.FromDynamoRecord(new DynamoRecord(item.M!), {pkVariable}, {skVariable}) : null) : null";
+            }
+            else
+            {
+                sourceExpression = $"{recordVariableName}.TryGetList(\"{memberName}\", out var {varName}List) && {varName}List != null ? {varName}List.Where(item => item.M != null).Select(item => DynamoMapper.{normalizedTypeName}.FromDynamoRecord(new DynamoRecord(item.M!), {pkVariable}, {skVariable})) : null";
+            }
             return ConvertToTargetCollectionType(propertyInfo.Type, elementType, sourceExpression);
         }
 
