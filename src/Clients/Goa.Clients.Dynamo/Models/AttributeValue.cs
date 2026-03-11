@@ -37,10 +37,10 @@ public readonly struct AttributeValue
     }
 
     /// <summary>Creates an AttributeValue of type String.</summary>
-    public static AttributeValue String(string value) => new(value, AttributeType.String);
+    public static AttributeValue String(string value) { ArgumentNullException.ThrowIfNull(value); return new(value, AttributeType.String); }
 
     /// <summary>Creates an AttributeValue of type Number.</summary>
-    public static AttributeValue Number(string value) => new(value, AttributeType.Number);
+    public static AttributeValue Number(string value) { ArgumentNullException.ThrowIfNull(value); return new(value, AttributeType.Number); }
 
     /// <summary>Creates an AttributeValue of type Bool.</summary>
     public static AttributeValue Bool(bool value) => new(value);
@@ -49,22 +49,22 @@ public readonly struct AttributeValue
     public static AttributeValue Null() => new(null, AttributeType.Null);
 
     /// <summary>Creates an AttributeValue from a String Set.</summary>
-    public static AttributeValue FromStringSet(List<string> value) => new(value, AttributeType.StringSet);
+    public static AttributeValue FromStringSet(List<string> value) { ArgumentNullException.ThrowIfNull(value); return new(value, AttributeType.StringSet); }
 
     /// <summary>Creates an AttributeValue from a Number Set.</summary>
-    public static AttributeValue FromNumberSet(List<string> value) => new(value, AttributeType.NumberSet);
+    public static AttributeValue FromNumberSet(List<string> value) { ArgumentNullException.ThrowIfNull(value); return new(value, AttributeType.NumberSet); }
 
     /// <summary>Creates an AttributeValue from a List of AttributeValues.</summary>
-    public static AttributeValue FromList(List<AttributeValue> value) => new(value, AttributeType.List);
+    public static AttributeValue FromList(List<AttributeValue> value) { ArgumentNullException.ThrowIfNull(value); return new(value, AttributeType.List); }
 
     /// <summary>Creates an AttributeValue from a Map of string to AttributeValue.</summary>
-    public static AttributeValue FromMap(Dictionary<string, AttributeValue> value) => new(value, AttributeType.Map);
+    public static AttributeValue FromMap(Dictionary<string, AttributeValue> value) { ArgumentNullException.ThrowIfNull(value); return new(value, AttributeType.Map); }
 
     /// <summary>Creates an AttributeValue of type Binary.</summary>
-    public static AttributeValue FromBinary(byte[] value) => new(value, AttributeType.Binary);
+    public static AttributeValue FromBinary(byte[] value) { ArgumentNullException.ThrowIfNull(value); return new(value, AttributeType.Binary); }
 
     /// <summary>Creates an AttributeValue from a Binary Set.</summary>
-    public static AttributeValue FromBinarySet(List<byte[]> value) => new(value, AttributeType.BinarySet);
+    public static AttributeValue FromBinarySet(List<byte[]> value) { ArgumentNullException.ThrowIfNull(value); return new(value, AttributeType.BinarySet); }
 
     /// <summary>
     /// An attribute of type String. Returns null if this is not a String attribute.
