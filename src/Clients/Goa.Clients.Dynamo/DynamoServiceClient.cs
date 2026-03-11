@@ -372,9 +372,13 @@ public class DynamoServiceClient : JsonAwsServiceClient<DynamoServiceClientConfi
         }
 
         var errorType = error?.Type ?? error?.Code ?? "Unknown";
+        var metadata = new Dictionary<string, object>();
+        if (error?.Payload is not null) metadata["Payload"] = error.Payload;
+        if (error?.StatusCode is not null) metadata["StatusCode"] = error.StatusCode;
         return Error.Failure(
             code: MapErrorCodeToDynamo(errorType),
-            description: error?.Message ?? "An error occurred while processing the request.");
+            description: error?.Message ?? "An error occurred while processing the request.",
+            metadata: metadata);
     }
 
     /// <summary>
