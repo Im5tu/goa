@@ -296,7 +296,7 @@ public class ComplexTypeHandlerTests
         var result = _handler.GenerateToAttributeValue(propertyInfo);
 
         // Assert
-        var expected = "model.TagsByCategory != null ? AttributeValue.FromMap(model.TagsByCategory.ToDictionary(kvp => kvp.Key, kvp => AttributeValue.FromStringSet(kvp.Value ?? new List<string>()))) : AttributeValue.Null()";
+        var expected = "model.TagsByCategory != null ? AttributeValue.FromMap(model.TagsByCategory.ToDictionary(kvp => kvp.Key, kvp => kvp.Value == null || kvp.Value.Count == 0 ? AttributeValue.Null() : AttributeValue.FromStringSet(kvp.Value))) : AttributeValue.Null()";
         await Assert.That(result)
             .IsEqualTo(expected);
     }

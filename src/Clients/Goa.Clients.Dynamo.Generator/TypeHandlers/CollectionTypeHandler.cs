@@ -78,7 +78,7 @@ public class CollectionTypeHandler : ICompositeTypeHandler
             var nestedElementType = GetCollectionElementType(elementType);
             if (nestedElementType != null)
             {
-                var nestedPrimitiveMapping = TryGeneratePrimitiveCollectionForElement(nestedElementType);
+                var nestedPrimitiveMapping = TryGeneratePrimitiveCollectionForElement(nestedElementType, itemVarName);
                 if (nestedPrimitiveMapping != null)
                 {
                     return nestedPrimitiveMapping;
@@ -100,20 +100,20 @@ public class CollectionTypeHandler : ICompositeTypeHandler
     /// <summary>
     /// Generates primitive collection mapping for a nested collection element.
     /// </summary>
-    private string? TryGeneratePrimitiveCollectionForElement(ITypeSymbol elementType)
+    private string? TryGeneratePrimitiveCollectionForElement(ITypeSymbol elementType, string collectionVarName)
     {
         return elementType.SpecialType switch
         {
-            SpecialType.System_String => "(item != null && item.Any() ? AttributeValue.FromStringSet(item.ToList()) : AttributeValue.Null())",
+            SpecialType.System_String => $"({collectionVarName} != null && {collectionVarName}.Any() ? AttributeValue.FromStringSet({collectionVarName}.ToList()) : AttributeValue.Null())",
             SpecialType.System_Byte or SpecialType.System_SByte or SpecialType.System_Int16 or SpecialType.System_UInt16 or
             SpecialType.System_Int32 or SpecialType.System_UInt32 or SpecialType.System_Int64 or SpecialType.System_UInt64 or
-            SpecialType.System_Decimal or SpecialType.System_Single or SpecialType.System_Double => "(item != null && item.Any() ? AttributeValue.FromNumberSet(item.Select(x => x.ToString(CultureInfo.InvariantCulture)).ToList()) : AttributeValue.Null())",
-            SpecialType.System_Boolean => "(item != null && item.Any() ? AttributeValue.FromStringSet(item.Select(x => x.ToString()).ToList()) : AttributeValue.Null())",
-            SpecialType.System_DateTime => "(item != null && item.Any() ? AttributeValue.FromStringSet(item.Select(x => x.ToString(\"o\")).ToList()) : AttributeValue.Null())",
-            _ when elementType.Name == nameof(Guid) => "(item != null && item.Any() ? AttributeValue.FromStringSet(item.Select(x => x.ToString()).ToList()) : AttributeValue.Null())",
-            _ when elementType.Name == nameof(TimeSpan) => "(item != null && item.Any() ? AttributeValue.FromStringSet(item.Select(x => x.ToString()).ToList()) : AttributeValue.Null())",
-            _ when elementType.Name == nameof(DateTimeOffset) => "(item != null && item.Any() ? AttributeValue.FromStringSet(item.Select(x => x.ToString(\"o\")).ToList()) : AttributeValue.Null())",
-            _ when elementType.TypeKind == TypeKind.Enum => "(item != null && item.Any() ? AttributeValue.FromStringSet(item.Select(x => x.ToString()).ToList()) : AttributeValue.Null())",
+            SpecialType.System_Decimal or SpecialType.System_Single or SpecialType.System_Double => $"({collectionVarName} != null && {collectionVarName}.Any() ? AttributeValue.FromNumberSet({collectionVarName}.Select(x => x.ToString(CultureInfo.InvariantCulture)).ToList()) : AttributeValue.Null())",
+            SpecialType.System_Boolean => $"({collectionVarName} != null && {collectionVarName}.Any() ? AttributeValue.FromStringSet({collectionVarName}.Select(x => x.ToString()).ToList()) : AttributeValue.Null())",
+            SpecialType.System_DateTime => $"({collectionVarName} != null && {collectionVarName}.Any() ? AttributeValue.FromStringSet({collectionVarName}.Select(x => x.ToString(\"o\")).ToList()) : AttributeValue.Null())",
+            _ when elementType.Name == nameof(Guid) => $"({collectionVarName} != null && {collectionVarName}.Any() ? AttributeValue.FromStringSet({collectionVarName}.Select(x => x.ToString()).ToList()) : AttributeValue.Null())",
+            _ when elementType.Name == nameof(TimeSpan) => $"({collectionVarName} != null && {collectionVarName}.Any() ? AttributeValue.FromStringSet({collectionVarName}.Select(x => x.ToString()).ToList()) : AttributeValue.Null())",
+            _ when elementType.Name == nameof(DateTimeOffset) => $"({collectionVarName} != null && {collectionVarName}.Any() ? AttributeValue.FromStringSet({collectionVarName}.Select(x => x.ToString(\"o\")).ToList()) : AttributeValue.Null())",
+            _ when elementType.TypeKind == TypeKind.Enum => $"({collectionVarName} != null && {collectionVarName}.Any() ? AttributeValue.FromStringSet({collectionVarName}.Select(x => x.ToString()).ToList()) : AttributeValue.Null())",
             _ => null
         };
     }
