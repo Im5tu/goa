@@ -95,6 +95,11 @@ public class AttributeValue
     public static implicit operator AttributeValue(byte[] value) => new() { B = value };
 
     /// <summary>
+    /// Implicitly converts a List of byte arrays to an AttributeValue with BS type.
+    /// </summary>
+    public static implicit operator AttributeValue(List<byte[]> value) => new() { BS = value };
+
+    /// <summary>
     /// Implicitly converts a List&lt;string&gt; to an AttributeValue with SS type.
     /// </summary>
     public static implicit operator AttributeValue(List<string> value) => new() { SS = value };

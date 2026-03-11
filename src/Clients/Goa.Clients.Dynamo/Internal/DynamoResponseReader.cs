@@ -367,15 +367,15 @@ internal static class DynamoResponseReader
         return detail;
     }
 
-    private static Dictionary<string, ConsumedCapacity> ReadCapacityDetailMap(ref Utf8JsonReader reader)
+    private static Dictionary<string, CapacityDetail> ReadCapacityDetailMap(ref Utf8JsonReader reader)
     {
-        var map = new Dictionary<string, ConsumedCapacity>();
+        var map = new Dictionary<string, CapacityDetail>();
         // reader is at StartObject
         while (reader.Read() && reader.TokenType != JsonTokenType.EndObject)
         {
             var key = reader.GetString()!;
             reader.Read(); // StartObject
-            map[key] = ReadConsumedCapacity(ref reader);
+            map[key] = ReadCapacityDetail(ref reader);
         }
         return map;
     }
@@ -548,14 +548,14 @@ internal static class DynamoResponseReader
             T? item = default;
             while (reader.Read() && reader.TokenType != JsonTokenType.EndObject)
             {
-                var propName = reader.GetString();
-                reader.Read();
-                if (propName == "Item")
+                if (reader.ValueTextEquals("Item"u8))
                 {
+                    reader.Read();
                     item = itemReader(ref reader);
                 }
                 else
                 {
+                    reader.Read();
                     reader.Skip();
                 }
             }
