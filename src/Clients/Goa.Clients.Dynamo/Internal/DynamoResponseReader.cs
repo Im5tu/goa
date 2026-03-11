@@ -197,70 +197,72 @@ internal static class DynamoResponseReader
             {
                 reader.Read();
                 var v = reader.GetString()!;
-                reader.Read(); // EndObject
+                ReadEndObject(ref reader);
                 return AttributeValue.String(v);
             }
             if (reader.ValueTextEquals("N"u8))
             {
                 reader.Read();
                 var v = reader.GetString()!;
-                reader.Read(); // EndObject
+                ReadEndObject(ref reader);
                 return AttributeValue.Number(v);
             }
             if (reader.ValueTextEquals("BOOL"u8))
             {
                 reader.Read();
                 var v = reader.GetBoolean();
-                reader.Read(); // EndObject
+                ReadEndObject(ref reader);
                 return AttributeValue.Bool(v);
             }
             if (reader.ValueTextEquals("NULL"u8))
             {
                 reader.Read();
-                reader.GetBoolean();
-                reader.Read(); // EndObject
+                var isNull = reader.GetBoolean();
+                ReadEndObject(ref reader);
+                if (!isNull)
+                    throw new JsonException("Invalid NULL attribute value: expected true but got false");
                 return AttributeValue.Null();
             }
             if (reader.ValueTextEquals("SS"u8))
             {
                 reader.Read();
                 var v = ReadStringArray(ref reader);
-                reader.Read(); // EndObject
+                ReadEndObject(ref reader);
                 return AttributeValue.FromStringSet(v);
             }
             if (reader.ValueTextEquals("NS"u8))
             {
                 reader.Read();
                 var v = ReadStringArray(ref reader);
-                reader.Read(); // EndObject
+                ReadEndObject(ref reader);
                 return AttributeValue.FromNumberSet(v);
             }
             if (reader.ValueTextEquals("L"u8))
             {
                 reader.Read();
                 var v = ReadAttributeValueList(ref reader);
-                reader.Read(); // EndObject
+                ReadEndObject(ref reader);
                 return AttributeValue.FromList(v);
             }
             if (reader.ValueTextEquals("M"u8))
             {
                 reader.Read();
                 var v = ReadAttributeMap(ref reader);
-                reader.Read(); // EndObject
+                ReadEndObject(ref reader);
                 return AttributeValue.FromMap(v);
             }
             if (reader.ValueTextEquals("B"u8))
             {
                 reader.Read();
                 var v = Convert.FromBase64String(reader.GetString()!);
-                reader.Read(); // EndObject
+                ReadEndObject(ref reader);
                 return AttributeValue.FromBinary(v);
             }
             if (reader.ValueTextEquals("BS"u8))
             {
                 reader.Read();
                 var v = ReadBinaryArray(ref reader);
-                reader.Read(); // EndObject
+                ReadEndObject(ref reader);
                 return AttributeValue.FromBinarySet(v);
             }
 
@@ -269,6 +271,13 @@ internal static class DynamoResponseReader
             reader.Skip();
         }
         throw new JsonException("Unrecognized DynamoDB attribute type: no recognized type property found in attribute value object");
+    }
+
+    private static void ReadEndObject(ref Utf8JsonReader reader)
+    {
+        reader.Read();
+        if (reader.TokenType != JsonTokenType.EndObject)
+            throw new JsonException("Expected end of attribute value wrapper object");
     }
 
     private static List<string> ReadStringArray(ref Utf8JsonReader reader)

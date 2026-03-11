@@ -830,6 +830,64 @@ public class DynamoResponseReaderTests
         await Assert.That(result).IsNull();
     }
 
+    // === NULL attribute validation ===
+
+    [Test]
+    public async Task ReadAttributeValue_NullTrue_ShouldReturnNullAttributeValue()
+    {
+        var json = """
+        {
+            "Items": [],
+            "Count": 0,
+            "ScannedCount": 0,
+            "LastEvaluatedKey": {
+                "empty": {"NULL": true}
+            }
+        }
+        """u8;
+
+        var result = DynamoResponseReader.ReadQueryResponse<TestEntity>(json, ReadTestEntity);
+
+        await Assert.That(result.LastEvaluatedKey).IsNotNull();
+        await Assert.That(result.LastEvaluatedKey!["empty"].NULL).IsEqualTo(true);
+    }
+
+    [Test]
+    public void ReadAttributeValue_NullFalse_ShouldThrowJsonException()
+    {
+        var json = System.Text.Encoding.UTF8.GetBytes("""
+        {
+            "Items": [],
+            "Count": 0,
+            "ScannedCount": 0,
+            "LastEvaluatedKey": {
+                "empty": {"NULL": false}
+            }
+        }
+        """);
+
+        Assert.Throws<JsonException>(() => DynamoResponseReader.ReadQueryResponse<TestEntity>(json, ReadTestEntity));
+    }
+
+    // === Wrapper object validation ===
+
+    [Test]
+    public void ReadAttributeValue_ExtraPropertyInWrapper_ShouldThrowJsonException()
+    {
+        var json = System.Text.Encoding.UTF8.GetBytes("""
+        {
+            "Items": [],
+            "Count": 0,
+            "ScannedCount": 0,
+            "LastEvaluatedKey": {
+                "pk": {"S": "value", "Extra": "bad"}
+            }
+        }
+        """);
+
+        Assert.Throws<JsonException>(() => DynamoResponseReader.ReadQueryResponse<TestEntity>(json, ReadTestEntity));
+    }
+
     // === Binary attribute parsing ===
 
     [Test]
