@@ -22,5 +22,7 @@ public enum AttributeType : byte
     /// <summary>An attribute of type Map.</summary>
     Map,
     /// <summary>An attribute of type Binary.</summary>
-    Binary
+    Binary,
+    /// <summary>An attribute of type Binary Set.</summary>
+    BinarySet
 }
