@@ -291,9 +291,11 @@ public static class DynamoExtensions
     /// <returns>An async enumerable that yields items from all tables in the batch get result, retrying unprocessed keys.</returns>
     public static async IAsyncEnumerable<KeyValuePair<string, DynamoRecord>> BatchGetAllAsync(this IDynamoClient client, Action<BatchGetItemBuilder> builder, [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
+        const int maxAttempts = 10;
         var _builder = new BatchGetItemBuilder();
         builder(_builder);
         var request = _builder.Build();
+        int attempts = 0;
 
         do
         {
@@ -316,8 +318,18 @@ public static class DynamoExtensions
                 break;
             }
 
-            // Retry with unprocessed keys
+            if (attempts >= maxAttempts)
+            {
+                throw new DynamoPaginationException(
+                    ErrorOr.Error.Failure("Goa.DynamoDb.MaxRetriesExceeded", $"BatchGetItem still has unprocessed keys after {maxAttempts} retry attempts."));
+            }
+
+            // Retry with unprocessed keys using exponential backoff with jitter
             request.RequestItems = result.Value.UnprocessedKeys!;
+            var baseDelay = Math.Min(100 * (1 << attempts), 25_600);
+            var jitter = Random.Shared.Next(0, baseDelay);
+            await Task.Delay(baseDelay + jitter, cancellationToken);
+            attempts++;
         }
         while (true);
     }
@@ -327,9 +339,11 @@ public static class DynamoExtensions
     /// </summary>
     public static async IAsyncEnumerable<KeyValuePair<string, T>> BatchGetAllAsync<T>(this IDynamoClient client, DynamoItemReader<T> itemReader, Action<BatchGetItemBuilder> builder, [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
+        const int maxAttempts = 10;
         var _builder = new BatchGetItemBuilder();
         builder(_builder);
         var request = _builder.Build();
+        int attempts = 0;
 
         do
         {
@@ -352,8 +366,18 @@ public static class DynamoExtensions
                 break;
             }
 
-            // Retry with unprocessed keys
+            if (attempts >= maxAttempts)
+            {
+                throw new DynamoPaginationException(
+                    ErrorOr.Error.Failure("Goa.DynamoDb.MaxRetriesExceeded", $"BatchGetItem still has unprocessed keys after {maxAttempts} retry attempts."));
+            }
+
+            // Retry with unprocessed keys using exponential backoff with jitter
             request.RequestItems = result.Value.UnprocessedKeys!;
+            var baseDelay = Math.Min(100 * (1 << attempts), 25_600);
+            var jitter = Random.Shared.Next(0, baseDelay);
+            await Task.Delay(baseDelay + jitter, cancellationToken);
+            attempts++;
         }
         while (true);
     }
