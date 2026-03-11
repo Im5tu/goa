@@ -43,11 +43,13 @@ public class AttributeValue
     /// <summary>
     /// An attribute of type Binary. DynamoDB sends binary data as a base64-encoded string.
     /// </summary>
+    [JsonPropertyName("B")]
     public byte[]? B { get; set; }
 
     /// <summary>
     /// An attribute of type Binary Set. A set of binary values, each base64-encoded.
     /// </summary>
+    [JsonPropertyName("BS")]
     public List<byte[]>? BS { get; set; }
 
     /// <summary>
