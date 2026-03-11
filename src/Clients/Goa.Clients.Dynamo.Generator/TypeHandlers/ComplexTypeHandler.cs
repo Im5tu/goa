@@ -68,7 +68,7 @@ public class ComplexTypeHandler : ICompositeTypeHandler
                     namedValueType.TypeArguments.Length == 1 &&
                     namedValueType.TypeArguments[0].SpecialType == SpecialType.System_String)
                 {
-                    return $"model.{propertyName} != null ? new AttributeValue {{ M = model.{propertyName}.ToDictionary(kvp => kvp.Key, kvp => new AttributeValue {{ SS = kvp.Value ?? new List<string>() }}) }} : new AttributeValue {{ NULL = true }}";
+                    return $"model.{propertyName} != null ? new AttributeValue {{ M = model.{propertyName}.ToDictionary(kvp => kvp.Key, kvp => kvp.Value == null || kvp.Value.Count == 0 ? new AttributeValue {{ NULL = true }} : new AttributeValue {{ SS = kvp.Value }}) }} : new AttributeValue {{ NULL = true }}";
                 }
                 
                 // Special case: Dictionary<string, Dictionary<string, string>>

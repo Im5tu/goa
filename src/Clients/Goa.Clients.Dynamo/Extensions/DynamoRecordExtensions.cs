@@ -46,7 +46,7 @@ public static class DynamoRecordExtensions
         if (!record.TryGetValue(columnName, out var attributeValue))
             return false;
 
-        if (attributeValue == null || attributeValue.NULL == true || string.IsNullOrEmpty(attributeValue.S))
+        if (attributeValue == null || attributeValue.NULL == true || attributeValue.S == null)
             return false;
 
         value = attributeValue.S;
