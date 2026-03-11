@@ -302,8 +302,7 @@ internal static class DynamoResponseReader
                     result.Responses = ReadTableResponses(ref reader, itemReader);
                     break;
                 case "UnprocessedKeys":
-                    // Skip for now - complex structure, users can retry with original request
-                    reader.Skip();
+                    result.UnprocessedKeys = ReadUnprocessedKeys(ref reader);
                     break;
                 case "ConsumedCapacity":
                     result.ConsumedCapacity = ReadConsumedCapacityList(ref reader);
@@ -367,6 +366,74 @@ internal static class DynamoResponseReader
             list.Add(ReadConsumedCapacity(ref reader));
         }
         return list;
+    }
+
+    private static Dictionary<string, BatchGetRequestItem> ReadUnprocessedKeys(ref Utf8JsonReader reader)
+    {
+        var map = new Dictionary<string, BatchGetRequestItem>();
+        // reader is at StartObject
+        while (reader.Read() && reader.TokenType != JsonTokenType.EndObject)
+        {
+            var tableName = reader.GetString()!;
+            reader.Read(); // StartObject
+            map[tableName] = ReadBatchGetRequestItem(ref reader);
+        }
+        return map;
+    }
+
+    private static BatchGetRequestItem ReadBatchGetRequestItem(ref Utf8JsonReader reader)
+    {
+        var item = new BatchGetRequestItem();
+        // reader is at StartObject
+        while (reader.Read() && reader.TokenType != JsonTokenType.EndObject)
+        {
+            var propertyName = reader.GetString();
+            reader.Read();
+
+            switch (propertyName)
+            {
+                case "Keys":
+                    item.Keys = ReadKeysList(ref reader);
+                    break;
+                case "ProjectionExpression":
+                    item.ProjectionExpression = reader.GetString();
+                    break;
+                case "ConsistentRead":
+                    item.ConsistentRead = reader.GetBoolean();
+                    break;
+                case "ExpressionAttributeNames":
+                    item.ExpressionAttributeNames = ReadStringMap(ref reader);
+                    break;
+                default:
+                    reader.Skip();
+                    break;
+            }
+        }
+        return item;
+    }
+
+    private static List<Dictionary<string, AttributeValue>> ReadKeysList(ref Utf8JsonReader reader)
+    {
+        var list = new List<Dictionary<string, AttributeValue>>();
+        // reader is at StartArray
+        while (reader.Read() && reader.TokenType != JsonTokenType.EndArray)
+        {
+            list.Add(ReadAttributeMap(ref reader));
+        }
+        return list;
+    }
+
+    private static Dictionary<string, string> ReadStringMap(ref Utf8JsonReader reader)
+    {
+        var map = new Dictionary<string, string>();
+        // reader is at StartObject
+        while (reader.Read() && reader.TokenType != JsonTokenType.EndObject)
+        {
+            var key = reader.GetString()!;
+            reader.Read();
+            map[key] = reader.GetString()!;
+        }
+        return map;
     }
 
     private static List<T?> ReadTransactGetResponses<T>(ref Utf8JsonReader reader, DynamoItemReader<T> itemReader)
