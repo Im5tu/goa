@@ -41,6 +41,16 @@ public class AttributeValue
     public List<string>? NS { get; set; }
 
     /// <summary>
+    /// An attribute of type Binary. DynamoDB sends binary data as a base64-encoded string.
+    /// </summary>
+    public byte[]? B { get; set; }
+
+    /// <summary>
+    /// An attribute of type Binary Set. A set of binary values, each base64-encoded.
+    /// </summary>
+    public List<byte[]>? BS { get; set; }
+
+    /// <summary>
     /// An attribute of type List. Lists are ordered collections of values.
     /// </summary>
     [JsonPropertyName("L")]
@@ -89,6 +99,16 @@ public class AttributeValue
     public static implicit operator AttributeValue(bool value) => new() { BOOL = value };
 
     /// <summary>
+    /// Implicitly converts a byte array to an AttributeValue with B type.
+    /// </summary>
+    public static implicit operator AttributeValue(byte[] value) => new() { B = value };
+
+    /// <summary>
+    /// Implicitly converts a List of byte arrays to an AttributeValue with BS type.
+    /// </summary>
+    public static implicit operator AttributeValue(List<byte[]> value) => new() { BS = value };
+
+    /// <summary>
     /// Implicitly converts a List&lt;string&gt; to an AttributeValue with SS type.
     /// </summary>
     public static implicit operator AttributeValue(List<string> value) => new() { SS = value };
@@ -111,6 +131,8 @@ public class AttributeValue
             var t when t == typeof(decimal) => decimal.TryParse(N, out var m) ? (T?)(object?)m : default,
             var t when t == typeof(bool) => (T?)(object?)BOOL,
             var t when t == typeof(List<string>) => (T?)(object?)SS,
+            var t when t == typeof(byte[]) => (T?)(object?)B,
+            var t when t == typeof(List<byte[]>) => (T?)(object?)BS,
             _ => default
         };
     }

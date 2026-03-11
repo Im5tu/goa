@@ -551,6 +551,68 @@ public class DynamoResponseReaderTests
     }
 
     [Test]
+    public async Task ReadBatchGetItemResponse_ShouldParseUnprocessedKeys()
+    {
+        var json = """
+        {
+            "Responses": {
+                "TestTable": [
+                    {"pk": {"S": "pk1"}, "sk": {"S": "sk1"}}
+                ]
+            },
+            "UnprocessedKeys": {
+                "TestTable": {
+                    "Keys": [
+                        {"pk": {"S": "pk2"}, "sk": {"S": "sk2"}},
+                        {"pk": {"S": "pk3"}, "sk": {"S": "sk3"}}
+                    ],
+                    "ConsistentRead": true,
+                    "ProjectionExpression": "pk, sk, #d",
+                    "ExpressionAttributeNames": {"#d": "data"}
+                }
+            }
+        }
+        """u8;
+
+        var result = DynamoResponseReader.ReadBatchGetItemResponse<TestEntity>(json, ReadTestEntity);
+
+        await Assert.That(result.Responses["TestTable"].Count).IsEqualTo(1);
+        await Assert.That(result.HasUnprocessedKeys).IsTrue();
+        await Assert.That(result.UnprocessedKeys).IsNotNull();
+        await Assert.That(result.UnprocessedKeys!.ContainsKey("TestTable")).IsTrue();
+
+        var unprocessed = result.UnprocessedKeys!["TestTable"];
+        await Assert.That(unprocessed.Keys.Count).IsEqualTo(2);
+        await Assert.That(unprocessed.Keys[0]["pk"].S).IsEqualTo("pk2");
+        await Assert.That(unprocessed.Keys[1]["pk"].S).IsEqualTo("pk3");
+        await Assert.That(unprocessed.ConsistentRead).IsTrue();
+        await Assert.That(unprocessed.ProjectionExpression).IsEqualTo("pk, sk, #d");
+        await Assert.That(unprocessed.ExpressionAttributeNames).IsNotNull();
+        await Assert.That(unprocessed.ExpressionAttributeNames!["#d"]).IsEqualTo("data");
+    }
+
+    [Test]
+    public async Task ReadBatchGetItemResponse_ShouldParseEmptyUnprocessedKeys()
+    {
+        var json = """
+        {
+            "Responses": {
+                "TestTable": [
+                    {"pk": {"S": "pk1"}, "sk": {"S": "sk1"}}
+                ]
+            },
+            "UnprocessedKeys": {}
+        }
+        """u8;
+
+        var result = DynamoResponseReader.ReadBatchGetItemResponse<TestEntity>(json, ReadTestEntity);
+
+        await Assert.That(result.HasUnprocessedKeys).IsFalse();
+        await Assert.That(result.UnprocessedKeys).IsNotNull();
+        await Assert.That(result.UnprocessedKeys!.Count).IsEqualTo(0);
+    }
+
+    [Test]
     public async Task ReadBatchGetItemResponse_ShouldHandleEmptyResponses()
     {
         var json = """
@@ -682,6 +744,139 @@ public class DynamoResponseReaderTests
         await Assert.That(result.ConsumedCapacity).IsNotNull();
         await Assert.That(result.ConsumedCapacity!.TableName).IsEqualTo("FullTable");
         await Assert.That(result.ConsumedCapacity!.CapacityUnits).IsEqualTo(7.5);
+    }
+
+    // === Registry path tests (ref Utf8JsonReader overload) ===
+
+    [Test]
+    public async Task ReadQueryResponse_RefOverload_ShouldHandleEmptyItems()
+    {
+        var json = """{"Items":[],"Count":0,"ScannedCount":0}"""u8;
+
+        var jsonReader = new Utf8JsonReader(json);
+        var result = DynamoResponseReader.ReadQueryResponse(ref jsonReader, DynamoResponseReader.ReadDynamoRecordItem);
+
+        await Assert.That(result.Items).IsNotNull();
+        await Assert.That(result.Items.Count).IsEqualTo(0);
+        await Assert.That(result.ScannedCount).IsEqualTo(0);
+    }
+
+    [Test]
+    public async Task ReadQueryResponse_RefOverload_ShouldDeserializeDynamoRecordItems()
+    {
+        var json = """
+        {
+            "Items": [
+                {"pk": {"S": "pk1"}, "sk": {"S": "sk1"}, "data": {"S": "value1"}}
+            ],
+            "Count": 1,
+            "ScannedCount": 1
+        }
+        """u8;
+
+        var jsonReader = new Utf8JsonReader(json);
+        var result = DynamoResponseReader.ReadQueryResponse(ref jsonReader, DynamoResponseReader.ReadDynamoRecordItem);
+
+        await Assert.That(result.Items.Count).IsEqualTo(1);
+        await Assert.That(result.Items[0]["pk"]?.S).IsEqualTo("pk1");
+        await Assert.That(result.Items[0]["sk"]?.S).IsEqualTo("sk1");
+        await Assert.That(result.Items[0]["data"]?.S).IsEqualTo("value1");
+    }
+
+    [Test]
+    public async Task ReadScanResponse_RefOverload_ShouldDeserializeDynamoRecordItems()
+    {
+        var json = """
+        {
+            "Items": [
+                {"pk": {"S": "pk1"}, "sk": {"S": "sk1"}}
+            ],
+            "Count": 1,
+            "ScannedCount": 1
+        }
+        """u8;
+
+        var jsonReader = new Utf8JsonReader(json);
+        var result = DynamoResponseReader.ReadScanResponse(ref jsonReader, DynamoResponseReader.ReadDynamoRecordItem);
+
+        await Assert.That(result.Items.Count).IsEqualTo(1);
+        await Assert.That(result.Items[0]["pk"]?.S).IsEqualTo("pk1");
+    }
+
+    [Test]
+    public async Task ReadGetItemResponse_RefOverload_ShouldDeserializeDynamoRecordItem()
+    {
+        var json = """
+        {
+            "Item": {"pk": {"S": "pk1"}, "sk": {"S": "sk1"}}
+        }
+        """u8;
+
+        var jsonReader = new Utf8JsonReader(json);
+        var result = DynamoResponseReader.ReadGetItemResponse(ref jsonReader, DynamoResponseReader.ReadDynamoRecordItem);
+
+        await Assert.That(result).IsNotNull();
+        await Assert.That(result!["pk"]?.S).IsEqualTo("pk1");
+    }
+
+    [Test]
+    public async Task ReadGetItemResponse_RefOverload_ShouldReturnNull_WhenNoItemProperty()
+    {
+        var json = """{}"""u8;
+
+        var jsonReader = new Utf8JsonReader(json);
+        var result = DynamoResponseReader.ReadGetItemResponse(ref jsonReader, DynamoResponseReader.ReadDynamoRecordItem);
+
+        await Assert.That(result).IsNull();
+    }
+
+    // === Binary attribute parsing ===
+
+    [Test]
+    public async Task ReadQueryResponse_ShouldParseLastEvaluatedKeyWithBinaryType()
+    {
+        var json = """
+        {
+            "Items": [],
+            "Count": 0,
+            "ScannedCount": 0,
+            "LastEvaluatedKey": {
+                "pk": {"S": "partition"},
+                "bin": {"B": "SGVsbG8="}
+            }
+        }
+        """u8;
+
+        var result = DynamoResponseReader.ReadQueryResponse<TestEntity>(json, ReadTestEntity);
+
+        await Assert.That(result.LastEvaluatedKey).IsNotNull();
+        await Assert.That(result.LastEvaluatedKey!["pk"].S).IsEqualTo("partition");
+        await Assert.That(result.LastEvaluatedKey!["bin"].B).IsNotNull();
+        await Assert.That(Convert.ToBase64String(result.LastEvaluatedKey!["bin"].B!)).IsEqualTo("SGVsbG8=");
+    }
+
+    [Test]
+    public async Task ReadQueryResponse_ShouldParseLastEvaluatedKeyWithBinarySetType()
+    {
+        var json = """
+        {
+            "Items": [],
+            "Count": 0,
+            "ScannedCount": 0,
+            "LastEvaluatedKey": {
+                "pk": {"S": "partition"},
+                "bins": {"BS": ["SGVsbG8=", "V29ybGQ="]}
+            }
+        }
+        """u8;
+
+        var result = DynamoResponseReader.ReadQueryResponse<TestEntity>(json, ReadTestEntity);
+
+        await Assert.That(result.LastEvaluatedKey).IsNotNull();
+        await Assert.That(result.LastEvaluatedKey!["bins"].BS).IsNotNull();
+        await Assert.That(result.LastEvaluatedKey!["bins"].BS!.Count).IsEqualTo(2);
+        await Assert.That(Convert.ToBase64String(result.LastEvaluatedKey!["bins"].BS![0])).IsEqualTo("SGVsbG8=");
+        await Assert.That(Convert.ToBase64String(result.LastEvaluatedKey!["bins"].BS![1])).IsEqualTo("V29ybGQ=");
     }
 
 }

@@ -34,14 +34,12 @@ public class ConsumedCapacity
     /// <summary>
     /// The capacity consumed by the global secondary indexes affected by the operation.
     /// </summary>
-    [JsonPropertyName("GlobalSecondaryIndexes")]
-    public Dictionary<string, ConsumedCapacity>? GlobalSecondaryIndexes { get; set; }
+    public Dictionary<string, CapacityDetail>? GlobalSecondaryIndexes { get; set; }
 
     /// <summary>
     /// The capacity consumed by the local secondary indexes affected by the operation.
     /// </summary>
-    [JsonPropertyName("LocalSecondaryIndexes")]
-    public Dictionary<string, ConsumedCapacity>? LocalSecondaryIndexes { get; set; }
+    public Dictionary<string, CapacityDetail>? LocalSecondaryIndexes { get; set; }
 
     /// <summary>
     /// The capacity consumed by the table itself.

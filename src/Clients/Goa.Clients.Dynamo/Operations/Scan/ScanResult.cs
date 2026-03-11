@@ -22,7 +22,9 @@ public class ScanResult
     public Dictionary<string, AttributeValue>? LastEvaluatedKey { get; set; }
 
     /// <summary>
-    /// Gets the number of items in the response.
+    /// Gets the number of items in the response. This is deliberately computed from <see cref="Items"/>
+    /// because DynamoDB's Count always equals the number of items returned (post-filter).
+    /// See <see cref="ScannedCount"/> for the pre-filter total.
     /// </summary>
     public int Count => Items.Count;
 
@@ -32,7 +34,8 @@ public class ScanResult
     public bool HasMoreResults => LastEvaluatedKey?.Count > 0;
 
     /// <summary>
-    /// The number of items evaluated, before applying any ScanFilter.
+    /// The number of items evaluated before any filter expression was applied.
+    /// If no filter was used, this equals <see cref="Count"/>.
     /// </summary>
     [JsonPropertyName("ScannedCount")]
     public int ScannedCount { get; set; }
@@ -51,11 +54,9 @@ public class ScanResult
 public class ScanResult<T>
 {
     /// <inheritdoc cref="ScanResult.Items"/>
-    [JsonPropertyName("Items")]
     public List<T> Items { get; set; } = new();
 
     /// <inheritdoc cref="ScanResult.LastEvaluatedKey"/>
-    [JsonPropertyName("LastEvaluatedKey")]
     public Dictionary<string, AttributeValue>? LastEvaluatedKey { get; set; }
 
     /// <inheritdoc cref="ScanResult.Count"/>
@@ -65,12 +66,10 @@ public class ScanResult<T>
     public bool HasMoreResults => LastEvaluatedKey?.Count > 0;
 
     /// <inheritdoc cref="ScanResult.ScannedCount"/>
-    [JsonPropertyName("ScannedCount")]
     public int ScannedCount { get; set; }
 
     /// <summary>
     /// The capacity consumed by the operation.
     /// </summary>
-    [JsonPropertyName("ConsumedCapacity")]
     public ConsumedCapacity? ConsumedCapacity { get; set; }
 }

@@ -11,36 +11,47 @@ internal static class DynamoResponseReader
 {
     public static QueryResult<T> ReadQueryResponse<T>(ReadOnlySpan<byte> utf8Json, DynamoItemReader<T> itemReader)
     {
-        var result = new QueryResult<T>();
         var reader = new Utf8JsonReader(utf8Json);
+        return ReadQueryResponse(ref reader, itemReader);
+    }
+
+    public static QueryResult<T> ReadQueryResponse<T>(ref Utf8JsonReader reader, DynamoItemReader<T> itemReader)
+    {
+        var result = new QueryResult<T>();
 
         reader.Read(); // StartObject
         while (reader.Read() && reader.TokenType == JsonTokenType.PropertyName)
         {
-            var propertyName = reader.GetString();
-            reader.Read();
-
-            switch (propertyName)
+            if (reader.ValueTextEquals("Items"u8))
             {
-                case "Items":
-                    result.Items = ReadItems(ref reader, itemReader);
-                    break;
-                case "Count":
-                    // Count is derived from Items.Count, skip
-                    reader.GetInt32();
-                    break;
-                case "ScannedCount":
-                    result.ScannedCount = reader.GetInt32();
-                    break;
-                case "LastEvaluatedKey":
-                    result.LastEvaluatedKey = ReadAttributeMap(ref reader);
-                    break;
-                case "ConsumedCapacity":
-                    result.ConsumedCapacity = ReadConsumedCapacity(ref reader);
-                    break;
-                default:
-                    reader.Skip();
-                    break;
+                reader.Read();
+                result.Items = ReadItems(ref reader, itemReader);
+            }
+            else if (reader.ValueTextEquals("Count"u8))
+            {
+                reader.Read();
+                // DynamoDB Count always equals Items.Count (post-filter); ScannedCount is the pre-filter total
+                reader.GetInt32();
+            }
+            else if (reader.ValueTextEquals("ScannedCount"u8))
+            {
+                reader.Read();
+                result.ScannedCount = reader.GetInt32();
+            }
+            else if (reader.ValueTextEquals("LastEvaluatedKey"u8))
+            {
+                reader.Read();
+                result.LastEvaluatedKey = ReadAttributeMap(ref reader);
+            }
+            else if (reader.ValueTextEquals("ConsumedCapacity"u8))
+            {
+                reader.Read();
+                result.ConsumedCapacity = ReadConsumedCapacity(ref reader);
+            }
+            else
+            {
+                reader.Read();
+                reader.Skip();
             }
         }
 
@@ -49,35 +60,47 @@ internal static class DynamoResponseReader
 
     public static ScanResult<T> ReadScanResponse<T>(ReadOnlySpan<byte> utf8Json, DynamoItemReader<T> itemReader)
     {
-        var result = new ScanResult<T>();
         var reader = new Utf8JsonReader(utf8Json);
+        return ReadScanResponse(ref reader, itemReader);
+    }
+
+    public static ScanResult<T> ReadScanResponse<T>(ref Utf8JsonReader reader, DynamoItemReader<T> itemReader)
+    {
+        var result = new ScanResult<T>();
 
         reader.Read(); // StartObject
         while (reader.Read() && reader.TokenType == JsonTokenType.PropertyName)
         {
-            var propertyName = reader.GetString();
-            reader.Read();
-
-            switch (propertyName)
+            if (reader.ValueTextEquals("Items"u8))
             {
-                case "Items":
-                    result.Items = ReadItems(ref reader, itemReader);
-                    break;
-                case "Count":
-                    reader.GetInt32();
-                    break;
-                case "ScannedCount":
-                    result.ScannedCount = reader.GetInt32();
-                    break;
-                case "LastEvaluatedKey":
-                    result.LastEvaluatedKey = ReadAttributeMap(ref reader);
-                    break;
-                case "ConsumedCapacity":
-                    result.ConsumedCapacity = ReadConsumedCapacity(ref reader);
-                    break;
-                default:
-                    reader.Skip();
-                    break;
+                reader.Read();
+                result.Items = ReadItems(ref reader, itemReader);
+            }
+            else if (reader.ValueTextEquals("Count"u8))
+            {
+                reader.Read();
+                // DynamoDB Count always equals Items.Count (post-filter); ScannedCount is the pre-filter total
+                reader.GetInt32();
+            }
+            else if (reader.ValueTextEquals("ScannedCount"u8))
+            {
+                reader.Read();
+                result.ScannedCount = reader.GetInt32();
+            }
+            else if (reader.ValueTextEquals("LastEvaluatedKey"u8))
+            {
+                reader.Read();
+                result.LastEvaluatedKey = ReadAttributeMap(ref reader);
+            }
+            else if (reader.ValueTextEquals("ConsumedCapacity"u8))
+            {
+                reader.Read();
+                result.ConsumedCapacity = ReadConsumedCapacity(ref reader);
+            }
+            else
+            {
+                reader.Read();
+                reader.Skip();
             }
         }
 
@@ -87,24 +110,55 @@ internal static class DynamoResponseReader
     public static T? ReadGetItemResponse<T>(ReadOnlySpan<byte> utf8Json, DynamoItemReader<T> itemReader)
     {
         var reader = new Utf8JsonReader(utf8Json);
+        return ReadGetItemResponse(ref reader, itemReader);
+    }
+
+    public static T? ReadGetItemResponse<T>(ref Utf8JsonReader reader, DynamoItemReader<T> itemReader)
+    {
+        T? item = default;
 
         reader.Read(); // StartObject
         while (reader.Read() && reader.TokenType == JsonTokenType.PropertyName)
         {
-            var propertyName = reader.GetString();
-            reader.Read();
-
-            switch (propertyName)
+            if (reader.ValueTextEquals("Item"u8))
             {
-                case "Item":
-                    return itemReader(ref reader);
-                default:
-                    reader.Skip();
-                    break;
+                reader.Read();
+                item = itemReader(ref reader);
+            }
+            else
+            {
+                reader.Read();
+                reader.Skip();
             }
         }
 
-        return default;
+        return item;
+    }
+
+    public static DynamoRecord ReadDynamoRecordItem(ref Utf8JsonReader reader)
+    {
+        var record = new DynamoRecord();
+        // reader must be at StartObject
+        while (reader.Read() && reader.TokenType != JsonTokenType.EndObject)
+        {
+            var key = reader.GetString()!;
+            reader.Read();
+            record[key] = ReadAttributeValue(ref reader);
+        }
+        return record;
+    }
+
+    internal static DynamoRecord ReadDynamoRecordItemCached(ref Utf8JsonReader reader, ref PropertyNameCache cache)
+    {
+        var record = new DynamoRecord();
+        // reader must be at StartObject
+        while (reader.Read() && reader.TokenType != JsonTokenType.EndObject)
+        {
+            var key = cache.GetOrAdd(ref reader);
+            reader.Read();
+            record[key] = ReadAttributeValue(ref reader);
+        }
+        return record;
     }
 
     private static List<T> ReadItems<T>(ref Utf8JsonReader reader, DynamoItemReader<T> itemReader)
@@ -140,42 +194,60 @@ internal static class DynamoResponseReader
         // reader is at StartObject
         while (reader.Read() && reader.TokenType != JsonTokenType.EndObject)
         {
-            var typeName = reader.GetString();
-            reader.Read(); // value
-
-            switch (typeName)
+            if (reader.ValueTextEquals("S"u8))
             {
-                case "S":
-                    attr.S = reader.GetString();
-                    break;
-                case "N":
-                    attr.N = reader.GetString();
-                    break;
-                case "BOOL":
-                    attr.BOOL = reader.GetBoolean();
-                    break;
-                case "NULL":
-                    attr.NULL = reader.GetBoolean();
-                    break;
-                case "SS":
-                    attr.SS = ReadStringArray(ref reader);
-                    break;
-                case "NS":
-                    attr.NS = ReadStringArray(ref reader);
-                    break;
-                case "L":
-                    attr.L = ReadAttributeValueList(ref reader);
-                    break;
-                case "M":
-                    attr.M = ReadAttributeMap(ref reader);
-                    break;
-                case "B":
-                case "BS":
-                    reader.Skip();
-                    break;
-                default:
-                    reader.Skip();
-                    break;
+                reader.Read();
+                attr.S = reader.GetString();
+            }
+            else if (reader.ValueTextEquals("N"u8))
+            {
+                reader.Read();
+                attr.N = reader.GetString();
+            }
+            else if (reader.ValueTextEquals("BOOL"u8))
+            {
+                reader.Read();
+                attr.BOOL = reader.GetBoolean();
+            }
+            else if (reader.ValueTextEquals("NULL"u8))
+            {
+                reader.Read();
+                attr.NULL = reader.GetBoolean();
+            }
+            else if (reader.ValueTextEquals("SS"u8))
+            {
+                reader.Read();
+                attr.SS = ReadStringArray(ref reader);
+            }
+            else if (reader.ValueTextEquals("NS"u8))
+            {
+                reader.Read();
+                attr.NS = ReadStringArray(ref reader);
+            }
+            else if (reader.ValueTextEquals("L"u8))
+            {
+                reader.Read();
+                attr.L = ReadAttributeValueList(ref reader);
+            }
+            else if (reader.ValueTextEquals("M"u8))
+            {
+                reader.Read();
+                attr.M = ReadAttributeMap(ref reader);
+            }
+            else if (reader.ValueTextEquals("B"u8))
+            {
+                reader.Read();
+                attr.B = Convert.FromBase64String(reader.GetString()!);
+            }
+            else if (reader.ValueTextEquals("BS"u8))
+            {
+                reader.Read();
+                attr.BS = ReadBinaryArray(ref reader);
+            }
+            else
+            {
+                reader.Read();
+                reader.Skip();
             }
         }
         return attr;
@@ -188,6 +260,17 @@ internal static class DynamoResponseReader
         while (reader.Read() && reader.TokenType != JsonTokenType.EndArray)
         {
             list.Add(reader.GetString()!);
+        }
+        return list;
+    }
+
+    private static List<byte[]> ReadBinaryArray(ref Utf8JsonReader reader)
+    {
+        var list = new List<byte[]>();
+        // reader is at StartArray
+        while (reader.Read() && reader.TokenType != JsonTokenType.EndArray)
+        {
+            list.Add(Convert.FromBase64String(reader.GetString()!));
         }
         return list;
     }
@@ -210,35 +293,45 @@ internal static class DynamoResponseReader
         // reader is at StartObject
         while (reader.Read() && reader.TokenType != JsonTokenType.EndObject)
         {
-            var propertyName = reader.GetString();
-            reader.Read();
-
-            switch (propertyName)
+            if (reader.ValueTextEquals("TableName"u8))
             {
-                case "TableName":
-                    capacity.TableName = reader.GetString();
-                    break;
-                case "CapacityUnits":
-                    capacity.CapacityUnits = reader.GetDouble();
-                    break;
-                case "ReadCapacityUnits":
-                    capacity.ReadCapacityUnits = reader.GetDouble();
-                    break;
-                case "WriteCapacityUnits":
-                    capacity.WriteCapacityUnits = reader.GetDouble();
-                    break;
-                case "Table":
-                    capacity.Table = ReadCapacityDetail(ref reader);
-                    break;
-                case "GlobalSecondaryIndexes":
-                    capacity.GlobalSecondaryIndexes = ReadCapacityDetailMap(ref reader);
-                    break;
-                case "LocalSecondaryIndexes":
-                    capacity.LocalSecondaryIndexes = ReadCapacityDetailMap(ref reader);
-                    break;
-                default:
-                    reader.Skip();
-                    break;
+                reader.Read();
+                capacity.TableName = reader.GetString();
+            }
+            else if (reader.ValueTextEquals("CapacityUnits"u8))
+            {
+                reader.Read();
+                capacity.CapacityUnits = reader.GetDouble();
+            }
+            else if (reader.ValueTextEquals("ReadCapacityUnits"u8))
+            {
+                reader.Read();
+                capacity.ReadCapacityUnits = reader.GetDouble();
+            }
+            else if (reader.ValueTextEquals("WriteCapacityUnits"u8))
+            {
+                reader.Read();
+                capacity.WriteCapacityUnits = reader.GetDouble();
+            }
+            else if (reader.ValueTextEquals("Table"u8))
+            {
+                reader.Read();
+                capacity.Table = ReadCapacityDetail(ref reader);
+            }
+            else if (reader.ValueTextEquals("GlobalSecondaryIndexes"u8))
+            {
+                reader.Read();
+                capacity.GlobalSecondaryIndexes = ReadCapacityDetailMap(ref reader);
+            }
+            else if (reader.ValueTextEquals("LocalSecondaryIndexes"u8))
+            {
+                reader.Read();
+                capacity.LocalSecondaryIndexes = ReadCapacityDetailMap(ref reader);
+            }
+            else
+            {
+                reader.Read();
+                reader.Skip();
             }
         }
         return capacity;
@@ -250,66 +343,75 @@ internal static class DynamoResponseReader
         // reader is at StartObject
         while (reader.Read() && reader.TokenType != JsonTokenType.EndObject)
         {
-            var propertyName = reader.GetString();
-            reader.Read();
-
-            switch (propertyName)
+            if (reader.ValueTextEquals("CapacityUnits"u8))
             {
-                case "CapacityUnits":
-                    detail.CapacityUnits = reader.GetDouble();
-                    break;
-                case "ReadCapacityUnits":
-                    detail.ReadCapacityUnits = reader.GetDouble();
-                    break;
-                case "WriteCapacityUnits":
-                    detail.WriteCapacityUnits = reader.GetDouble();
-                    break;
-                default:
-                    reader.Skip();
-                    break;
+                reader.Read();
+                detail.CapacityUnits = reader.GetDouble();
+            }
+            else if (reader.ValueTextEquals("ReadCapacityUnits"u8))
+            {
+                reader.Read();
+                detail.ReadCapacityUnits = reader.GetDouble();
+            }
+            else if (reader.ValueTextEquals("WriteCapacityUnits"u8))
+            {
+                reader.Read();
+                detail.WriteCapacityUnits = reader.GetDouble();
+            }
+            else
+            {
+                reader.Read();
+                reader.Skip();
             }
         }
         return detail;
     }
 
-    private static Dictionary<string, ConsumedCapacity> ReadCapacityDetailMap(ref Utf8JsonReader reader)
+    private static Dictionary<string, CapacityDetail> ReadCapacityDetailMap(ref Utf8JsonReader reader)
     {
-        var map = new Dictionary<string, ConsumedCapacity>();
+        var map = new Dictionary<string, CapacityDetail>();
         // reader is at StartObject
         while (reader.Read() && reader.TokenType != JsonTokenType.EndObject)
         {
             var key = reader.GetString()!;
             reader.Read(); // StartObject
-            map[key] = ReadConsumedCapacity(ref reader);
+            map[key] = ReadCapacityDetail(ref reader);
         }
         return map;
     }
 
     public static BatchGetResult<T> ReadBatchGetItemResponse<T>(ReadOnlySpan<byte> utf8Json, DynamoItemReader<T> itemReader)
     {
-        var result = new BatchGetResult<T>();
         var reader = new Utf8JsonReader(utf8Json);
+        return ReadBatchGetItemResponse(ref reader, itemReader);
+    }
+
+    public static BatchGetResult<T> ReadBatchGetItemResponse<T>(ref Utf8JsonReader reader, DynamoItemReader<T> itemReader)
+    {
+        var result = new BatchGetResult<T>();
 
         reader.Read(); // StartObject
         while (reader.Read() && reader.TokenType == JsonTokenType.PropertyName)
         {
-            var propertyName = reader.GetString();
-            reader.Read();
-
-            switch (propertyName)
+            if (reader.ValueTextEquals("Responses"u8))
             {
-                case "Responses":
-                    result.Responses = ReadTableResponses(ref reader, itemReader);
-                    break;
-                case "UnprocessedKeys":
-                    result.UnprocessedKeys = ReadUnprocessedKeys(ref reader);
-                    break;
-                case "ConsumedCapacity":
-                    result.ConsumedCapacity = ReadConsumedCapacityList(ref reader);
-                    break;
-                default:
-                    reader.Skip();
-                    break;
+                reader.Read();
+                result.Responses = ReadTableResponses(ref reader, itemReader);
+            }
+            else if (reader.ValueTextEquals("UnprocessedKeys"u8))
+            {
+                reader.Read();
+                result.UnprocessedKeys = ReadUnprocessedKeys(ref reader);
+            }
+            else if (reader.ValueTextEquals("ConsumedCapacity"u8))
+            {
+                reader.Read();
+                result.ConsumedCapacity = ReadConsumedCapacityList(ref reader);
+            }
+            else
+            {
+                reader.Read();
+                reader.Skip();
             }
         }
 
@@ -318,26 +420,31 @@ internal static class DynamoResponseReader
 
     public static TransactGetResult<T> ReadTransactGetItemResponse<T>(ReadOnlySpan<byte> utf8Json, DynamoItemReader<T> itemReader)
     {
-        var result = new TransactGetResult<T>();
         var reader = new Utf8JsonReader(utf8Json);
+        return ReadTransactGetItemResponse(ref reader, itemReader);
+    }
+
+    public static TransactGetResult<T> ReadTransactGetItemResponse<T>(ref Utf8JsonReader reader, DynamoItemReader<T> itemReader)
+    {
+        var result = new TransactGetResult<T>();
 
         reader.Read(); // StartObject
         while (reader.Read() && reader.TokenType == JsonTokenType.PropertyName)
         {
-            var propertyName = reader.GetString();
-            reader.Read();
-
-            switch (propertyName)
+            if (reader.ValueTextEquals("Responses"u8))
             {
-                case "Responses":
-                    result.Items = ReadTransactGetResponses(ref reader, itemReader);
-                    break;
-                case "ConsumedCapacity":
-                    result.ConsumedCapacity = ReadConsumedCapacityList(ref reader);
-                    break;
-                default:
-                    reader.Skip();
-                    break;
+                reader.Read();
+                result.Items = ReadTransactGetResponses(ref reader, itemReader);
+            }
+            else if (reader.ValueTextEquals("ConsumedCapacity"u8))
+            {
+                reader.Read();
+                result.ConsumedCapacity = ReadConsumedCapacityList(ref reader);
+            }
+            else
+            {
+                reader.Read();
+                reader.Skip();
             }
         }
 
@@ -371,11 +478,14 @@ internal static class DynamoResponseReader
     private static Dictionary<string, BatchGetRequestItem> ReadUnprocessedKeys(ref Utf8JsonReader reader)
     {
         var map = new Dictionary<string, BatchGetRequestItem>();
-        // reader is at StartObject
+        // reader is at StartObject (or empty object)
+        if (reader.TokenType == JsonTokenType.Null)
+            return map;
+
         while (reader.Read() && reader.TokenType != JsonTokenType.EndObject)
         {
             var tableName = reader.GetString()!;
-            reader.Read(); // StartObject
+            reader.Read(); // StartObject of BatchGetRequestItem
             map[tableName] = ReadBatchGetRequestItem(ref reader);
         }
         return map;
@@ -387,53 +497,45 @@ internal static class DynamoResponseReader
         // reader is at StartObject
         while (reader.Read() && reader.TokenType != JsonTokenType.EndObject)
         {
-            var propertyName = reader.GetString();
-            reader.Read();
-
-            switch (propertyName)
+            if (reader.ValueTextEquals("Keys"u8))
             {
-                case "Keys":
-                    item.Keys = ReadKeysList(ref reader);
-                    break;
-                case "ProjectionExpression":
-                    item.ProjectionExpression = reader.GetString();
-                    break;
-                case "ConsistentRead":
-                    item.ConsistentRead = reader.GetBoolean();
-                    break;
-                case "ExpressionAttributeNames":
-                    item.ExpressionAttributeNames = ReadStringMap(ref reader);
-                    break;
-                default:
-                    reader.Skip();
-                    break;
+                reader.Read(); // StartArray
+                var keys = new List<Dictionary<string, AttributeValue>>();
+                while (reader.Read() && reader.TokenType != JsonTokenType.EndArray)
+                {
+                    keys.Add(ReadAttributeMap(ref reader));
+                }
+                item.Keys = keys;
+            }
+            else if (reader.ValueTextEquals("ProjectionExpression"u8))
+            {
+                reader.Read();
+                item.ProjectionExpression = reader.GetString();
+            }
+            else if (reader.ValueTextEquals("ConsistentRead"u8))
+            {
+                reader.Read();
+                item.ConsistentRead = reader.GetBoolean();
+            }
+            else if (reader.ValueTextEquals("ExpressionAttributeNames"u8))
+            {
+                reader.Read();
+                var names = new Dictionary<string, string>();
+                while (reader.Read() && reader.TokenType != JsonTokenType.EndObject)
+                {
+                    var key = reader.GetString()!;
+                    reader.Read();
+                    names[key] = reader.GetString()!;
+                }
+                item.ExpressionAttributeNames = names;
+            }
+            else
+            {
+                reader.Read();
+                reader.Skip();
             }
         }
         return item;
-    }
-
-    private static List<Dictionary<string, AttributeValue>> ReadKeysList(ref Utf8JsonReader reader)
-    {
-        var list = new List<Dictionary<string, AttributeValue>>();
-        // reader is at StartArray
-        while (reader.Read() && reader.TokenType != JsonTokenType.EndArray)
-        {
-            list.Add(ReadAttributeMap(ref reader));
-        }
-        return list;
-    }
-
-    private static Dictionary<string, string> ReadStringMap(ref Utf8JsonReader reader)
-    {
-        var map = new Dictionary<string, string>();
-        // reader is at StartObject
-        while (reader.Read() && reader.TokenType != JsonTokenType.EndObject)
-        {
-            var key = reader.GetString()!;
-            reader.Read();
-            map[key] = reader.GetString()!;
-        }
-        return map;
     }
 
     private static List<T?> ReadTransactGetResponses<T>(ref Utf8JsonReader reader, DynamoItemReader<T> itemReader)
@@ -446,14 +548,14 @@ internal static class DynamoResponseReader
             T? item = default;
             while (reader.Read() && reader.TokenType != JsonTokenType.EndObject)
             {
-                var propName = reader.GetString();
-                reader.Read();
-                if (propName == "Item")
+                if (reader.ValueTextEquals("Item"u8))
                 {
+                    reader.Read();
                     item = itemReader(ref reader);
                 }
                 else
                 {
+                    reader.Read();
                     reader.Skip();
                 }
             }

@@ -229,7 +229,6 @@ public class DynamoServiceClient : JsonAwsServiceClient<DynamoServiceClientConfi
         using var requestMessage = CreateRequestMessage(
             HttpMethod.Post, "/", content,
             JsonContentType);
-        requestMessage.Headers.Add("X-Amz-Target", "DynamoDB_20120810.Query");
 
         using var response = await SendAsync(requestMessage, "DynamoDB_20120810.Query", cancellationToken);
 
@@ -250,7 +249,6 @@ public class DynamoServiceClient : JsonAwsServiceClient<DynamoServiceClientConfi
         using var requestMessage = CreateRequestMessage(
             HttpMethod.Post, "/", content,
             JsonContentType);
-        requestMessage.Headers.Add("X-Amz-Target", "DynamoDB_20120810.Scan");
 
         using var response = await SendAsync(requestMessage, "DynamoDB_20120810.Scan", cancellationToken);
 
@@ -271,7 +269,6 @@ public class DynamoServiceClient : JsonAwsServiceClient<DynamoServiceClientConfi
         using var requestMessage = CreateRequestMessage(
             HttpMethod.Post, "/", content,
             JsonContentType);
-        requestMessage.Headers.Add("X-Amz-Target", "DynamoDB_20120810.GetItem");
 
         using var response = await SendAsync(requestMessage, "DynamoDB_20120810.GetItem", cancellationToken);
 
@@ -301,7 +298,6 @@ public class DynamoServiceClient : JsonAwsServiceClient<DynamoServiceClientConfi
         using var requestMessage = CreateRequestMessage(
             HttpMethod.Post, "/", content,
             JsonContentType);
-        requestMessage.Headers.Add("X-Amz-Target", "DynamoDB_20120810.PutItem");
 
         using var response = await SendAsync(requestMessage, "DynamoDB_20120810.PutItem", cancellationToken);
 
@@ -323,7 +319,6 @@ public class DynamoServiceClient : JsonAwsServiceClient<DynamoServiceClientConfi
         using var requestMessage = CreateRequestMessage(
             HttpMethod.Post, "/", content,
             JsonContentType);
-        requestMessage.Headers.Add("X-Amz-Target", "DynamoDB_20120810.BatchGetItem");
 
         using var response = await SendAsync(requestMessage, "DynamoDB_20120810.BatchGetItem", cancellationToken);
 
@@ -344,7 +339,6 @@ public class DynamoServiceClient : JsonAwsServiceClient<DynamoServiceClientConfi
         using var requestMessage = CreateRequestMessage(
             HttpMethod.Post, "/", content,
             JsonContentType);
-        requestMessage.Headers.Add("X-Amz-Target", "DynamoDB_20120810.TransactGetItems");
 
         using var response = await SendAsync(requestMessage, "DynamoDB_20120810.TransactGetItems", cancellationToken);
 
