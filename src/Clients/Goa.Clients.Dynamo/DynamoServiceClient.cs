@@ -263,7 +263,7 @@ public class DynamoServiceClient : JsonAwsServiceClient<DynamoServiceClientConfi
     }
 
     /// <inheritdoc/>
-    public async Task<ErrorOr<T?>> GetItemAsync<T>(GetItemRequest request, DynamoItemReader<T> itemReader, CancellationToken cancellationToken = default)
+    public async Task<ErrorOr<T?>> GetItemAsync<T>(GetItemRequest request, DynamoItemReader<T> itemReader, CancellationToken cancellationToken = default) where T : class
     {
         var content = JsonSerializer.SerializeToUtf8Bytes(request, ResolveJsonTypeInfo<GetItemRequest>());
         using var requestMessage = CreateRequestMessage(
