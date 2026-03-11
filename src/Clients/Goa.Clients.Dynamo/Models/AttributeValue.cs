@@ -188,28 +188,30 @@ public sealed class AttributeValueJsonConverter : JsonConverter<AttributeValue>
             {
                 reader.Read();
                 var v = reader.GetString()!;
-                reader.Read(); // EndObject
+                ReadEndObject(ref reader);
                 return AttributeValue.String(v);
             }
             if (reader.ValueTextEquals("N"u8))
             {
                 reader.Read();
                 var v = reader.GetString()!;
-                reader.Read(); // EndObject
+                ReadEndObject(ref reader);
                 return AttributeValue.Number(v);
             }
             if (reader.ValueTextEquals("BOOL"u8))
             {
                 reader.Read();
                 var v = reader.GetBoolean();
-                reader.Read(); // EndObject
+                ReadEndObject(ref reader);
                 return AttributeValue.Bool(v);
             }
             if (reader.ValueTextEquals("NULL"u8))
             {
                 reader.Read();
-                reader.GetBoolean();
-                reader.Read(); // EndObject
+                var isNull = reader.GetBoolean();
+                ReadEndObject(ref reader);
+                if (!isNull)
+                    throw new JsonException("Invalid NULL attribute value: expected true but got false");
                 return AttributeValue.Null();
             }
             if (reader.ValueTextEquals("SS"u8))
@@ -218,7 +220,7 @@ public sealed class AttributeValueJsonConverter : JsonConverter<AttributeValue>
                 var list = new List<string>();
                 while (reader.Read() && reader.TokenType != JsonTokenType.EndArray)
                     list.Add(reader.GetString()!);
-                reader.Read(); // EndObject
+                ReadEndObject(ref reader);
                 return AttributeValue.FromStringSet(list);
             }
             if (reader.ValueTextEquals("NS"u8))
@@ -227,7 +229,7 @@ public sealed class AttributeValueJsonConverter : JsonConverter<AttributeValue>
                 var list = new List<string>();
                 while (reader.Read() && reader.TokenType != JsonTokenType.EndArray)
                     list.Add(reader.GetString()!);
-                reader.Read(); // EndObject
+                ReadEndObject(ref reader);
                 return AttributeValue.FromNumberSet(list);
             }
             if (reader.ValueTextEquals("L"u8))
@@ -236,7 +238,7 @@ public sealed class AttributeValueJsonConverter : JsonConverter<AttributeValue>
                 var list = new List<AttributeValue>();
                 while (reader.Read() && reader.TokenType != JsonTokenType.EndArray)
                     list.Add(Read(ref reader, typeToConvert, options));
-                reader.Read(); // EndObject
+                ReadEndObject(ref reader);
                 return AttributeValue.FromList(list);
             }
             if (reader.ValueTextEquals("M"u8))
@@ -249,14 +251,14 @@ public sealed class AttributeValueJsonConverter : JsonConverter<AttributeValue>
                     reader.Read();
                     map[key] = Read(ref reader, typeToConvert, options);
                 }
-                reader.Read(); // EndObject
+                ReadEndObject(ref reader);
                 return AttributeValue.FromMap(map);
             }
             if (reader.ValueTextEquals("B"u8))
             {
                 reader.Read();
                 var v = Convert.FromBase64String(reader.GetString()!);
-                reader.Read(); // EndObject
+                ReadEndObject(ref reader);
                 return AttributeValue.FromBinary(v);
             }
             if (reader.ValueTextEquals("BS"u8))
@@ -265,7 +267,7 @@ public sealed class AttributeValueJsonConverter : JsonConverter<AttributeValue>
                 var list = new List<byte[]>();
                 while (reader.Read() && reader.TokenType != JsonTokenType.EndArray)
                     list.Add(Convert.FromBase64String(reader.GetString()!));
-                reader.Read(); // EndObject
+                ReadEndObject(ref reader);
                 return AttributeValue.FromBinarySet(list);
             }
 
@@ -275,6 +277,13 @@ public sealed class AttributeValueJsonConverter : JsonConverter<AttributeValue>
         }
 
         throw new JsonException("Invalid AttributeValue JSON: no recognized DynamoDB type property found");
+    }
+
+    private static void ReadEndObject(ref Utf8JsonReader reader)
+    {
+        reader.Read();
+        if (reader.TokenType != JsonTokenType.EndObject)
+            throw new JsonException("Expected end of attribute value wrapper object");
     }
 
     /// <inheritdoc />
