@@ -192,10 +192,7 @@ public class JsonMapperGenerator : ICodeGenerator
 
         if (isNullable)
         {
-            var isString = underlyingType.SpecialType == SpecialType.System_String;
-            var nullCheck = isString
-                ? $"!string.IsNullOrEmpty({accessExpr})"
-                : $"{accessExpr} != null";
+            var nullCheck = $"{accessExpr} != null";
 
             builder.OpenBraceWithLine($"if ({nullCheck})");
             EmitPrimitiveTypeWrapper(builder, property, isNullable, accessExpr, hasUnixTimestamp);
@@ -209,7 +206,7 @@ public class JsonMapperGenerator : ICodeGenerator
             // Non-nullable strings are reference types that could still be null at runtime
             if (underlyingType.SpecialType == SpecialType.System_String)
             {
-                builder.OpenBraceWithLine($"if (!string.IsNullOrEmpty({accessExpr}))");
+                builder.OpenBraceWithLine($"if ({accessExpr} != null)");
                 EmitPrimitiveTypeWrapper(builder, property, isNullable, accessExpr, hasUnixTimestamp);
                 builder.CloseBrace();
                 builder.OpenBraceWithLine("else");
