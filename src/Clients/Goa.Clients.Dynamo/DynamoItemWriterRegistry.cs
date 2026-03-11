@@ -23,6 +23,6 @@ public static class DynamoItemWriterRegistry
 
     private static class Cache<T>
     {
-        public static DynamoItemWriter<T>? Writer;
+        public static volatile DynamoItemWriter<T>? Writer;
     }
 }

@@ -23,6 +23,6 @@ public static class DynamoItemReaderRegistry
 
     private static class Cache<T>
     {
-        public static DynamoItemReader<T>? Reader;
+        public static volatile DynamoItemReader<T>? Reader;
     }
 }
