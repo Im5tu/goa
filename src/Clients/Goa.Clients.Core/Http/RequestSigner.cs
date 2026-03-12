@@ -29,6 +29,12 @@ internal sealed class RequestSigner
     private static readonly string? _cachedAwsRegion = Environment.GetEnvironmentVariable("AWS_REGION");
     private const string RootPath = "/";
     private const string CredentialSuffix = "/aws4_request";
+    private const string HeaderHost = "host";
+    private const string HeaderAmzContentSha256 = "x-amz-content-sha256";
+    private const string HeaderAmzDate = "x-amz-date";
+    private const string HeaderAmzTarget = "x-amz-target";
+    private const string HeaderAmzApiVersion = "x-amz-api-version";
+    private const string HeaderAmzSecurityToken = "x-amz-security-token";
 
     private readonly ICredentialProviderChain _credentialProvider;
 
@@ -268,13 +274,13 @@ internal sealed class RequestSigner
 
         // Build AWS required headers first
         if (request.RequestUri is not null)
-            headerRefs[hrefIndex++] = HeaderRef.Create("host", HeaderKind.Host, -1);
-        headerRefs[hrefIndex++] = HeaderRef.Create("x-amz-content-sha256", HeaderKind.AmzSha256, -1);
-        headerRefs[hrefIndex++] = HeaderRef.Create("x-amz-date", HeaderKind.AmzDate, -1);
+            headerRefs[hrefIndex++] = HeaderRef.Create(HeaderHost, HeaderKind.Host, -1);
+        headerRefs[hrefIndex++] = HeaderRef.Create(HeaderAmzContentSha256, HeaderKind.AmzSha256, -1);
+        headerRefs[hrefIndex++] = HeaderRef.Create(HeaderAmzDate, HeaderKind.AmzDate, -1);
 
-        if (hasApiVersion) headerRefs[hrefIndex++] = HeaderRef.Create("x-amz-api-version", HeaderKind.AmzApiVersion, -1);
-        if (!string.IsNullOrWhiteSpace(credentials.SessionToken)) headerRefs[hrefIndex++] = HeaderRef.Create("x-amz-security-token", HeaderKind.AmzSecurityToken, -1);
-        if (hasTarget) headerRefs[hrefIndex++] = HeaderRef.Create("x-amz-target", HeaderKind.AmzTarget, -1);
+        if (hasApiVersion) headerRefs[hrefIndex++] = HeaderRef.Create(HeaderAmzApiVersion, HeaderKind.AmzApiVersion, -1);
+        if (!string.IsNullOrWhiteSpace(credentials.SessionToken)) headerRefs[hrefIndex++] = HeaderRef.Create(HeaderAmzSecurityToken, HeaderKind.AmzSecurityToken, -1);
+        if (hasTarget) headerRefs[hrefIndex++] = HeaderRef.Create(HeaderAmzTarget, HeaderKind.AmzTarget, -1);
 
         // Add request headers from cached array, skipping AWS-managed headers
         var filteredIndex = 0;
@@ -1101,12 +1107,12 @@ internal sealed class RequestSigner
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static bool IsAwsManagedHeader(string headerName)
     {
-        return string.Equals(headerName, "Host", StringComparison.OrdinalIgnoreCase) ||
-               string.Equals(headerName, "x-amz-content-sha256", StringComparison.OrdinalIgnoreCase) ||
-               string.Equals(headerName, "x-amz-date", StringComparison.OrdinalIgnoreCase) ||
-               string.Equals(headerName, "x-amz-target", StringComparison.OrdinalIgnoreCase) ||
-               string.Equals(headerName, "x-amz-api-version", StringComparison.OrdinalIgnoreCase) ||
-               string.Equals(headerName, "x-amz-security-token", StringComparison.OrdinalIgnoreCase);
+        return string.Equals(headerName, HeaderHost, StringComparison.OrdinalIgnoreCase) ||
+               string.Equals(headerName, HeaderAmzContentSha256, StringComparison.OrdinalIgnoreCase) ||
+               string.Equals(headerName, HeaderAmzDate, StringComparison.OrdinalIgnoreCase) ||
+               string.Equals(headerName, HeaderAmzTarget, StringComparison.OrdinalIgnoreCase) ||
+               string.Equals(headerName, HeaderAmzApiVersion, StringComparison.OrdinalIgnoreCase) ||
+               string.Equals(headerName, HeaderAmzSecurityToken, StringComparison.OrdinalIgnoreCase);
     }
 
     /// <summary>
