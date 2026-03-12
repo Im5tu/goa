@@ -40,6 +40,8 @@ public class QueryAsyncBenchmarks
     [GlobalSetup]
     public void Setup()
     {
+        DynamoReaderRegistration.Initialize();
+
         _fixture = new LocalStackFixture();
         _fixture.StartAsync().GetAwaiter().GetResult();
 
