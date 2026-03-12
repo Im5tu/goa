@@ -53,85 +53,85 @@ public class QueryAsyncBenchmarks
         _fixture.DisposeAsync().AsTask().GetAwaiter().GetResult();
     }
 
-    // --- Single item query ---
-
-    [Benchmark(Baseline = true), BenchmarkCategory("1 Item")]
-    public async Task<int> AwsSdk_Query_1Item()
-    {
-        var count = 0;
-        Dictionary<string, AttributeValue>? lastKey = null;
-        do
-        {
-            var response = await _fixture.AwsSdkClient.QueryAsync(new Amazon.DynamoDBv2.Model.QueryRequest
-            {
-                TableName = _fixture.TableName,
-                KeyConditionExpression = "pk = :pk",
-                ExpressionAttributeValues = new Dictionary<string, AttributeValue>
-                {
-                    [":pk"] = new AttributeValue("query-1")
-                },
-                ExclusiveStartKey = lastKey
-            });
-            count += response.Items.Count;
-            lastKey = response.LastEvaluatedKey?.Count > 0 ? response.LastEvaluatedKey : null;
-        } while (lastKey != null);
-        return count;
-    }
-
-    [Benchmark, BenchmarkCategory("1 Item")]
-    public async Task<int> Goa_Query_1Item_DynamoRecord()
-    {
-        var count = 0;
-        Dictionary<string, GoaModels.AttributeValue>? lastKey = null;
-        do
-        {
-            var response = await _fixture.GoaClient.QueryAsync(new GoaQueryRequest
-            {
-                TableName = _fixture.TableName,
-                KeyConditionExpression = "pk = :pk",
-                ExpressionAttributeValues = new Dictionary<string, GoaModels.AttributeValue>
-                {
-                    [":pk"] = GoaModels.AttributeValue.String("query-1")
-                },
-                ExclusiveStartKey = lastKey
-            });
-
-            count += response.Value.Items.Count;
-            lastKey = response.Value.HasMoreResults ? response.Value.LastEvaluatedKey : null;
-        } while (lastKey != null);
-        return count;
-    }
-
-    [Benchmark, BenchmarkCategory("1 Item")]
-    public async Task<int> Efficient_Query_1Item()
-    {
-        var count = 0;
-        IReadOnlyDictionary<string, EfficientAttributeValue>? lastKey = null;
-        do
-        {
-            var response = await _fixture.EfficientClient.QueryAsync(new EfficientQueryRequest
-            {
-                TableName = _fixture.TableName,
-                KeyConditionExpression = "pk = :pk",
-                ExpressionAttributeValues = new Dictionary<string, EfficientAttributeValue>
-                {
-                    [":pk"] = "query-1"
-                },
-                ExclusiveStartKey = lastKey
-            });
-            count += response.Items.Count;
-            lastKey = response.LastEvaluatedKey;
-        } while (lastKey != null);
-        return count;
-    }
-
-    [Benchmark, BenchmarkCategory("1 Item")]
-    public async Task<int> Efficient_Query_1Item_Typed()
-    {
-        return (await _fixture.EfficientContext.Query<BenchmarkEntity>()
-            .WithKeyExpression(Condition<BenchmarkEntity>.On(x => x.Pk).EqualTo("query-1"))
-            .ToListAsync()).Count;
-    }
+    // // --- Single item query ---
+    //
+    // [Benchmark(Baseline = true), BenchmarkCategory("1 Item")]
+    // public async Task<int> AwsSdk_Query_1Item()
+    // {
+    //     var count = 0;
+    //     Dictionary<string, AttributeValue>? lastKey = null;
+    //     do
+    //     {
+    //         var response = await _fixture.AwsSdkClient.QueryAsync(new Amazon.DynamoDBv2.Model.QueryRequest
+    //         {
+    //             TableName = _fixture.TableName,
+    //             KeyConditionExpression = "pk = :pk",
+    //             ExpressionAttributeValues = new Dictionary<string, AttributeValue>
+    //             {
+    //                 [":pk"] = new AttributeValue("query-1")
+    //             },
+    //             ExclusiveStartKey = lastKey
+    //         });
+    //         count += response.Items.Count;
+    //         lastKey = response.LastEvaluatedKey?.Count > 0 ? response.LastEvaluatedKey : null;
+    //     } while (lastKey != null);
+    //     return count;
+    // }
+    //
+    // [Benchmark, BenchmarkCategory("1 Item")]
+    // public async Task<int> Goa_Query_1Item_DynamoRecord()
+    // {
+    //     var count = 0;
+    //     Dictionary<string, GoaModels.AttributeValue>? lastKey = null;
+    //     do
+    //     {
+    //         var response = await _fixture.GoaClient.QueryAsync(new GoaQueryRequest
+    //         {
+    //             TableName = _fixture.TableName,
+    //             KeyConditionExpression = "pk = :pk",
+    //             ExpressionAttributeValues = new Dictionary<string, GoaModels.AttributeValue>
+    //             {
+    //                 [":pk"] = GoaModels.AttributeValue.String("query-1")
+    //             },
+    //             ExclusiveStartKey = lastKey
+    //         });
+    //
+    //         count += response.Value.Items.Count;
+    //         lastKey = response.Value.HasMoreResults ? response.Value.LastEvaluatedKey : null;
+    //     } while (lastKey != null);
+    //     return count;
+    // }
+    //
+    // [Benchmark, BenchmarkCategory("1 Item")]
+    // public async Task<int> Efficient_Query_1Item()
+    // {
+    //     var count = 0;
+    //     IReadOnlyDictionary<string, EfficientAttributeValue>? lastKey = null;
+    //     do
+    //     {
+    //         var response = await _fixture.EfficientClient.QueryAsync(new EfficientQueryRequest
+    //         {
+    //             TableName = _fixture.TableName,
+    //             KeyConditionExpression = "pk = :pk",
+    //             ExpressionAttributeValues = new Dictionary<string, EfficientAttributeValue>
+    //             {
+    //                 [":pk"] = "query-1"
+    //             },
+    //             ExclusiveStartKey = lastKey
+    //         });
+    //         count += response.Items.Count;
+    //         lastKey = response.LastEvaluatedKey;
+    //     } while (lastKey != null);
+    //     return count;
+    // }
+    //
+    // [Benchmark, BenchmarkCategory("1 Item")]
+    // public async Task<int> Efficient_Query_1Item_Typed()
+    // {
+    //     return (await _fixture.EfficientContext.Query<BenchmarkEntity>()
+    //         .WithKeyExpression(Condition<BenchmarkEntity>.On(x => x.Pk).EqualTo("query-1"))
+    //         .ToListAsync()).Count;
+    // }
 
     // --- 10 item query (Limit=5, forces 2 pages) ---
 
