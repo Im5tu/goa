@@ -1,6 +1,7 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Goa.Clients.Bedrock.Enums;
+using Goa.Clients.Core;
 
 namespace Goa.Clients.Bedrock.Serialization;
 
@@ -23,7 +24,7 @@ public sealed class StopReasonConverter : JsonConverter<StopReason>
             "guardrail_intervened" => StopReason.GuardrailIntervened,
             "content_filtered" => StopReason.ContentFiltered,
             "model_context_window_exceeded" => StopReason.ModelContextWindowExceeded,
-            _ => throw new JsonException($"Unknown StopReason: {value}")
+            _ => Throw.JsonException<StopReason>($"Unknown StopReason: {value}")
         };
     }
 
@@ -39,7 +40,7 @@ public sealed class StopReasonConverter : JsonConverter<StopReason>
             StopReason.GuardrailIntervened => "guardrail_intervened",
             StopReason.ContentFiltered => "content_filtered",
             StopReason.ModelContextWindowExceeded => "model_context_window_exceeded",
-            _ => throw new JsonException($"Unknown StopReason: {value}")
+            _ => Throw.JsonException<string>($"Unknown StopReason: {value}")
         };
         writer.WriteStringValue(stringValue);
     }

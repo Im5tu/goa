@@ -1,6 +1,7 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Goa.Clients.Bedrock.Enums;
+using Goa.Clients.Core;
 
 namespace Goa.Clients.Bedrock.Serialization;
 
@@ -18,7 +19,7 @@ public sealed class ConversationRoleConverter : JsonConverter<ConversationRole>
         {
             "user" => ConversationRole.User,
             "assistant" => ConversationRole.Assistant,
-            _ => throw new JsonException($"Unknown ConversationRole: {value}")
+            _ => Throw.JsonException<ConversationRole>($"Unknown ConversationRole: {value}")
         };
     }
 
@@ -29,7 +30,7 @@ public sealed class ConversationRoleConverter : JsonConverter<ConversationRole>
         {
             ConversationRole.User => "user",
             ConversationRole.Assistant => "assistant",
-            _ => throw new JsonException($"Unknown ConversationRole: {value}")
+            _ => Throw.JsonException<string>($"Unknown ConversationRole: {value}")
         };
         writer.WriteStringValue(stringValue);
     }

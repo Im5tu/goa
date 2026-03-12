@@ -1,6 +1,7 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Goa.Clients.Bedrock.Operations.ApplyGuardrail;
+using Goa.Clients.Core;
 
 namespace Goa.Clients.Bedrock.Serialization;
 
@@ -19,7 +20,7 @@ public sealed class GuardrailTextQualifierConverter : JsonConverter<GuardrailTex
             "grounding_source" => GuardrailTextQualifier.GroundingSource,
             "query" => GuardrailTextQualifier.Query,
             "guard_content" => GuardrailTextQualifier.GuardContent,
-            _ => throw new JsonException($"Unknown GuardrailTextQualifier: {value}")
+            _ => Throw.JsonException<GuardrailTextQualifier>($"Unknown GuardrailTextQualifier: {value}")
         };
     }
 
@@ -31,7 +32,7 @@ public sealed class GuardrailTextQualifierConverter : JsonConverter<GuardrailTex
             GuardrailTextQualifier.GroundingSource => "grounding_source",
             GuardrailTextQualifier.Query => "query",
             GuardrailTextQualifier.GuardContent => "guard_content",
-            _ => throw new JsonException($"Unknown GuardrailTextQualifier: {value}")
+            _ => Throw.JsonException<string>($"Unknown GuardrailTextQualifier: {value}")
         };
         writer.WriteStringValue(stringValue);
     }

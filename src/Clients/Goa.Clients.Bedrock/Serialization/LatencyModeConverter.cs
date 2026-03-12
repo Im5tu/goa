@@ -1,6 +1,7 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Goa.Clients.Bedrock.Enums;
+using Goa.Clients.Core;
 
 namespace Goa.Clients.Bedrock.Serialization;
 
@@ -18,7 +19,7 @@ public sealed class LatencyModeConverter : JsonConverter<LatencyMode>
         {
             "standard" => LatencyMode.Standard,
             "optimized" => LatencyMode.Optimized,
-            _ => throw new JsonException($"Unknown LatencyMode: {value}")
+            _ => Throw.JsonException<LatencyMode>($"Unknown LatencyMode: {value}")
         };
     }
 
@@ -29,7 +30,7 @@ public sealed class LatencyModeConverter : JsonConverter<LatencyMode>
         {
             LatencyMode.Standard => "standard",
             LatencyMode.Optimized => "optimized",
-            _ => throw new JsonException($"Unknown LatencyMode: {value}")
+            _ => Throw.JsonException<string>($"Unknown LatencyMode: {value}")
         };
         writer.WriteStringValue(stringValue);
     }
