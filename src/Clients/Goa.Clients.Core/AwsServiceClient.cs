@@ -68,16 +68,18 @@ public abstract class AwsServiceClient<T> where T : AwsServiceConfiguration
         request.Options.Set(HttpOptions.Target, target);
         request.Options.Set(HttpOptions.ApiVersion, Configuration.ApiVersion);
 
-        using var logContext = Logger.BeginScope(new LogScope8(
-            new("Client", _clientType),
-            new("Region", Configuration.Region),
-            new("Service", Configuration.Service),
-            new("SigningService", Configuration.SigningService),
-            new("Target", target),
-            new("ApiVersion", Configuration.ApiVersion),
-            new("Method", request.Method.Method),
-            new("Uri", request.RequestUri?.AbsoluteUri ?? "Unknown")
-        ));
+        using var logContext = Logger.IsEnabled(Configuration.LogLevel)
+            ? Logger.BeginScope(new LogScope8(
+                new("Client", _clientType),
+                new("Region", Configuration.Region),
+                new("Service", Configuration.Service),
+                new("SigningService", Configuration.SigningService),
+                new("Target", target),
+                new("ApiVersion", Configuration.ApiVersion),
+                new("Method", request.Method.Method),
+                new("Uri", request.RequestUri?.AbsoluteUri ?? "Unknown")
+            ))
+            : null;
 
         try
         {
@@ -87,10 +89,12 @@ public abstract class AwsServiceClient<T> where T : AwsServiceConfiguration
             var response = await client.SendAsync(request, cancellationToken);
 
             // Log fixed response fields with zero-allocation scope
-            using var responseLogContext = Logger.BeginScope(new LogScope2(
-                new("StatusCode", ((int)response.StatusCode).ToString()),
-                new("ReasonPhrase", response.ReasonPhrase ?? response.StatusCode.ToString())
-            ));
+            using var responseLogContext = Logger.IsEnabled(Configuration.LogLevel)
+                ? Logger.BeginScope(new LogScope2(
+                    new("StatusCode", ((int)response.StatusCode).ToString()),
+                    new("ReasonPhrase", response.ReasonPhrase ?? response.StatusCode.ToString())
+                ))
+                : null;
 
             // Log x-amz response headers separately with capacity hint
             Dictionary<string, object>? amzHeaders = null;
