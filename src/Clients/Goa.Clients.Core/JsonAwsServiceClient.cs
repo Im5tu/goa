@@ -94,8 +94,8 @@ public abstract class JsonAwsServiceClient<T> : AwsServiceClient<T> where T : Aw
                 return new ApiResponse<TResponse>(new ApiError("Request not successful.") { StatusCode = response.StatusCode });
             }
 
+            var error = ApiErrorReader.ReadApiError(errorBuffer.Span);
             var errorPayload = Encoding.UTF8.GetString(errorBuffer.Span);
-            var error = DeserializeJsonError(errorPayload);
             if (error is not null)
             {
                 error = error with
