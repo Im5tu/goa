@@ -24,12 +24,12 @@ public class DateOnlyTypeHandler : ITypeHandler
 #pragma warning disable CS8603 // Possible null reference return - intentional for conditional assignment
             ? null // Use conditional assignment instead
 #pragma warning restore CS8603
-            : $"new AttributeValue {{ S = model.{propertyName}.ToString(\"yyyy-MM-dd\") }}";
+            : $"AttributeValue.String(model.{propertyName}.ToString(\"yyyy-MM-dd\"))";
     }
     
     public string GenerateFromDynamoRecord(PropertyInfo propertyInfo, string recordVariableName, string pkVariable, string skVariable)
     {
-        var memberName = propertyInfo.Name;
+        var memberName = propertyInfo.GetDynamoAttributeName();
         var isNullable = propertyInfo.IsNullable;
         
         // Avoid variable name conflicts with pk/sk extraction variables
@@ -52,16 +52,17 @@ public class DateOnlyTypeHandler : ITypeHandler
     public string? GenerateConditionalAssignment(PropertyInfo propertyInfo, string recordVariable)
     {
         var propertyName = propertyInfo.Name;
+        var dynamoAttributeName = propertyInfo.GetDynamoAttributeName();
         var isNullable = propertyInfo.IsNullable;
-        
+
         if (!isNullable)
         {
             return null;
         }
-        
+
         return $@"if (model.{propertyName}.HasValue)
 {{
-    {recordVariable}[""{propertyName}""] = new AttributeValue {{ S = model.{propertyName}.Value.ToString(""yyyy-MM-dd"") }};
+    {recordVariable}[""{dynamoAttributeName}""] = AttributeValue.String(model.{propertyName}.Value.ToString(""yyyy-MM-dd""));
 }}";
     }
     

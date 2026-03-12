@@ -121,8 +121,8 @@ public class BuilderChainingTests
     {
         var startKey = new Dictionary<string, AttributeValue>
         {
-            ["pk"] = new AttributeValue { S = "lastPk" },
-            ["sk"] = new AttributeValue { S = "lastSk" }
+            ["pk"] = AttributeValue.String("lastPk"),
+            ["sk"] = AttributeValue.String("lastSk")
         };
 
         var builder = new QueryBuilder("TestTable")
@@ -167,7 +167,7 @@ public class BuilderChainingTests
     {
         var startKey = new Dictionary<string, AttributeValue>
         {
-            ["pk"] = new AttributeValue { S = "lastPk" }
+            ["pk"] = AttributeValue.String("lastPk")
         };
 
         var builder = new ScanBuilder("TestTable")
@@ -198,7 +198,7 @@ public class BuilderChainingTests
     {
         var builder = new BatchWriteItemBuilder()
             .WithTable("TestTable", table => table
-                .WithPut(new Dictionary<string, AttributeValue> { ["pk"] = new AttributeValue { S = "value1" } }))
+                .WithPut(new Dictionary<string, AttributeValue> { ["pk"] = AttributeValue.String("value1") }))
             .WithReturnConsumedCapacity(ReturnConsumedCapacity.TOTAL)
             .WithReturnItemCollectionMetrics(ReturnItemCollectionMetrics.SIZE);
 
@@ -212,7 +212,7 @@ public class BuilderChainingTests
     public async Task DeleteItemBuilder_WithReturnConsumedCapacity_SetsCapacity()
     {
         var builder = new DeleteItemBuilder("TestTable")
-            .WithKey("pk", new AttributeValue { S = "value1" })
+            .WithKey("pk", AttributeValue.String("value1"))
             .WithReturnConsumedCapacity(ReturnConsumedCapacity.INDEXES)
             .WithReturnItemCollectionMetrics(ReturnItemCollectionMetrics.SIZE);
 
@@ -226,7 +226,7 @@ public class BuilderChainingTests
     public async Task DeleteItemBuilder_WithReturnValuesOnConditionCheckFailure_AllOld_SetsValue()
     {
         var builder = new DeleteItemBuilder("TestTable")
-            .WithKey("pk", new AttributeValue { S = "value1" })
+            .WithKey("pk", AttributeValue.String("value1"))
             .WithReturnValuesOnConditionCheckFailure(ReturnValuesOnConditionCheckFailure.ALL_OLD);
 
         var request = builder.Build();
@@ -238,7 +238,7 @@ public class BuilderChainingTests
     public async Task DeleteItemBuilder_WithReturnValuesOnConditionCheckFailure_None_SetsValue()
     {
         var builder = new DeleteItemBuilder("TestTable")
-            .WithKey("pk", new AttributeValue { S = "value1" })
+            .WithKey("pk", AttributeValue.String("value1"))
             .WithReturnValuesOnConditionCheckFailure(ReturnValuesOnConditionCheckFailure.NONE);
 
         var request = builder.Build();
@@ -274,7 +274,7 @@ public class BuilderChainingTests
     public async Task UpdateItemBuilder_WithReturnValuesOnConditionCheckFailure_AllOld_SetsValue()
     {
         var builder = new UpdateItemBuilder("TestTable")
-            .WithKey("pk", new AttributeValue { S = "value1" })
+            .WithKey("pk", AttributeValue.String("value1"))
             .Set("status", "active")
             .WithReturnValuesOnConditionCheckFailure(ReturnValuesOnConditionCheckFailure.ALL_OLD);
 
@@ -287,7 +287,7 @@ public class BuilderChainingTests
     public async Task UpdateItemBuilder_WithReturnValuesOnConditionCheckFailure_None_SetsValue()
     {
         var builder = new UpdateItemBuilder("TestTable")
-            .WithKey("pk", new AttributeValue { S = "value1" })
+            .WithKey("pk", AttributeValue.String("value1"))
             .Set("status", "active")
             .WithReturnValuesOnConditionCheckFailure(ReturnValuesOnConditionCheckFailure.NONE);
 
@@ -300,7 +300,7 @@ public class BuilderChainingTests
     public async Task DeleteItemBuilder_WithReturnValuesOnConditionCheckFailure_AllOld_SerializesCorrectly()
     {
         var builder = new DeleteItemBuilder("TestTable")
-            .WithKey("pk", new AttributeValue { S = "value1" })
+            .WithKey("pk", AttributeValue.String("value1"))
             .WithReturnValuesOnConditionCheckFailure(ReturnValuesOnConditionCheckFailure.ALL_OLD);
 
         var request = builder.Build();
@@ -326,7 +326,7 @@ public class BuilderChainingTests
     public async Task UpdateItemBuilder_WithReturnValuesOnConditionCheckFailure_AllOld_SerializesCorrectly()
     {
         var builder = new UpdateItemBuilder("TestTable")
-            .WithKey("pk", new AttributeValue { S = "value1" })
+            .WithKey("pk", AttributeValue.String("value1"))
             .Set("status", "active")
             .WithReturnValuesOnConditionCheckFailure(ReturnValuesOnConditionCheckFailure.ALL_OLD);
 

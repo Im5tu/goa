@@ -190,67 +190,94 @@ internal static class DynamoResponseReader
 
     private static AttributeValue ReadAttributeValue(ref Utf8JsonReader reader)
     {
-        var attr = new AttributeValue();
-        // reader is at StartObject
+        // reader is at StartObject — DynamoDB type wrapper has a single type-value pair
         while (reader.Read() && reader.TokenType != JsonTokenType.EndObject)
         {
             if (reader.ValueTextEquals("S"u8))
             {
                 reader.Read();
-                attr.S = reader.GetString();
+                var v = reader.GetString()!;
+                ReadEndObject(ref reader);
+                return AttributeValue.String(v);
             }
-            else if (reader.ValueTextEquals("N"u8))
+            if (reader.ValueTextEquals("N"u8))
             {
                 reader.Read();
-                attr.N = reader.GetString();
+                var v = reader.GetString()!;
+                ReadEndObject(ref reader);
+                return AttributeValue.Number(v);
             }
-            else if (reader.ValueTextEquals("BOOL"u8))
+            if (reader.ValueTextEquals("BOOL"u8))
             {
                 reader.Read();
-                attr.BOOL = reader.GetBoolean();
+                var v = reader.GetBoolean();
+                ReadEndObject(ref reader);
+                return AttributeValue.Bool(v);
             }
-            else if (reader.ValueTextEquals("NULL"u8))
+            if (reader.ValueTextEquals("NULL"u8))
             {
                 reader.Read();
-                attr.NULL = reader.GetBoolean();
+                var isNull = reader.GetBoolean();
+                ReadEndObject(ref reader);
+                if (!isNull)
+                    throw new JsonException("Invalid NULL attribute value: expected true but got false");
+                return AttributeValue.Null();
             }
-            else if (reader.ValueTextEquals("SS"u8))
+            if (reader.ValueTextEquals("SS"u8))
             {
                 reader.Read();
-                attr.SS = ReadStringArray(ref reader);
+                var v = ReadStringArray(ref reader);
+                ReadEndObject(ref reader);
+                return AttributeValue.FromStringSet(v);
             }
-            else if (reader.ValueTextEquals("NS"u8))
+            if (reader.ValueTextEquals("NS"u8))
             {
                 reader.Read();
-                attr.NS = ReadStringArray(ref reader);
+                var v = ReadStringArray(ref reader);
+                ReadEndObject(ref reader);
+                return AttributeValue.FromNumberSet(v);
             }
-            else if (reader.ValueTextEquals("L"u8))
+            if (reader.ValueTextEquals("L"u8))
             {
                 reader.Read();
-                attr.L = ReadAttributeValueList(ref reader);
+                var v = ReadAttributeValueList(ref reader);
+                ReadEndObject(ref reader);
+                return AttributeValue.FromList(v);
             }
-            else if (reader.ValueTextEquals("M"u8))
+            if (reader.ValueTextEquals("M"u8))
             {
                 reader.Read();
-                attr.M = ReadAttributeMap(ref reader);
+                var v = ReadAttributeMap(ref reader);
+                ReadEndObject(ref reader);
+                return AttributeValue.FromMap(v);
             }
-            else if (reader.ValueTextEquals("B"u8))
+            if (reader.ValueTextEquals("B"u8))
             {
                 reader.Read();
-                attr.B = Convert.FromBase64String(reader.GetString()!);
+                var v = Convert.FromBase64String(reader.GetString()!);
+                ReadEndObject(ref reader);
+                return AttributeValue.FromBinary(v);
             }
-            else if (reader.ValueTextEquals("BS"u8))
+            if (reader.ValueTextEquals("BS"u8))
             {
                 reader.Read();
-                attr.BS = ReadBinaryArray(ref reader);
+                var v = ReadBinaryArray(ref reader);
+                ReadEndObject(ref reader);
+                return AttributeValue.FromBinarySet(v);
             }
-            else
-            {
-                reader.Read();
-                reader.Skip();
-            }
+
+            // Skip unknown type
+            reader.Read();
+            reader.Skip();
         }
-        return attr;
+        throw new JsonException("Unrecognized DynamoDB attribute type: no recognized type property found in attribute value object");
+    }
+
+    private static void ReadEndObject(ref Utf8JsonReader reader)
+    {
+        reader.Read();
+        if (reader.TokenType != JsonTokenType.EndObject)
+            throw new JsonException("Expected end of attribute value wrapper object");
     }
 
     private static List<string> ReadStringArray(ref Utf8JsonReader reader)

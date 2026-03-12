@@ -72,7 +72,7 @@ public class NullAwarenessIntegrationTests
 
         var result = _typeHandlerRegistry.GenerateToAttributeValue(property);
 
-        var expected = "new AttributeValue { N = model.Id.ToString(CultureInfo.InvariantCulture) }";
+        var expected = "AttributeValue.Number(model.Id.ToString(CultureInfo.InvariantCulture))";
         await Assert.That(result).IsEqualTo(expected);
     }
 
@@ -144,13 +144,13 @@ public class NullAwarenessIntegrationTests
         // Verify the generated code contains correct null handling
         // Non-nullable strings now use conditional assignment to skip empty strings
         await Assert.That(generatedCode).Contains("if (!string.IsNullOrEmpty(model.RequiredName))");
-        await Assert.That(generatedCode).Contains("record[\"RequiredName\"] = new AttributeValue { S = model.RequiredName };");
+        await Assert.That(generatedCode).Contains("record[\"RequiredName\"] = AttributeValue.String(model.RequiredName);");
         // Nullable strings also use conditional assignment with IsNullOrEmpty check
         await Assert.That(generatedCode).Contains("if (!string.IsNullOrEmpty(model.OptionalDescription))");
-        await Assert.That(generatedCode).Contains("record[\"OptionalDescription\"] = new AttributeValue { S = model.OptionalDescription };");
+        await Assert.That(generatedCode).Contains("record[\"OptionalDescription\"] = AttributeValue.String(model.OptionalDescription);");
         // Nullable properties use conditional assignment for sparse GSI compatibility
         await Assert.That(generatedCode).Contains("if (model.OptionalCount.HasValue)");
-        await Assert.That(generatedCode).Contains("new AttributeValue { N = model.OptionalCount.Value.ToString(CultureInfo.InvariantCulture) }");
+        await Assert.That(generatedCode).Contains("AttributeValue.Number(model.OptionalCount.Value.ToString(CultureInfo.InvariantCulture))");
 
         // Verify MissingAttributeException for non-nullable types
         await Assert.That(generatedCode).Contains("MissingAttributeException.Throw<string>(\"RequiredName\"");
@@ -181,7 +181,7 @@ public class NullAwarenessIntegrationTests
         await Assert.That(nullableResult).IsNull();
         
         await Assert.That(nonNullableResult).DoesNotContain("HasValue");
-        await Assert.That(nonNullableResult).DoesNotContain("NULL = true");
+        await Assert.That(nonNullableResult).DoesNotContain("AttributeValue.Null()");
     }
 
     [Test]
@@ -446,7 +446,7 @@ public class NullAwarenessIntegrationTests
             .Because("Should check each item for null before converting");
 
         await Assert.That(toAttributeValue)
-            .Contains("NULL = true")
+            .Contains("AttributeValue.Null()")
             .Because("Null items should be preserved as DynamoDB NULL attributes");
 
         await Assert.That(toAttributeValue)

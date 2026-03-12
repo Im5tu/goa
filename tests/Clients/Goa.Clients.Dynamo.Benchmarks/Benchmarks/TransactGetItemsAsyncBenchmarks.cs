@@ -1,9 +1,12 @@
-using Amazon.DynamoDBv2;
 using Amazon.DynamoDBv2.Model;
 using BenchmarkDotNet.Order;
 using EfficientDynamoDb.Operations.Shared;
 using Goa.Clients.Dynamo.Benchmarks.Infrastructure;
+using Goa.Clients.Dynamo.Operations.Transactions;
 using GoaModels = Goa.Clients.Dynamo.Models;
+using EfficientTransactGetItemsRequest = EfficientDynamoDb.Operations.TransactGetItems.TransactGetItemsRequest;
+using EfficientTransactGetItemsResponse = EfficientDynamoDb.Operations.TransactGetItems.TransactGetItemsResponse;
+using EfficientTransactGetRequest = EfficientDynamoDb.Operations.TransactGetItems.TransactGetRequest;
 
 namespace Goa.Clients.Dynamo.Benchmarks.Benchmarks;
 
@@ -17,32 +20,103 @@ public class TransactGetItemsAsyncBenchmarks
     {
         _fixture = new LocalStackFixture();
         _fixture.StartAsync().GetAwaiter().GetResult();
-        _fixture.SeedItemsAsync("txget-bench", 10).GetAwaiter().GetResult();
+        _fixture.SeedItemsAsync("transact-get", 10).GetAwaiter().GetResult();
     }
 
     [GlobalCleanup]
-    public void Cleanup() => _fixture.DisposeAsync().AsTask().GetAwaiter().GetResult();
-
-    [Benchmark(Baseline = true), BenchmarkCategory("Transact Get 10 Items")]
-    public async Task<TransactGetItemsResponse> AwsSdk_TransactGetItems()
+    public void Cleanup()
     {
-        var items = new List<TransactGetItem>();
-        for (var i = 0; i < 10; i++)
+        _fixture.DisposeAsync().AsTask().GetAwaiter().GetResult();
+    }
+
+    [Benchmark(Baseline = true), BenchmarkCategory("Transact Get 5 Items")]
+    public async Task<TransactGetItemsResponse> AwsSdk_TransactGet_5Items()
+    {
+        var items = new List<Amazon.DynamoDBv2.Model.TransactGetItem>();
+        for (var i = 0; i < 5; i++)
         {
-            items.Add(new TransactGetItem
+            items.Add(new Amazon.DynamoDBv2.Model.TransactGetItem
             {
                 Get = new Get
                 {
                     TableName = _fixture.TableName,
                     Key = new Dictionary<string, AttributeValue>
                     {
-                        ["pk"] = new("txget-bench"),
-                        ["sk"] = new($"item-{i:D4}")
+                        ["pk"] = new AttributeValue("transact-get"),
+                        ["sk"] = new AttributeValue($"item-{i:D4}")
                     }
                 }
             });
         }
+        return await _fixture.AwsSdkClient.TransactGetItemsAsync(new TransactGetItemsRequest
+        {
+            TransactItems = items
+        });
+    }
 
+    [Benchmark, BenchmarkCategory("Transact Get 5 Items")]
+    public async Task<TransactGetItemResponse> Goa_TransactGet_5Items()
+    {
+        var items = new List<Goa.Clients.Dynamo.Operations.Transactions.TransactGetItem>();
+        for (var i = 0; i < 5; i++)
+        {
+            items.Add(new Goa.Clients.Dynamo.Operations.Transactions.TransactGetItem
+            {
+                Get = new TransactGetItemRequest
+                {
+                    TableName = _fixture.TableName,
+                    Key = new Dictionary<string, GoaModels.AttributeValue>
+                    {
+                        ["pk"] = GoaModels.AttributeValue.String("transact-get"),
+                        ["sk"] = GoaModels.AttributeValue.String($"item-{i:D4}")
+                    }
+                }
+            });
+        }
+        var response = await _fixture.GoaClient.TransactGetItemsAsync(new TransactGetRequest
+        {
+            TransactItems = items
+        });
+        return response.Value;
+    }
+
+    [Benchmark, BenchmarkCategory("Transact Get 5 Items")]
+    public async Task<EfficientTransactGetItemsResponse> Efficient_TransactGet_5Items()
+    {
+        var items = new List<EfficientTransactGetRequest>();
+        for (var i = 0; i < 5; i++)
+        {
+            items.Add(new EfficientTransactGetRequest
+            {
+                TableName = _fixture.TableName,
+                Key = new PrimaryKey("pk", "transact-get", "sk", $"item-{i:D4}")
+            });
+        }
+        return await _fixture.EfficientClient.TransactGetItemsAsync(new EfficientTransactGetItemsRequest
+        {
+            TransactItems = items
+        });
+    }
+
+    [Benchmark(Baseline = true), BenchmarkCategory("Transact Get 10 Items")]
+    public async Task<TransactGetItemsResponse> AwsSdk_TransactGet_10Items()
+    {
+        var items = new List<Amazon.DynamoDBv2.Model.TransactGetItem>();
+        for (var i = 0; i < 10; i++)
+        {
+            items.Add(new Amazon.DynamoDBv2.Model.TransactGetItem
+            {
+                Get = new Get
+                {
+                    TableName = _fixture.TableName,
+                    Key = new Dictionary<string, AttributeValue>
+                    {
+                        ["pk"] = new AttributeValue("transact-get"),
+                        ["sk"] = new AttributeValue($"item-{i:D4}")
+                    }
+                }
+            });
+        }
         return await _fixture.AwsSdkClient.TransactGetItemsAsync(new TransactGetItemsRequest
         {
             TransactItems = items
@@ -50,26 +124,25 @@ public class TransactGetItemsAsyncBenchmarks
     }
 
     [Benchmark, BenchmarkCategory("Transact Get 10 Items")]
-    public async Task<Goa.Clients.Dynamo.Operations.Transactions.TransactGetItemResponse> Goa_TransactGetItems()
+    public async Task<TransactGetItemResponse> Goa_TransactGet_10Items()
     {
         var items = new List<Goa.Clients.Dynamo.Operations.Transactions.TransactGetItem>();
         for (var i = 0; i < 10; i++)
         {
             items.Add(new Goa.Clients.Dynamo.Operations.Transactions.TransactGetItem
             {
-                Get = new Goa.Clients.Dynamo.Operations.Transactions.TransactGetItemRequest
+                Get = new TransactGetItemRequest
                 {
                     TableName = _fixture.TableName,
                     Key = new Dictionary<string, GoaModels.AttributeValue>
                     {
-                        ["pk"] = new() { S = "txget-bench" },
-                        ["sk"] = new() { S = $"item-{i:D4}" }
+                        ["pk"] = GoaModels.AttributeValue.String("transact-get"),
+                        ["sk"] = GoaModels.AttributeValue.String($"item-{i:D4}")
                     }
                 }
             });
         }
-
-        var response = await _fixture.GoaClient.TransactGetItemsAsync(new Goa.Clients.Dynamo.Operations.Transactions.TransactGetRequest
+        var response = await _fixture.GoaClient.TransactGetItemsAsync(new TransactGetRequest
         {
             TransactItems = items
         });
@@ -77,19 +150,18 @@ public class TransactGetItemsAsyncBenchmarks
     }
 
     [Benchmark, BenchmarkCategory("Transact Get 10 Items")]
-    public async Task<EfficientDynamoDb.Operations.TransactGetItems.TransactGetItemsResponse> Efficient_TransactGetItems()
+    public async Task<EfficientTransactGetItemsResponse> Efficient_TransactGet_10Items()
     {
-        var items = new List<EfficientDynamoDb.Operations.TransactGetItems.TransactGetRequest>();
+        var items = new List<EfficientTransactGetRequest>();
         for (var i = 0; i < 10; i++)
         {
-            items.Add(new EfficientDynamoDb.Operations.TransactGetItems.TransactGetRequest
+            items.Add(new EfficientTransactGetRequest
             {
                 TableName = _fixture.TableName,
-                Key = new PrimaryKey("pk", "txget-bench", "sk", $"item-{i:D4}")
+                Key = new PrimaryKey("pk", "transact-get", "sk", $"item-{i:D4}")
             });
         }
-
-        return await _fixture.EfficientClient.TransactGetItemsAsync(new EfficientDynamoDb.Operations.TransactGetItems.TransactGetItemsRequest
+        return await _fixture.EfficientClient.TransactGetItemsAsync(new EfficientTransactGetItemsRequest
         {
             TransactItems = items
         });

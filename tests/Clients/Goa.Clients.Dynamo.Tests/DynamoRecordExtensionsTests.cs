@@ -10,7 +10,7 @@ public class DynamoRecordExtensionsTests
     {
         var record = new DynamoRecord
         {
-            ["Name"] = new AttributeValue { S = "" }
+            ["Name"] = AttributeValue.String("")
         };
 
         var result = record.TryGetString("Name", out var value);
@@ -26,7 +26,7 @@ public class DynamoRecordExtensionsTests
     {
         var record = new DynamoRecord
         {
-            ["Name"] = new AttributeValue { S = "" }
+            ["Name"] = AttributeValue.String("")
         };
 
         var result = record.TryGetNullableString("Name", out var value);
@@ -42,7 +42,7 @@ public class DynamoRecordExtensionsTests
     {
         var record = new DynamoRecord
         {
-            ["Name"] = new AttributeValue { NULL = true }
+            ["Name"] = AttributeValue.Null()
         };
 
         var result = record.TryGetString("Name", out _);
@@ -56,7 +56,7 @@ public class DynamoRecordExtensionsTests
     {
         var record = new DynamoRecord
         {
-            ["Name"] = new AttributeValue { NULL = true }
+            ["Name"] = AttributeValue.Null()
         };
 
         var result = record.TryGetNullableString("Name", out var value);

@@ -31,7 +31,7 @@ public class CollectionTypeHandler : ICompositeTypeHandler
 
         if (propertyInfo.ElementType == null || _registry == null)
         {
-            return "new AttributeValue { NULL = true }"; // Skip invalid collections
+            return "AttributeValue.Null()"; // Skip invalid collections
         }
 
         var elementType = propertyInfo.ElementType;
@@ -48,11 +48,11 @@ public class CollectionTypeHandler : ICompositeTypeHandler
         var elementMapping = GenerateElementToAttributeValue(elementType, "item");
         if (elementMapping != null)
         {
-            return $"model.{propertyName} != null ? new AttributeValue {{ L = model.{propertyName}.Select(item => {elementMapping}).ToList() }} : new AttributeValue {{ NULL = true }}";
+            return $"model.{propertyName} != null ? AttributeValue.FromList(model.{propertyName}.Select(item => {elementMapping}).ToList()) : AttributeValue.Null()";
         }
 
         // Fallback to NULL for unsupported types
-        return "new AttributeValue { NULL = true }";
+        return "AttributeValue.Null()";
     }
 
     /// <summary>
@@ -68,7 +68,7 @@ public class CollectionTypeHandler : ICompositeTypeHandler
         {
             // Use just the type name (not the full namespace) to match the mapper naming convention
             var normalizedTypeName = NamingHelpers.NormalizeTypeName(elementType.Name);
-            return $"({itemVarName} != null ? new AttributeValue {{ M = DynamoMapper.{normalizedTypeName}.ToDynamoRecord({itemVarName}) }} : new AttributeValue {{ NULL = true }})";
+            return $"({itemVarName} != null ? AttributeValue.FromMap(DynamoMapper.{normalizedTypeName}.ToDynamoRecord({itemVarName})) : AttributeValue.Null())";
         }
 
         // Check if it's a nested collection
@@ -89,7 +89,7 @@ public class CollectionTypeHandler : ICompositeTypeHandler
                 var nestedElementMapping = GenerateElementToAttributeValue(nestedElementType, nestedVarName);
                 if (nestedElementMapping != null)
                 {
-                    return $"({itemVarName} != null ? new AttributeValue {{ L = {itemVarName}.Select({nestedVarName} => {nestedElementMapping}).ToList() }} : new AttributeValue {{ NULL = true }})";
+                    return $"({itemVarName} != null ? AttributeValue.FromList({itemVarName}.Select({nestedVarName} => {nestedElementMapping}).ToList()) : AttributeValue.Null())";
                 }
             }
         }
@@ -104,16 +104,16 @@ public class CollectionTypeHandler : ICompositeTypeHandler
     {
         return elementType.SpecialType switch
         {
-            SpecialType.System_String => $"({collectionVarName} != null && {collectionVarName}.Any() ? new AttributeValue {{ SS = {collectionVarName}.ToList() }} : new AttributeValue {{ NULL = true }})",
+            SpecialType.System_String => $"({collectionVarName} != null && {collectionVarName}.Any() ? AttributeValue.FromStringSet({collectionVarName}.ToList()) : AttributeValue.Null())",
             SpecialType.System_Byte or SpecialType.System_SByte or SpecialType.System_Int16 or SpecialType.System_UInt16 or
             SpecialType.System_Int32 or SpecialType.System_UInt32 or SpecialType.System_Int64 or SpecialType.System_UInt64 or
-            SpecialType.System_Decimal or SpecialType.System_Single or SpecialType.System_Double => $"({collectionVarName} != null && {collectionVarName}.Any() ? new AttributeValue {{ NS = {collectionVarName}.Select(x => x.ToString(CultureInfo.InvariantCulture)).ToList() }} : new AttributeValue {{ NULL = true }})",
-            SpecialType.System_Boolean => $"({collectionVarName} != null && {collectionVarName}.Any() ? new AttributeValue {{ SS = {collectionVarName}.Select(x => x.ToString()).ToList() }} : new AttributeValue {{ NULL = true }})",
-            SpecialType.System_DateTime => $"({collectionVarName} != null && {collectionVarName}.Any() ? new AttributeValue {{ SS = {collectionVarName}.Select(x => x.ToString(\"o\")).ToList() }} : new AttributeValue {{ NULL = true }})",
-            _ when elementType.Name == nameof(Guid) => $"({collectionVarName} != null && {collectionVarName}.Any() ? new AttributeValue {{ SS = {collectionVarName}.Select(x => x.ToString()).ToList() }} : new AttributeValue {{ NULL = true }})",
-            _ when elementType.Name == nameof(TimeSpan) => $"({collectionVarName} != null && {collectionVarName}.Any() ? new AttributeValue {{ SS = {collectionVarName}.Select(x => x.ToString()).ToList() }} : new AttributeValue {{ NULL = true }})",
-            _ when elementType.Name == nameof(DateTimeOffset) => $"({collectionVarName} != null && {collectionVarName}.Any() ? new AttributeValue {{ SS = {collectionVarName}.Select(x => x.ToString(\"o\")).ToList() }} : new AttributeValue {{ NULL = true }})",
-            _ when elementType.TypeKind == TypeKind.Enum => $"({collectionVarName} != null && {collectionVarName}.Any() ? new AttributeValue {{ SS = {collectionVarName}.Select(x => x.ToString()).ToList() }} : new AttributeValue {{ NULL = true }})",
+            SpecialType.System_Decimal or SpecialType.System_Single or SpecialType.System_Double => $"({collectionVarName} != null && {collectionVarName}.Any() ? AttributeValue.FromNumberSet({collectionVarName}.Select(x => x.ToString(CultureInfo.InvariantCulture)).ToList()) : AttributeValue.Null())",
+            SpecialType.System_Boolean => $"({collectionVarName} != null && {collectionVarName}.Any() ? AttributeValue.FromStringSet({collectionVarName}.Select(x => x.ToString()).ToList()) : AttributeValue.Null())",
+            SpecialType.System_DateTime => $"({collectionVarName} != null && {collectionVarName}.Any() ? AttributeValue.FromStringSet({collectionVarName}.Select(x => x.ToString(\"o\")).ToList()) : AttributeValue.Null())",
+            _ when elementType.Name == nameof(Guid) => $"({collectionVarName} != null && {collectionVarName}.Any() ? AttributeValue.FromStringSet({collectionVarName}.Select(x => x.ToString()).ToList()) : AttributeValue.Null())",
+            _ when elementType.Name == nameof(TimeSpan) => $"({collectionVarName} != null && {collectionVarName}.Any() ? AttributeValue.FromStringSet({collectionVarName}.Select(x => x.ToString()).ToList()) : AttributeValue.Null())",
+            _ when elementType.Name == nameof(DateTimeOffset) => $"({collectionVarName} != null && {collectionVarName}.Any() ? AttributeValue.FromStringSet({collectionVarName}.Select(x => x.ToString(\"o\")).ToList()) : AttributeValue.Null())",
+            _ when elementType.TypeKind == TypeKind.Enum => $"({collectionVarName} != null && {collectionVarName}.Any() ? AttributeValue.FromStringSet({collectionVarName}.Select(x => x.ToString()).ToList()) : AttributeValue.Null())",
             _ => null
         };
     }
@@ -173,16 +173,16 @@ public class CollectionTypeHandler : ICompositeTypeHandler
     {
         return elementType.SpecialType switch
         {
-            SpecialType.System_String => $"(model.{propertyName} != null && model.{propertyName}.Any() ? new AttributeValue {{ SS = model.{propertyName}.ToList() }} : new AttributeValue {{ NULL = true }})",
+            SpecialType.System_String => $"(model.{propertyName} != null && model.{propertyName}.Any() ? AttributeValue.FromStringSet(model.{propertyName}.ToList()) : AttributeValue.Null())",
             SpecialType.System_Byte or SpecialType.System_SByte or SpecialType.System_Int16 or SpecialType.System_UInt16 or
             SpecialType.System_Int32 or SpecialType.System_UInt32 or SpecialType.System_Int64 or SpecialType.System_UInt64 or
-            SpecialType.System_Decimal or SpecialType.System_Single or SpecialType.System_Double => $"(model.{propertyName} != null && model.{propertyName}.Any() ? new AttributeValue {{ NS = model.{propertyName}.Select(x => x.ToString(CultureInfo.InvariantCulture)).ToList() }} : new AttributeValue {{ NULL = true }})",
-            SpecialType.System_Boolean => $"(model.{propertyName} != null && model.{propertyName}.Any() ? new AttributeValue {{ SS = model.{propertyName}.Select(x => x.ToString()).ToList() }} : new AttributeValue {{ NULL = true }})",
-            SpecialType.System_DateTime => $"(model.{propertyName} != null && model.{propertyName}.Any() ? new AttributeValue {{ SS = model.{propertyName}.Select(x => x.ToString(\"o\")).ToList() }} : new AttributeValue {{ NULL = true }})",
-            _ when elementType.Name == nameof(Guid) => $"(model.{propertyName} != null && model.{propertyName}.Any() ? new AttributeValue {{ SS = model.{propertyName}.Select(x => x.ToString()).ToList() }} : new AttributeValue {{ NULL = true }})",
-            _ when elementType.Name == nameof(TimeSpan) => $"(model.{propertyName} != null && model.{propertyName}.Any() ? new AttributeValue {{ SS = model.{propertyName}.Select(x => x.ToString()).ToList() }} : new AttributeValue {{ NULL = true }})",
-            _ when elementType.Name == nameof(DateTimeOffset) => $"(model.{propertyName} != null && model.{propertyName}.Any() ? new AttributeValue {{ SS = model.{propertyName}.Select(x => x.ToString(\"o\")).ToList() }} : new AttributeValue {{ NULL = true }})",
-            _ when elementType.TypeKind == TypeKind.Enum => $"(model.{propertyName} != null && model.{propertyName}.Any() ? new AttributeValue {{ SS = model.{propertyName}.Select(x => x.ToString()).ToList() }} : new AttributeValue {{ NULL = true }})",
+            SpecialType.System_Decimal or SpecialType.System_Single or SpecialType.System_Double => $"(model.{propertyName} != null && model.{propertyName}.Any() ? AttributeValue.FromNumberSet(model.{propertyName}.Select(x => x.ToString(CultureInfo.InvariantCulture)).ToList()) : AttributeValue.Null())",
+            SpecialType.System_Boolean => $"(model.{propertyName} != null && model.{propertyName}.Any() ? AttributeValue.FromStringSet(model.{propertyName}.Select(x => x.ToString()).ToList()) : AttributeValue.Null())",
+            SpecialType.System_DateTime => $"(model.{propertyName} != null && model.{propertyName}.Any() ? AttributeValue.FromStringSet(model.{propertyName}.Select(x => x.ToString(\"o\")).ToList()) : AttributeValue.Null())",
+            _ when elementType.Name == nameof(Guid) => $"(model.{propertyName} != null && model.{propertyName}.Any() ? AttributeValue.FromStringSet(model.{propertyName}.Select(x => x.ToString()).ToList()) : AttributeValue.Null())",
+            _ when elementType.Name == nameof(TimeSpan) => $"(model.{propertyName} != null && model.{propertyName}.Any() ? AttributeValue.FromStringSet(model.{propertyName}.Select(x => x.ToString()).ToList()) : AttributeValue.Null())",
+            _ when elementType.Name == nameof(DateTimeOffset) => $"(model.{propertyName} != null && model.{propertyName}.Any() ? AttributeValue.FromStringSet(model.{propertyName}.Select(x => x.ToString(\"o\")).ToList()) : AttributeValue.Null())",
+            _ when elementType.TypeKind == TypeKind.Enum => $"(model.{propertyName} != null && model.{propertyName}.Any() ? AttributeValue.FromStringSet(model.{propertyName}.Select(x => x.ToString()).ToList()) : AttributeValue.Null())",
             _ => null // Use composition for complex types
         };
     }
@@ -213,7 +213,18 @@ public class CollectionTypeHandler : ICompositeTypeHandler
         {
             var normalizedTypeName = elementType.Name.Replace(".", "_").Replace("`", "_");
             var varName = memberName.ToLowerInvariant();
-            var sourceExpression = $"{recordVariableName}.TryGetList(\"{memberName}\", out var {varName}List) && {varName}List != null ? {varName}List.Where(item => item.M != null).Select(item => DynamoMapper.{normalizedTypeName}.FromDynamoRecord(new DynamoRecord(item.M!), {pkVariable}, {skVariable})) : null";
+            // When element type is explicitly nullable (e.g., List<MyClass?>), preserve NULL entries as null
+            // instead of filtering them out. Non-nullable element types keep the filter to avoid type mismatches.
+            var isElementNullable = elementType.NullableAnnotation == NullableAnnotation.Annotated;
+            string sourceExpression;
+            if (isElementNullable)
+            {
+                sourceExpression = $"{recordVariableName}.TryGetList(\"{memberName}\", out var {varName}List) && {varName}List != null ? {varName}List.Select(item => item.M != null ? DynamoMapper.{normalizedTypeName}.FromDynamoRecord(new DynamoRecord(item.M!), {pkVariable}, {skVariable}) : null) : null";
+            }
+            else
+            {
+                sourceExpression = $"{recordVariableName}.TryGetList(\"{memberName}\", out var {varName}List) && {varName}List != null ? {varName}List.Where(item => item.M != null).Select(item => DynamoMapper.{normalizedTypeName}.FromDynamoRecord(new DynamoRecord(item.M!), {pkVariable}, {skVariable})) : null";
+            }
             return ConvertToTargetCollectionType(propertyInfo.Type, elementType, sourceExpression);
         }
 

@@ -107,7 +107,7 @@ public class UnixTimestampTypeHandlerTests
         var result = _handler.GenerateToAttributeValue(propertyInfo);
 
         // Assert
-        var expected = "new AttributeValue { N = ((DateTimeOffset)model.CreatedAt).ToUnixTimeSeconds().ToString() }";
+        var expected = "AttributeValue.Number(((DateTimeOffset)model.CreatedAt).ToUnixTimeSeconds().ToString())";
         await Assert.That(result)
             .IsEqualTo(expected);
     }
@@ -127,7 +127,7 @@ public class UnixTimestampTypeHandlerTests
         var result = _handler.GenerateToAttributeValue(propertyInfo);
 
         // Assert
-        var expected = "new AttributeValue { N = ((DateTimeOffset)model.CreatedAt).ToUnixTimeMilliseconds().ToString() }";
+        var expected = "AttributeValue.Number(((DateTimeOffset)model.CreatedAt).ToUnixTimeMilliseconds().ToString())";
         await Assert.That(result)
             .IsEqualTo(expected);
     }

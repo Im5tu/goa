@@ -1,9 +1,15 @@
-using Amazon.DynamoDBv2;
-using Amazon.DynamoDBv2.Model;
 using BenchmarkDotNet.Order;
 using EfficientDynamoDb.DocumentModel;
+using EfficientDynamoDb.Operations.BatchWriteItem;
+using AwsAttributeValue = Amazon.DynamoDBv2.Model.AttributeValue;
 using Goa.Clients.Dynamo.Benchmarks.Infrastructure;
+using Goa.Clients.Dynamo.Operations.Batch;
 using GoaModels = Goa.Clients.Dynamo.Models;
+using AwsBatchWriteItemRequest = Amazon.DynamoDBv2.Model.BatchWriteItemRequest;
+using GoaBatchWriteItemRequest = Goa.Clients.Dynamo.Operations.Batch.BatchWriteItemRequest;
+using GoaPutRequest = Goa.Clients.Dynamo.Operations.Batch.PutRequest;
+using EfficientBatchWriteItemRequest = EfficientDynamoDb.Operations.BatchWriteItem.BatchWriteItemRequest;
+using EfficientBatchWriteItemResponse = EfficientDynamoDb.Operations.BatchWriteItem.BatchWriteItemResponse;
 
 namespace Goa.Clients.Dynamo.Benchmarks.Benchmarks;
 
@@ -21,84 +27,161 @@ public class BatchWriteItemAsyncBenchmarks
     }
 
     [GlobalCleanup]
-    public void Cleanup() => _fixture.DisposeAsync().AsTask().GetAwaiter().GetResult();
-
-    [Benchmark(Baseline = true), BenchmarkCategory("Batch Write 25 Items")]
-    public async Task<BatchWriteItemResponse> AwsSdk_BatchWriteItem()
+    public void Cleanup()
     {
-        var baseCounter = Interlocked.Add(ref _counter, 25);
-        var items = new List<WriteRequest>();
-        for (var i = 0; i < 25; i++)
-        {
-            items.Add(new WriteRequest(new PutRequest(new Dictionary<string, Amazon.DynamoDBv2.Model.AttributeValue>
-            {
-                ["pk"] = new($"bw-aws-{baseCounter + i}"),
-                ["sk"] = new("item"),
-                ["data"] = new($"value-{baseCounter + i}")
-            })));
-        }
+        _fixture.DisposeAsync().AsTask().GetAwaiter().GetResult();
+    }
 
-        return await _fixture.AwsSdkClient.BatchWriteItemAsync(new BatchWriteItemRequest
+    [Benchmark(Baseline = true), BenchmarkCategory("Batch Write 10 Items")]
+    public async Task<Amazon.DynamoDBv2.Model.BatchWriteItemResponse> AwsSdk_BatchWrite_10Items()
+    {
+        var batch = Interlocked.Increment(ref _counter);
+        var requests = new List<Amazon.DynamoDBv2.Model.WriteRequest>();
+        for (var i = 0; i < 10; i++)
         {
-            RequestItems = new Dictionary<string, List<WriteRequest>>
+            requests.Add(new Amazon.DynamoDBv2.Model.WriteRequest(new Amazon.DynamoDBv2.Model.PutRequest(
+                new Dictionary<string, AwsAttributeValue>
+                {
+                    ["pk"] = new AwsAttributeValue($"aws-bw-{batch}"),
+                    ["sk"] = new AwsAttributeValue($"item-{i:D4}"),
+                    ["data"] = new AwsAttributeValue($"value-{i}")
+                })));
+        }
+        return await _fixture.AwsSdkClient.BatchWriteItemAsync(new AwsBatchWriteItemRequest
+        {
+            RequestItems = new Dictionary<string, List<Amazon.DynamoDBv2.Model.WriteRequest>>
             {
-                [_fixture.TableName] = items
+                [_fixture.TableName] = requests
             }
         });
     }
 
-    [Benchmark, BenchmarkCategory("Batch Write 25 Items")]
-    public async Task<Goa.Clients.Dynamo.Operations.Batch.BatchWriteItemResponse> Goa_BatchWriteItem()
+    [Benchmark, BenchmarkCategory("Batch Write 10 Items")]
+    public async Task<bool> Goa_BatchWrite_10Items()
     {
-        var baseCounter = Interlocked.Add(ref _counter, 25);
-        var items = new List<Goa.Clients.Dynamo.Operations.Batch.BatchWriteRequestItem>();
-        for (var i = 0; i < 25; i++)
+        var batch = Interlocked.Increment(ref _counter);
+        var requests = new List<BatchWriteRequestItem>();
+        for (var i = 0; i < 10; i++)
         {
-            items.Add(new Goa.Clients.Dynamo.Operations.Batch.BatchWriteRequestItem
+            requests.Add(new BatchWriteRequestItem
             {
-                PutRequest = new Goa.Clients.Dynamo.Operations.Batch.PutRequest
+                PutRequest = new GoaPutRequest
                 {
                     Item = new Dictionary<string, GoaModels.AttributeValue>
                     {
-                        ["pk"] = new() { S = $"bw-goa-{baseCounter + i}" },
-                        ["sk"] = new() { S = "item" },
-                        ["data"] = new() { S = $"value-{baseCounter + i}" }
+                        ["pk"] = GoaModels.AttributeValue.String($"goa-bw-{batch}"),
+                        ["sk"] = GoaModels.AttributeValue.String($"item-{i:D4}"),
+                        ["data"] = GoaModels.AttributeValue.String($"value-{i}")
                     }
                 }
             });
         }
-
-        var response = await _fixture.GoaClient.BatchWriteItemAsync(new Goa.Clients.Dynamo.Operations.Batch.BatchWriteItemRequest
+        var response = await _fixture.GoaClient.BatchWriteItemAsync(new GoaBatchWriteItemRequest
         {
-            RequestItems = new Dictionary<string, List<Goa.Clients.Dynamo.Operations.Batch.BatchWriteRequestItem>>
+            RequestItems = new Dictionary<string, List<BatchWriteRequestItem>>
             {
-                [_fixture.TableName] = items
+                [_fixture.TableName] = requests
             }
         });
-        return response.Value;
+        return !response.IsError;
+    }
+
+    [Benchmark, BenchmarkCategory("Batch Write 10 Items")]
+    public async Task<EfficientBatchWriteItemResponse> Efficient_BatchWrite_10Items()
+    {
+        var batch = Interlocked.Increment(ref _counter);
+        var operations = new List<BatchWriteOperation>();
+        for (var i = 0; i < 10; i++)
+        {
+            operations.Add(new BatchWriteOperation(new BatchWritePutRequest(new Document
+            {
+                ["pk"] = $"eff-bw-{batch}",
+                ["sk"] = $"item-{i:D4}",
+                ["data"] = $"value-{i}"
+            })));
+        }
+        return await _fixture.EfficientClient.BatchWriteItemAsync(new EfficientBatchWriteItemRequest
+        {
+            RequestItems = new Dictionary<string, IReadOnlyList<BatchWriteOperation>>
+            {
+                [_fixture.TableName] = operations
+            }
+        });
+    }
+
+    [Benchmark(Baseline = true), BenchmarkCategory("Batch Write 25 Items")]
+    public async Task<Amazon.DynamoDBv2.Model.BatchWriteItemResponse> AwsSdk_BatchWrite_25Items()
+    {
+        var batch = Interlocked.Increment(ref _counter);
+        var requests = new List<Amazon.DynamoDBv2.Model.WriteRequest>();
+        for (var i = 0; i < 25; i++)
+        {
+            requests.Add(new Amazon.DynamoDBv2.Model.WriteRequest(new Amazon.DynamoDBv2.Model.PutRequest(
+                new Dictionary<string, AwsAttributeValue>
+                {
+                    ["pk"] = new AwsAttributeValue($"aws-bw25-{batch}"),
+                    ["sk"] = new AwsAttributeValue($"item-{i:D4}"),
+                    ["data"] = new AwsAttributeValue($"value-{i}")
+                })));
+        }
+        return await _fixture.AwsSdkClient.BatchWriteItemAsync(new AwsBatchWriteItemRequest
+        {
+            RequestItems = new Dictionary<string, List<Amazon.DynamoDBv2.Model.WriteRequest>>
+            {
+                [_fixture.TableName] = requests
+            }
+        });
     }
 
     [Benchmark, BenchmarkCategory("Batch Write 25 Items")]
-    public async Task<EfficientDynamoDb.Operations.BatchWriteItem.BatchWriteItemResponse> Efficient_BatchWriteItem()
+    public async Task<bool> Goa_BatchWrite_25Items()
     {
-        var baseCounter = Interlocked.Add(ref _counter, 25);
-        var items = new List<EfficientDynamoDb.Operations.BatchWriteItem.BatchWriteOperation>();
+        var batch = Interlocked.Increment(ref _counter);
+        var requests = new List<BatchWriteRequestItem>();
         for (var i = 0; i < 25; i++)
         {
-            items.Add(new EfficientDynamoDb.Operations.BatchWriteItem.BatchWriteOperation(
-                new EfficientDynamoDb.Operations.BatchWriteItem.BatchWritePutRequest(new Document
-                {
-                    ["pk"] = $"bw-eff-{baseCounter + i}",
-                    ["sk"] = "item",
-                    ["data"] = $"value-{baseCounter + i}"
-                })));
-        }
-
-        return await _fixture.EfficientClient.BatchWriteItemAsync(new EfficientDynamoDb.Operations.BatchWriteItem.BatchWriteItemRequest
-        {
-            RequestItems = new Dictionary<string, IReadOnlyList<EfficientDynamoDb.Operations.BatchWriteItem.BatchWriteOperation>>
+            requests.Add(new BatchWriteRequestItem
             {
-                [_fixture.TableName] = items
+                PutRequest = new GoaPutRequest
+                {
+                    Item = new Dictionary<string, GoaModels.AttributeValue>
+                    {
+                        ["pk"] = GoaModels.AttributeValue.String($"goa-bw25-{batch}"),
+                        ["sk"] = GoaModels.AttributeValue.String($"item-{i:D4}"),
+                        ["data"] = GoaModels.AttributeValue.String($"value-{i}")
+                    }
+                }
+            });
+        }
+        var response = await _fixture.GoaClient.BatchWriteItemAsync(new GoaBatchWriteItemRequest
+        {
+            RequestItems = new Dictionary<string, List<BatchWriteRequestItem>>
+            {
+                [_fixture.TableName] = requests
+            }
+        });
+        return !response.IsError;
+    }
+
+    [Benchmark, BenchmarkCategory("Batch Write 25 Items")]
+    public async Task<EfficientBatchWriteItemResponse> Efficient_BatchWrite_25Items()
+    {
+        var batch = Interlocked.Increment(ref _counter);
+        var operations = new List<BatchWriteOperation>();
+        for (var i = 0; i < 25; i++)
+        {
+            operations.Add(new BatchWriteOperation(new BatchWritePutRequest(new Document
+            {
+                ["pk"] = $"eff-bw25-{batch}",
+                ["sk"] = $"item-{i:D4}",
+                ["data"] = $"value-{i}"
+            })));
+        }
+        return await _fixture.EfficientClient.BatchWriteItemAsync(new EfficientBatchWriteItemRequest
+        {
+            RequestItems = new Dictionary<string, IReadOnlyList<BatchWriteOperation>>
+            {
+                [_fixture.TableName] = operations
             }
         });
     }

@@ -1,4 +1,4 @@
-﻿namespace Goa.Clients.Dynamo.Models;
+namespace Goa.Clients.Dynamo.Models;
 
 /// <summary>
 /// Represents a DynamoDB record with strongly-typed attribute values.
@@ -8,7 +8,15 @@ public class DynamoRecord : Dictionary<string, AttributeValue>
     /// <summary>
     /// Initializes a new, empty instance of the <see cref="DynamoRecord"/> class.
     /// </summary>
-    public DynamoRecord()
+    public DynamoRecord() : base(StringComparer.Ordinal)
+    {
+    }
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="DynamoRecord"/> class with the specified capacity.
+    /// </summary>
+    /// <param name="capacity">The initial capacity of the record.</param>
+    public DynamoRecord(int capacity) : base(capacity, StringComparer.Ordinal)
     {
     }
 
@@ -17,7 +25,7 @@ public class DynamoRecord : Dictionary<string, AttributeValue>
     /// by copying all key-value pairs from the specified dictionary.
     /// </summary>
     /// <param name="record">A dictionary containing DynamoDB attribute names and their values.</param>
-    public DynamoRecord(Dictionary<string, AttributeValue> record)
+    public DynamoRecord(Dictionary<string, AttributeValue> record) : base(StringComparer.Ordinal)
     {
         foreach (var item in record)
             this[item.Key] = item.Value;
@@ -30,13 +38,13 @@ public class DynamoRecord : Dictionary<string, AttributeValue>
     /// <returns>The attribute value or null if not found.</returns>
     public new AttributeValue? this[string attributeName]
     {
-        get => base.TryGetValue(attributeName, out var attributeValue) ? attributeValue : null;
+        get => base.TryGetValue(attributeName, out var attributeValue) ? (AttributeValue?)attributeValue : null;
         set
         {
-            if (value == null)
+            if (value is null)
                 Remove(attributeName);
             else
-                base[attributeName] = value;
+                base[attributeName] = value.Value;
         }
     }
 }

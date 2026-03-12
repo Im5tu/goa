@@ -112,17 +112,17 @@ public class TypedExtensionTests
         var mock = new Mock<IDynamoClient>();
         var lastKey = new Dictionary<string, AttributeValue>
         {
-            ["pk"] = new AttributeValue { S = "lastPk" }
+            ["pk"] = AttributeValue.String("lastPk")
         };
 
         ErrorOr<QueryResponse> firstPage = new QueryResponse
         {
-            Items = [new DynamoRecord { ["pk"] = new AttributeValue { S = "pk1" } }],
+            Items = [new DynamoRecord { ["pk"] = AttributeValue.String("pk1") }],
             LastEvaluatedKey = lastKey
         };
         ErrorOr<QueryResponse> secondPage = new QueryResponse
         {
-            Items = [new DynamoRecord { ["pk"] = new AttributeValue { S = "pk2" } }],
+            Items = [new DynamoRecord { ["pk"] = AttributeValue.String("pk2") }],
             LastEvaluatedKey = null
         };
 
@@ -144,17 +144,17 @@ public class TypedExtensionTests
         var mock = new Mock<IDynamoClient>();
         var lastKey = new Dictionary<string, AttributeValue>
         {
-            ["pk"] = new AttributeValue { S = "lastPk" }
+            ["pk"] = AttributeValue.String("lastPk")
         };
 
         ErrorOr<ScanResponse> firstPage = new ScanResponse
         {
-            Items = [new DynamoRecord { ["pk"] = new AttributeValue { S = "pk1" } }],
+            Items = [new DynamoRecord { ["pk"] = AttributeValue.String("pk1") }],
             LastEvaluatedKey = lastKey
         };
         ErrorOr<ScanResponse> secondPage = new ScanResponse
         {
-            Items = [new DynamoRecord { ["pk"] = new AttributeValue { S = "pk2" } }],
+            Items = [new DynamoRecord { ["pk"] = AttributeValue.String("pk2") }],
             LastEvaluatedKey = null
         };
 

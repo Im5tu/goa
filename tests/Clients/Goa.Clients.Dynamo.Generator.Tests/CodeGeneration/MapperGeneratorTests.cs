@@ -103,9 +103,9 @@ public class MapperGeneratorTests
 
         // Assert
         await Assert.That(result)
-            .Contains("record[\"PK\"] = new AttributeValue { S = $\"USER#{ model.Id?.ToString() ?? \"\" }\" };");
+            .Contains("record[\"PK\"] = AttributeValue.String($\"USER#{ model.Id?.ToString() ?? \"\" }\");");
         await Assert.That(result)
-            .Contains("record[\"SK\"] = new AttributeValue { S = \"METADATA\" };");
+            .Contains("record[\"SK\"] = AttributeValue.String(\"METADATA\");");
     }
 
     [Test]
@@ -140,9 +140,9 @@ public class MapperGeneratorTests
 
         // Assert
         await Assert.That(result)
-            .Contains("record[\"HashKey\"] = new AttributeValue { S = $\"USER#{ model.Id?.ToString() ?? \"\" }\" };");
+            .Contains("record[\"HashKey\"] = AttributeValue.String($\"USER#{ model.Id?.ToString() ?? \"\" }\");");
         await Assert.That(result)
-            .Contains("record[\"RangeKey\"] = new AttributeValue { S = \"METADATA\" };");
+            .Contains("record[\"RangeKey\"] = AttributeValue.String(\"METADATA\");");
     }
 
     [Test]
@@ -184,9 +184,9 @@ public class MapperGeneratorTests
 
         // Assert - Based on actual generated output
         await Assert.That(result)
-            .Contains("record[\"GSI1PK\"] = new AttributeValue { S = $\"EMAIL#{ model.Email?.ToString() ?? \"\" }\" };");
+            .Contains("record[\"GSI1PK\"] = AttributeValue.String($\"EMAIL#{ model.Email?.ToString() ?? \"\" }\");");
         await Assert.That(result)
-            .Contains("record[\"GSI1SK\"] = new AttributeValue { S = $\"USER#{ model.Id?.ToString() ?? \"\" }\" };");
+            .Contains("record[\"GSI1SK\"] = AttributeValue.String($\"USER#{ model.Id?.ToString() ?? \"\" }\");");
     }
 
     [Test]
@@ -219,13 +219,17 @@ public class MapperGeneratorTests
         // Act
         var result = _generator.GenerateCode(types, context);
 
-        // Assert - Based on actual output from debug test
+        // Assert - Strings use conditional assignment to skip empty strings, Age uses direct assignment
         await Assert.That(result)
-            .Contains("record[\"Id\"] = new AttributeValue { S = model.Id };");
+            .Contains("if (!string.IsNullOrEmpty(model.Id))");
         await Assert.That(result)
-            .Contains("record[\"Name\"] = new AttributeValue { S = model.Name };");
+            .Contains("record[\"Id\"] = AttributeValue.String(model.Id);");
         await Assert.That(result)
-            .Contains("record[\"Age\"] = new AttributeValue { N = model.Age.ToString(CultureInfo.InvariantCulture) };");
+            .Contains("if (!string.IsNullOrEmpty(model.Name))");
+        await Assert.That(result)
+            .Contains("record[\"Name\"] = AttributeValue.String(model.Name);");
+        await Assert.That(result)
+            .Contains("record[\"Age\"] = AttributeValue.Number(model.Age.ToString(CultureInfo.InvariantCulture));");
     }
 
     [Test]
@@ -260,11 +264,11 @@ public class MapperGeneratorTests
         // Assert
         // DateTime should use DateTimeTypeHandler
         await Assert.That(result)
-            .Contains("record[\"CreatedAt\"] = new AttributeValue { S = model.CreatedAt.ToString(\"o\") };");
+            .Contains("record[\"CreatedAt\"] = AttributeValue.String(model.CreatedAt.ToString(\"o\"));");
 
         // UnixTimestamp should use UnixTimestampTypeHandler
         await Assert.That(result)
-            .Contains("record[\"UpdatedAt\"] = new AttributeValue { N = ((DateTimeOffset)model.UpdatedAt).ToUnixTimeSeconds().ToString() };");
+            .Contains("record[\"UpdatedAt\"] = AttributeValue.Number(((DateTimeOffset)model.UpdatedAt).ToUnixTimeSeconds().ToString());");
     }
 
     [Test]
@@ -303,7 +307,7 @@ public class MapperGeneratorTests
 
         // Assert - Based on actual CollectionTypeHandler output
         await Assert.That(result)
-            .Contains("record[\"Tags\"] = (model.Tags != null && model.Tags.Any() ? new AttributeValue { SS = model.Tags.ToList() } : new AttributeValue { NULL = true });");
+            .Contains("record[\"Tags\"] = (model.Tags != null && model.Tags.Any() ? AttributeValue.FromStringSet(model.Tags.ToList()) : AttributeValue.Null());");
     }
 
     [Test]

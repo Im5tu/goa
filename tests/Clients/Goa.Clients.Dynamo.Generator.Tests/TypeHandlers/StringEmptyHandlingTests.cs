@@ -75,7 +75,7 @@ public class StringEmptyHandlingTests
             .Because("Non-nullable strings should check for both null and empty");
 
         await Assert.That(result)
-            .Contains("record[\"Name\"] = new AttributeValue { S = model.Name };")
+            .Contains("record[\"Name\"] = AttributeValue.String(model.Name);")
             .Because("Should assign S attribute when string is not null or empty");
     }
 
@@ -101,7 +101,7 @@ public class StringEmptyHandlingTests
             .Because("Nullable strings should check for both null and empty");
 
         await Assert.That(result)
-            .Contains("record[\"Description\"] = new AttributeValue { S = model.Description };")
+            .Contains("record[\"Description\"] = AttributeValue.String(model.Description);")
             .Because("Should assign S attribute when string is not null or empty");
     }
 

@@ -20,7 +20,7 @@ public static class DynamoRecordExtensions
         if (!record.TryGetValue(columnName, out var attributeValue))
             return false;
 
-        if (attributeValue == null || attributeValue.NULL == true)
+        if (attributeValue.Type == AttributeType.Null)
         {
             value = null;
             return true;
@@ -46,7 +46,7 @@ public static class DynamoRecordExtensions
         if (!record.TryGetValue(columnName, out var attributeValue))
             return false;
 
-        if (attributeValue == null || attributeValue.NULL == true || attributeValue.S == null)
+        if (attributeValue.Type == AttributeType.Null || attributeValue.S is null)
             return false;
 
         value = attributeValue.S;
@@ -66,7 +66,7 @@ public static class DynamoRecordExtensions
         if (!record.TryGetValue(columnName, out var attributeValue))
             return false;
 
-        if (attributeValue == null || attributeValue.NULL == true)
+        if (attributeValue.Type == AttributeType.Null)
             return false;
 
         if (attributeValue.BOOL == null)
@@ -89,7 +89,7 @@ public static class DynamoRecordExtensions
         if (!record.TryGetValue(columnName, out var attributeValue))
             return false;
 
-        if (attributeValue == null || attributeValue.NULL == true)
+        if (attributeValue.Type == AttributeType.Null)
         {
             value = null;
             return true;
@@ -112,7 +112,7 @@ public static class DynamoRecordExtensions
         if (!record.TryGetValue(columnName, out var attributeValue))
             return false;
 
-        if (attributeValue == null || attributeValue.NULL == true)
+        if (attributeValue.Type == AttributeType.Null)
             return false;
 
         return !string.IsNullOrEmpty(attributeValue.N) && short.TryParse(attributeValue.N, out value);
@@ -131,7 +131,7 @@ public static class DynamoRecordExtensions
         if (!record.TryGetValue(columnName, out var attributeValue))
             return false;
 
-        if (attributeValue == null || attributeValue.NULL == true)
+        if (attributeValue.Type == AttributeType.Null)
         {
             value = null;
             return true;
@@ -161,7 +161,7 @@ public static class DynamoRecordExtensions
         if (!record.TryGetValue(columnName, out var attributeValue))
             return false;
 
-        if (attributeValue == null || attributeValue.NULL == true)
+        if (attributeValue.Type == AttributeType.Null)
             return false;
 
         return !string.IsNullOrEmpty(attributeValue.N) && int.TryParse(attributeValue.N, out value);
@@ -180,7 +180,7 @@ public static class DynamoRecordExtensions
         if (!record.TryGetValue(columnName, out var attributeValue))
             return false;
 
-        if (attributeValue == null || attributeValue.NULL == true)
+        if (attributeValue.Type == AttributeType.Null)
         {
             value = null;
             return true;
@@ -210,7 +210,7 @@ public static class DynamoRecordExtensions
         if (!record.TryGetValue(columnName, out var attributeValue))
             return false;
 
-        if (attributeValue == null || attributeValue.NULL == true)
+        if (attributeValue.Type == AttributeType.Null)
             return false;
 
         return !string.IsNullOrEmpty(attributeValue.N) && long.TryParse(attributeValue.N, out value);
@@ -229,7 +229,7 @@ public static class DynamoRecordExtensions
         if (!record.TryGetValue(columnName, out var attributeValue))
             return false;
 
-        if (attributeValue == null || attributeValue.NULL == true)
+        if (attributeValue.Type == AttributeType.Null)
         {
             value = null;
             return true;
@@ -259,7 +259,7 @@ public static class DynamoRecordExtensions
         if (!record.TryGetValue(columnName, out var attributeValue))
             return false;
 
-        if (attributeValue == null || attributeValue.NULL == true)
+        if (attributeValue.Type == AttributeType.Null)
             return false;
 
         return !string.IsNullOrEmpty(attributeValue.N) && double.TryParse(attributeValue.N, out value);
@@ -278,7 +278,7 @@ public static class DynamoRecordExtensions
         if (!record.TryGetValue(columnName, out var attributeValue))
             return false;
 
-        if (attributeValue == null || attributeValue.NULL == true)
+        if (attributeValue.Type == AttributeType.Null)
         {
             value = null;
             return true;
@@ -308,7 +308,7 @@ public static class DynamoRecordExtensions
         if (!record.TryGetValue(columnName, out var attributeValue))
             return false;
 
-        if (attributeValue == null || attributeValue.NULL == true)
+        if (attributeValue.Type == AttributeType.Null)
             return false;
 
         return !string.IsNullOrEmpty(attributeValue.N) && float.TryParse(attributeValue.N, out value);
@@ -327,7 +327,7 @@ public static class DynamoRecordExtensions
         if (!record.TryGetValue(columnName, out var attributeValue))
             return false;
 
-        if (attributeValue == null || attributeValue.NULL == true)
+        if (attributeValue.Type == AttributeType.Null)
         {
             value = null;
             return true;
@@ -357,7 +357,7 @@ public static class DynamoRecordExtensions
         if (!record.TryGetValue(columnName, out var attributeValue))
             return false;
 
-        if (attributeValue == null || attributeValue.NULL == true)
+        if (attributeValue.Type == AttributeType.Null)
             return false;
 
         return !string.IsNullOrEmpty(attributeValue.N) && decimal.TryParse(attributeValue.N, out value);
@@ -376,7 +376,7 @@ public static class DynamoRecordExtensions
         if (!record.TryGetValue(columnName, out var attributeValue))
             return false;
 
-        if (attributeValue == null || attributeValue.NULL == true)
+        if (attributeValue.Type == AttributeType.Null)
         {
             value = null;
             return true;
@@ -406,7 +406,7 @@ public static class DynamoRecordExtensions
         if (!record.TryGetValue(columnName, out var attributeValue))
             return false;
 
-        if (attributeValue == null || attributeValue.NULL == true)
+        if (attributeValue.Type == AttributeType.Null)
             return false;
 
         return !string.IsNullOrEmpty(attributeValue.S) && DateTime.TryParse(attributeValue.S, out value);
@@ -425,7 +425,7 @@ public static class DynamoRecordExtensions
         if (!record.TryGetValue(columnName, out var attributeValue))
             return false;
 
-        if (attributeValue == null || attributeValue.NULL == true)
+        if (attributeValue.Type == AttributeType.Null)
         {
             value = null;
             return true;
@@ -456,7 +456,7 @@ public static class DynamoRecordExtensions
         if (!record.TryGetValue(columnName, out var attributeValue))
             return false;
 
-        if (attributeValue == null || attributeValue.NULL == true)
+        if (attributeValue.Type == AttributeType.Null)
             return false;
 
         return !string.IsNullOrEmpty(attributeValue.S) && Enum.TryParse<T>(attributeValue.S, out value);
@@ -476,7 +476,7 @@ public static class DynamoRecordExtensions
         if (!record.TryGetValue(columnName, out var attributeValue))
             return false;
 
-        if (attributeValue == null || attributeValue.NULL == true)
+        if (attributeValue.Type == AttributeType.Null)
         {
             value = null;
             return true;
@@ -506,7 +506,7 @@ public static class DynamoRecordExtensions
         if (!record.TryGetValue(columnName, out var attributeValue))
             return false;
 
-        if (attributeValue == null || attributeValue.NULL == true)
+        if (attributeValue.Type == AttributeType.Null)
         {
             value = Enumerable.Empty<string>();
             return true;
@@ -532,7 +532,7 @@ public static class DynamoRecordExtensions
         if (!record.TryGetValue(columnName, out var attributeValue))
             return false;
 
-        if (attributeValue == null || attributeValue.NULL == true)
+        if (attributeValue.Type == AttributeType.Null)
         {
             value = Enumerable.Empty<int>();
             return true;
@@ -560,7 +560,7 @@ public static class DynamoRecordExtensions
         if (!record.TryGetValue(columnName, out var attributeValue))
             return false;
 
-        if (attributeValue == null || attributeValue.NULL == true)
+        if (attributeValue.Type == AttributeType.Null)
         {
             value = Enumerable.Empty<long>();
             return true;
@@ -588,7 +588,7 @@ public static class DynamoRecordExtensions
         if (!record.TryGetValue(columnName, out var attributeValue))
             return false;
 
-        if (attributeValue == null || attributeValue.NULL == true)
+        if (attributeValue.Type == AttributeType.Null)
         {
             value = Enumerable.Empty<double>();
             return true;
@@ -617,7 +617,7 @@ public static class DynamoRecordExtensions
         if (!record.TryGetValue(columnName, out var attributeValue))
             return false;
 
-        if (attributeValue == null || attributeValue.NULL == true)
+        if (attributeValue.Type == AttributeType.Null)
         {
             value = Enumerable.Empty<T>();
             return true;
@@ -645,7 +645,7 @@ public static class DynamoRecordExtensions
         if (!record.TryGetValue(columnName, out var attributeValue))
             return false;
 
-        if (attributeValue == null || attributeValue.NULL == true)
+        if (attributeValue.Type == AttributeType.Null)
             return false;
 
         return !string.IsNullOrEmpty(attributeValue.N) && byte.TryParse(attributeValue.N, out value);
@@ -664,7 +664,7 @@ public static class DynamoRecordExtensions
         if (!record.TryGetValue(columnName, out var attributeValue))
             return false;
 
-        if (attributeValue == null || attributeValue.NULL == true)
+        if (attributeValue.Type == AttributeType.Null)
         {
             value = null;
             return true;
@@ -694,7 +694,7 @@ public static class DynamoRecordExtensions
         if (!record.TryGetValue(columnName, out var attributeValue))
             return false;
 
-        if (attributeValue == null || attributeValue.NULL == true)
+        if (attributeValue.Type == AttributeType.Null)
             return false;
 
         return !string.IsNullOrEmpty(attributeValue.N) && sbyte.TryParse(attributeValue.N, out value);
@@ -713,7 +713,7 @@ public static class DynamoRecordExtensions
         if (!record.TryGetValue(columnName, out var attributeValue))
             return false;
 
-        if (attributeValue == null || attributeValue.NULL == true)
+        if (attributeValue.Type == AttributeType.Null)
         {
             value = null;
             return true;
@@ -743,7 +743,7 @@ public static class DynamoRecordExtensions
         if (!record.TryGetValue(columnName, out var attributeValue))
             return false;
 
-        if (attributeValue == null || attributeValue.NULL == true)
+        if (attributeValue.Type == AttributeType.Null)
             return false;
 
         return !string.IsNullOrEmpty(attributeValue.N) && ushort.TryParse(attributeValue.N, out value);
@@ -762,7 +762,7 @@ public static class DynamoRecordExtensions
         if (!record.TryGetValue(columnName, out var attributeValue))
             return false;
 
-        if (attributeValue == null || attributeValue.NULL == true)
+        if (attributeValue.Type == AttributeType.Null)
         {
             value = null;
             return true;
@@ -792,7 +792,7 @@ public static class DynamoRecordExtensions
         if (!record.TryGetValue(columnName, out var attributeValue))
             return false;
 
-        if (attributeValue == null || attributeValue.NULL == true)
+        if (attributeValue.Type == AttributeType.Null)
             return false;
 
         return !string.IsNullOrEmpty(attributeValue.N) && uint.TryParse(attributeValue.N, out value);
@@ -811,7 +811,7 @@ public static class DynamoRecordExtensions
         if (!record.TryGetValue(columnName, out var attributeValue))
             return false;
 
-        if (attributeValue == null || attributeValue.NULL == true)
+        if (attributeValue.Type == AttributeType.Null)
         {
             value = null;
             return true;
@@ -841,7 +841,7 @@ public static class DynamoRecordExtensions
         if (!record.TryGetValue(columnName, out var attributeValue))
             return false;
 
-        if (attributeValue == null || attributeValue.NULL == true)
+        if (attributeValue.Type == AttributeType.Null)
             return false;
 
         return !string.IsNullOrEmpty(attributeValue.N) && ulong.TryParse(attributeValue.N, out value);
@@ -860,7 +860,7 @@ public static class DynamoRecordExtensions
         if (!record.TryGetValue(columnName, out var attributeValue))
             return false;
 
-        if (attributeValue == null || attributeValue.NULL == true)
+        if (attributeValue.Type == AttributeType.Null)
         {
             value = null;
             return true;
@@ -890,7 +890,7 @@ public static class DynamoRecordExtensions
         if (!record.TryGetValue(columnName, out var attributeValue))
             return false;
 
-        if (attributeValue == null || attributeValue.NULL == true)
+        if (attributeValue.Type == AttributeType.Null)
             return false;
 
         return !string.IsNullOrEmpty(attributeValue.S) && DateTimeOffset.TryParse(attributeValue.S, out value);
@@ -909,7 +909,7 @@ public static class DynamoRecordExtensions
         if (!record.TryGetValue(columnName, out var attributeValue))
             return false;
 
-        if (attributeValue == null || attributeValue.NULL == true)
+        if (attributeValue.Type == AttributeType.Null)
         {
             value = null;
             return true;
@@ -939,7 +939,7 @@ public static class DynamoRecordExtensions
         if (!record.TryGetValue(columnName, out var attributeValue))
             return false;
 
-        if (attributeValue == null || attributeValue.NULL == true)
+        if (attributeValue.Type == AttributeType.Null)
             return false;
 
         return !string.IsNullOrEmpty(attributeValue.S) && TimeSpan.TryParse(attributeValue.S, out value);
@@ -958,7 +958,7 @@ public static class DynamoRecordExtensions
         if (!record.TryGetValue(columnName, out var attributeValue))
             return false;
 
-        if (attributeValue == null || attributeValue.NULL == true)
+        if (attributeValue.Type == AttributeType.Null)
         {
             value = null;
             return true;
@@ -988,7 +988,7 @@ public static class DynamoRecordExtensions
         if (!record.TryGetValue(columnName, out var attributeValue))
             return false;
 
-        if (attributeValue == null || attributeValue.NULL == true)
+        if (attributeValue.Type == AttributeType.Null)
             return false;
 
         return !string.IsNullOrEmpty(attributeValue.S) && Guid.TryParse(attributeValue.S, out value);
@@ -1007,7 +1007,7 @@ public static class DynamoRecordExtensions
         if (!record.TryGetValue(columnName, out var attributeValue))
             return false;
 
-        if (attributeValue == null || attributeValue.NULL == true)
+        if (attributeValue.Type == AttributeType.Null)
         {
             value = null;
             return true;
@@ -1037,7 +1037,7 @@ public static class DynamoRecordExtensions
         if (!record.TryGetValue(columnName, out var attributeValue))
             return false;
 
-        if (attributeValue == null || attributeValue.NULL == true)
+        if (attributeValue.Type == AttributeType.Null)
         {
             value = Enumerable.Empty<DateTime>();
             return true;
@@ -1065,7 +1065,7 @@ public static class DynamoRecordExtensions
         if (!record.TryGetValue(columnName, out var attributeValue))
             return false;
 
-        if (attributeValue == null || attributeValue.NULL == true)
+        if (attributeValue.Type == AttributeType.Null)
             return true; // Empty dictionary for NULL
 
         if (attributeValue.M == null)
@@ -1073,7 +1073,7 @@ public static class DynamoRecordExtensions
 
         foreach (var kvp in attributeValue.M)
         {
-            if (kvp.Value?.S != null)
+            if (kvp.Value.S != null)
             {
                 value[kvp.Key] = kvp.Value.S;
             }
@@ -1094,7 +1094,7 @@ public static class DynamoRecordExtensions
         if (!record.TryGetValue(columnName, out var attributeValue))
             return false;
 
-        if (attributeValue == null || attributeValue.NULL == true)
+        if (attributeValue.Type == AttributeType.Null)
         {
             value = null;
             return true;
@@ -1106,7 +1106,7 @@ public static class DynamoRecordExtensions
         value = new Dictionary<string, string>();
         foreach (var kvp in attributeValue.M)
         {
-            if (kvp.Value?.S != null)
+            if (kvp.Value.S != null)
             {
                 value[kvp.Key] = kvp.Value.S;
             }
@@ -1127,7 +1127,7 @@ public static class DynamoRecordExtensions
         if (!record.TryGetValue(columnName, out var attributeValue))
             return false;
 
-        if (attributeValue == null || attributeValue.NULL == true)
+        if (attributeValue.Type == AttributeType.Null)
             return true; // Empty dictionary for NULL
 
         if (attributeValue.M == null)
@@ -1135,7 +1135,7 @@ public static class DynamoRecordExtensions
 
         foreach (var kvp in attributeValue.M)
         {
-            if (kvp.Value?.N != null && int.TryParse(kvp.Value.N, out var intValue))
+            if (kvp.Value.N != null && int.TryParse(kvp.Value.N, out var intValue))
             {
                 value[kvp.Key] = intValue;
             }
@@ -1156,7 +1156,7 @@ public static class DynamoRecordExtensions
         if (!record.TryGetValue(columnName, out var attributeValue))
             return false;
 
-        if (attributeValue == null || attributeValue.NULL == true)
+        if (attributeValue.Type == AttributeType.Null)
         {
             value = null;
             return true;
@@ -1168,7 +1168,7 @@ public static class DynamoRecordExtensions
         value = new Dictionary<string, int>();
         foreach (var kvp in attributeValue.M)
         {
-            if (kvp.Value?.N != null && int.TryParse(kvp.Value.N, out var intValue))
+            if (kvp.Value.N != null && int.TryParse(kvp.Value.N, out var intValue))
             {
                 value[kvp.Key] = intValue;
             }
@@ -1189,7 +1189,7 @@ public static class DynamoRecordExtensions
         if (!record.TryGetValue(columnName, out var attributeValue))
             return false;
 
-        if (attributeValue == null || attributeValue.NULL == true)
+        if (attributeValue.Type == AttributeType.Null)
             return false;
 
         if (string.IsNullOrEmpty(attributeValue.N))
@@ -1223,7 +1223,7 @@ public static class DynamoRecordExtensions
         if (!record.TryGetValue(columnName, out var attributeValue))
             return false;
 
-        if (attributeValue == null || attributeValue.NULL == true)
+        if (attributeValue.Type == AttributeType.Null)
         {
             value = null;
             return true;
@@ -1260,7 +1260,7 @@ public static class DynamoRecordExtensions
         if (!record.TryGetValue(columnName, out var attributeValue))
             return false;
 
-        if (attributeValue == null || attributeValue.NULL == true)
+        if (attributeValue.Type == AttributeType.Null)
             return false;
 
         if (string.IsNullOrEmpty(attributeValue.N))
@@ -1294,7 +1294,7 @@ public static class DynamoRecordExtensions
         if (!record.TryGetValue(columnName, out var attributeValue))
             return false;
 
-        if (attributeValue == null || attributeValue.NULL == true)
+        if (attributeValue.Type == AttributeType.Null)
         {
             value = null;
             return true;
@@ -1331,7 +1331,7 @@ public static class DynamoRecordExtensions
         if (!record.TryGetValue(columnName, out var attributeValue))
             return false;
 
-        if (attributeValue == null || attributeValue.NULL == true)
+        if (attributeValue.Type == AttributeType.Null)
             return false;
 
         if (string.IsNullOrEmpty(attributeValue.N))
@@ -1365,7 +1365,7 @@ public static class DynamoRecordExtensions
         if (!record.TryGetValue(columnName, out var attributeValue))
             return false;
 
-        if (attributeValue == null || attributeValue.NULL == true)
+        if (attributeValue.Type == AttributeType.Null)
         {
             value = null;
             return true;
@@ -1402,7 +1402,7 @@ public static class DynamoRecordExtensions
         if (!record.TryGetValue(columnName, out var attributeValue))
             return false;
 
-        if (attributeValue == null || attributeValue.NULL == true)
+        if (attributeValue.Type == AttributeType.Null)
             return false;
 
         if (string.IsNullOrEmpty(attributeValue.N))
@@ -1436,7 +1436,7 @@ public static class DynamoRecordExtensions
         if (!record.TryGetValue(columnName, out var attributeValue))
             return false;
 
-        if (attributeValue == null || attributeValue.NULL == true)
+        if (attributeValue.Type == AttributeType.Null)
         {
             value = null;
             return true;
@@ -1473,7 +1473,7 @@ public static class DynamoRecordExtensions
         if (!record.TryGetValue(columnName, out var attributeValue))
             return false;
 
-        if (attributeValue == null || attributeValue.NULL == true)
+        if (attributeValue.Type == AttributeType.Null)
         {
             value = null;
             return true;
@@ -1499,7 +1499,7 @@ public static class DynamoRecordExtensions
         if (!record.TryGetValue(columnName, out var attributeValue))
             return false;
 
-        if (attributeValue == null || attributeValue.NULL == true)
+        if (attributeValue.Type == AttributeType.Null)
         {
             value = null;
             return true;

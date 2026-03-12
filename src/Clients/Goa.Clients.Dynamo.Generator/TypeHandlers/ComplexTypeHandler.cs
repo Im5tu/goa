@@ -68,7 +68,7 @@ public class ComplexTypeHandler : ICompositeTypeHandler
                     namedValueType.TypeArguments.Length == 1 &&
                     namedValueType.TypeArguments[0].SpecialType == SpecialType.System_String)
                 {
-                    return $"model.{propertyName} != null ? new AttributeValue {{ M = model.{propertyName}.ToDictionary(kvp => kvp.Key, kvp => kvp.Value == null || kvp.Value.Count == 0 ? new AttributeValue {{ NULL = true }} : new AttributeValue {{ SS = kvp.Value }}) }} : new AttributeValue {{ NULL = true }}";
+                    return $"model.{propertyName} != null ? AttributeValue.FromMap(model.{propertyName}.ToDictionary(kvp => kvp.Key, kvp => kvp.Value == null || kvp.Value.Count == 0 ? AttributeValue.Null() : AttributeValue.FromStringSet(kvp.Value))) : AttributeValue.Null()";
                 }
                 
                 // Special case: Dictionary<string, Dictionary<string, string>>
@@ -78,7 +78,7 @@ public class ComplexTypeHandler : ICompositeTypeHandler
                     namedValueType2.TypeArguments[0].SpecialType == SpecialType.System_String &&
                     namedValueType2.TypeArguments[1].SpecialType == SpecialType.System_String)
                 {
-                    return $"model.{propertyName} != null ? new AttributeValue {{ M = model.{propertyName}.ToDictionary(kvp => kvp.Key, kvp => new AttributeValue {{ M = (kvp.Value ?? new Dictionary<string, string>()).ToDictionary(innerKvp => innerKvp.Key, innerKvp => innerKvp.Value != null ? new AttributeValue {{ S = innerKvp.Value }} : new AttributeValue {{ NULL = true }}) }}) }} : new AttributeValue {{ NULL = true }}";
+                    return $"model.{propertyName} != null ? AttributeValue.FromMap(model.{propertyName}.ToDictionary(kvp => kvp.Key, kvp => AttributeValue.FromMap((kvp.Value ?? new Dictionary<string, string>()).ToDictionary(innerKvp => innerKvp.Key, innerKvp => innerKvp.Value != null ? AttributeValue.String(innerKvp.Value) : AttributeValue.Null())))) : AttributeValue.Null()";
                 }
                 
                 // Fallback to primitive handling for other types
@@ -86,17 +86,34 @@ public class ComplexTypeHandler : ICompositeTypeHandler
             }
             
             // For unsupported dictionary types, return NULL
-            return "new AttributeValue { NULL = true }";
+            return "AttributeValue.Null()";
         }
         
         // Handle complex types (nested objects)
         var normalizedTypeName = propertyInfo.UnderlyingType.Name.Replace(".", "_").Replace("`", "_");
-        return $"model.{propertyName} != null ? new AttributeValue {{ M = DynamoMapper.{normalizedTypeName}.ToDynamoRecord(model.{propertyName}) }} : new AttributeValue {{ NULL = true }}";
+        var isNullable = propertyInfo.IsNullable;
+        var isValueType = propertyInfo.Type.IsValueType;
+
+        if (isValueType && !isNullable)
+        {
+            // Non-nullable struct: always has a value, no null check needed
+            return $"AttributeValue.FromMap(DynamoMapper.{normalizedTypeName}.ToDynamoRecord(model.{propertyName}))";
+        }
+        else if (isValueType && isNullable)
+        {
+            // Nullable struct: check for null, unwrap with .Value
+            return $"model.{propertyName} != null ? AttributeValue.FromMap(DynamoMapper.{normalizedTypeName}.ToDynamoRecord(model.{propertyName}.Value)) : AttributeValue.Null()";
+        }
+        else
+        {
+            // Reference type: standard null check
+            return $"model.{propertyName} != null ? AttributeValue.FromMap(DynamoMapper.{normalizedTypeName}.ToDynamoRecord(model.{propertyName})) : AttributeValue.Null()";
+        }
     }
     
     public string GenerateFromDynamoRecord(PropertyInfo propertyInfo, string recordVariableName, string pkVariable, string skVariable)
     {
-        var memberName = propertyInfo.Name;
+        var memberName = propertyInfo.GetDynamoAttributeName();
         var typeName = propertyInfo.Type.ToDisplayString();
         
         // Check for dictionary types
@@ -326,22 +343,22 @@ public class ComplexTypeHandler : ICompositeTypeHandler
     {
         if (valueType.SpecialType == SpecialType.System_String)
         {
-            return $"model.{propertyName} != null ? new AttributeValue {{ M = model.{propertyName}.ToDictionary(kvp => kvp.Key, kvp => new AttributeValue {{ S = kvp.Value }}) }} : new AttributeValue {{ NULL = true }}";
+            return $"model.{propertyName} != null ? AttributeValue.FromMap(model.{propertyName}.ToDictionary(kvp => kvp.Key, kvp => kvp.Value != null ? AttributeValue.String(kvp.Value) : AttributeValue.Null())) : AttributeValue.Null()";
         }
         else if (IsNumericType(valueType))
         {
-            return $"model.{propertyName} != null ? new AttributeValue {{ M = model.{propertyName}.ToDictionary(kvp => kvp.Key, kvp => new AttributeValue {{ N = kvp.Value.ToString(CultureInfo.InvariantCulture) }}) }} : new AttributeValue {{ NULL = true }}";
+            return $"model.{propertyName} != null ? AttributeValue.FromMap(model.{propertyName}.ToDictionary(kvp => kvp.Key, kvp => AttributeValue.Number(kvp.Value.ToString(CultureInfo.InvariantCulture)))) : AttributeValue.Null()";
         }
         else if (valueType.SpecialType == SpecialType.System_DateTime)
         {
-            return $"model.{propertyName} != null ? new AttributeValue {{ M = model.{propertyName}.ToDictionary(kvp => kvp.Key, kvp => new AttributeValue {{ S = kvp.Value.ToString(\"o\") }}) }} : new AttributeValue {{ NULL = true }}";
+            return $"model.{propertyName} != null ? AttributeValue.FromMap(model.{propertyName}.ToDictionary(kvp => kvp.Key, kvp => AttributeValue.String(kvp.Value.ToString(\"o\")))) : AttributeValue.Null()";
         }
         else if (valueType.TypeKind == TypeKind.Enum)
         {
-            return $"model.{propertyName} != null ? new AttributeValue {{ M = model.{propertyName}.ToDictionary(kvp => kvp.Key, kvp => new AttributeValue {{ S = kvp.Value.ToString() }}) }} : new AttributeValue {{ NULL = true }}";
+            return $"model.{propertyName} != null ? AttributeValue.FromMap(model.{propertyName}.ToDictionary(kvp => kvp.Key, kvp => AttributeValue.String(kvp.Value.ToString()))) : AttributeValue.Null()";
         }
-        
+
         // For unsupported types, return NULL
-        return "new AttributeValue { NULL = true }";
+        return "AttributeValue.Null()";
     }
 }

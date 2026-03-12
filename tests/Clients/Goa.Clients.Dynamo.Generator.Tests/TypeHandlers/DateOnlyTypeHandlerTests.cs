@@ -61,7 +61,7 @@ public class DateOnlyTypeHandlerTests
         
         var result = _handler.GenerateToAttributeValue(property);
         
-        var expected = "new AttributeValue { S = model.CreatedDate.ToString(\"yyyy-MM-dd\") }";
+        var expected = "AttributeValue.String(model.CreatedDate.ToString(\"yyyy-MM-dd\"))";
         await Assert.That(result).IsEqualTo(expected);
     }
 

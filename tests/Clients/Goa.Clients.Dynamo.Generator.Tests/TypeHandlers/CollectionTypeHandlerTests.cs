@@ -118,7 +118,7 @@ public class CollectionTypeHandlerTests
             var property = TestModelBuilders.CreateCollectionPropertyInfo(propName, collectionType, MockSymbolFactory.PrimitiveTypes.String);
             var result = _handler.GenerateToAttributeValue(property);
             
-            var expected = $"(model.{propName} != null && model.{propName}.Any() ? new AttributeValue {{ SS = model.{propName}.ToList() }} : new AttributeValue {{ NULL = true }})";
+            var expected = $"(model.{propName} != null && model.{propName}.Any() ? AttributeValue.FromStringSet(model.{propName}.ToList()) : AttributeValue.Null())";
             await Assert.That(result)
                 .IsEqualTo(expected)
                 .Because($"String collections should generate SS (String Set) attribute value only when non-empty");
@@ -140,7 +140,7 @@ public class CollectionTypeHandlerTests
             var property = TestModelBuilders.CreateCollectionPropertyInfo(propName, collectionType, elementType);
             var result = _handler.GenerateToAttributeValue(property);
             
-            var expected = $"(model.{propName} != null && model.{propName}.Any() ? new AttributeValue {{ NS = model.{propName}.Select(x => x.ToString(CultureInfo.InvariantCulture)).ToList() }} : new AttributeValue {{ NULL = true }})";
+            var expected = $"(model.{propName} != null && model.{propName}.Any() ? AttributeValue.FromNumberSet(model.{propName}.Select(x => x.ToString(CultureInfo.InvariantCulture)).ToList()) : AttributeValue.Null())";
             await Assert.That(result)
                 .IsEqualTo(expected)
                 .Because($"Numeric collections should generate NS (Number Set) attribute value only when non-empty, with invariant culture");
@@ -155,7 +155,7 @@ public class CollectionTypeHandlerTests
         
         var result = _handler.GenerateToAttributeValue(property);
         
-        var expected = "(model.BoolArray != null && model.BoolArray.Any() ? new AttributeValue { SS = model.BoolArray.Select(x => x.ToString()).ToList() } : new AttributeValue { NULL = true })";
+        var expected = "(model.BoolArray != null && model.BoolArray.Any() ? AttributeValue.FromStringSet(model.BoolArray.Select(x => x.ToString()).ToList()) : AttributeValue.Null())";
         await Assert.That(result)
             .IsEqualTo(expected)
             .Because("Boolean collections should generate SS with ToString() conversion only when non-empty");
@@ -169,7 +169,7 @@ public class CollectionTypeHandlerTests
         
         var result = _handler.GenerateToAttributeValue(property);
         
-        var expected = "(model.GuidArray != null && model.GuidArray.Any() ? new AttributeValue { SS = model.GuidArray.Select(x => x.ToString()).ToList() } : new AttributeValue { NULL = true })";
+        var expected = "(model.GuidArray != null && model.GuidArray.Any() ? AttributeValue.FromStringSet(model.GuidArray.Select(x => x.ToString()).ToList()) : AttributeValue.Null())";
         await Assert.That(result)
             .IsEqualTo(expected)
             .Because("Guid collections should generate SS with ToString() conversion only when non-empty");
@@ -183,7 +183,7 @@ public class CollectionTypeHandlerTests
         
         var result = _handler.GenerateToAttributeValue(property);
         
-        var expected = "(model.DateTimeArray != null && model.DateTimeArray.Any() ? new AttributeValue { SS = model.DateTimeArray.Select(x => x.ToString(\"o\")).ToList() } : new AttributeValue { NULL = true })";
+        var expected = "(model.DateTimeArray != null && model.DateTimeArray.Any() ? AttributeValue.FromStringSet(model.DateTimeArray.Select(x => x.ToString(\"o\")).ToList()) : AttributeValue.Null())";
         await Assert.That(result)
             .IsEqualTo(expected)
             .Because("DateTime collections should generate SS with ISO format only when non-empty");
@@ -202,7 +202,7 @@ public class CollectionTypeHandlerTests
         
         var result = _handler.GenerateToAttributeValue(property);
         
-        var expected = "(model.PriorityArray != null && model.PriorityArray.Any() ? new AttributeValue { SS = model.PriorityArray.Select(x => x.ToString()).ToList() } : new AttributeValue { NULL = true })";
+        var expected = "(model.PriorityArray != null && model.PriorityArray.Any() ? AttributeValue.FromStringSet(model.PriorityArray.Select(x => x.ToString()).ToList()) : AttributeValue.Null())";
         await Assert.That(result)
             .IsEqualTo(expected)
             .Because("Enum collections should generate SS with ToString() conversion only when non-empty");
@@ -383,7 +383,7 @@ public class CollectionTypeHandlerTests
 
         var result = _handler.GenerateToAttributeValue(property);
 
-        var expected = "model.CustomList != null ? new AttributeValue { L = model.CustomList.Select(item => (item != null ? new AttributeValue { M = DynamoMapper.CustomClass.ToDynamoRecord(item) } : new AttributeValue { NULL = true })).ToList() } : new AttributeValue { NULL = true }";
+        var expected = "model.CustomList != null ? AttributeValue.FromList(model.CustomList.Select(item => (item != null ? AttributeValue.FromMap(DynamoMapper.CustomClass.ToDynamoRecord(item)) : AttributeValue.Null())).ToList()) : AttributeValue.Null()";
         await Assert.That(result)
             .IsEqualTo(expected)
             .Because("Complex type collections should generate L (List) attribute with M (Map) elements and handle null items");
@@ -446,7 +446,7 @@ public class CollectionTypeHandlerTests
             .Because("Complex type collections should check for null items before converting");
 
         await Assert.That(result)
-            .Contains("new AttributeValue { NULL = true }")
+            .Contains("AttributeValue.Null()")
             .Because("Null items should be represented as DynamoDB NULL attribute");
     }
 
@@ -471,8 +471,8 @@ public class CollectionTypeHandlerTests
 
         // Assert
         await Assert.That(result)
-            .Contains("L =")
-            .Because("Nested collections should use L (List) attribute type");
+            .Contains("AttributeValue.FromList(")
+            .Because("Nested collections should use List attribute type");
 
         await Assert.That(result)
             .IsNotNull()
@@ -500,8 +500,8 @@ public class CollectionTypeHandlerTests
 
         // Assert
         await Assert.That(result)
-            .Contains("L =")
-            .Because("Nested numeric collections should use L (List) attribute type");
+            .Contains("AttributeValue.FromList(")
+            .Because("Nested numeric collections should use List attribute type");
 
         await Assert.That(result)
             .IsNotNull()
@@ -533,7 +533,7 @@ public class CollectionTypeHandlerTests
             .Because("Nested collections should check for null inner collections");
 
         await Assert.That(result)
-            .Contains("NULL = true")
+            .Contains("AttributeValue.Null()")
             .Because("Null inner collections should be represented as DynamoDB NULL");
     }
 
@@ -639,7 +639,7 @@ public class CollectionTypeHandlerTests
             .Because("Three-level nested collections should be supported");
 
         await Assert.That(result)
-            .Contains("L =")
+            .Contains("AttributeValue.FromList(")
             .Because("Deep nested collections should use List attribute type");
     }
 
@@ -656,11 +656,11 @@ public class CollectionTypeHandlerTests
 
         // Assert
         await Assert.That(result)
-            .Contains("item != null ? new AttributeValue { M =")
+            .Contains("item != null ? AttributeValue.FromMap(")
             .Because("Should check each item for null");
 
         await Assert.That(result)
-            .Contains(": new AttributeValue { NULL = true }")
+            .Contains(": AttributeValue.Null()")
             .Because("Null items should be preserved as NULL attributes, not filtered out");
     }
 
@@ -685,7 +685,7 @@ public class CollectionTypeHandlerTests
 
         // Assert - The inner primitive collection mapping should use "item" (the outer lambda var),
         // not a hard-coded identifier that doesn't match the lambda parameter
-        var expected = "model.Tags != null ? new AttributeValue { L = model.Tags.Select(item => (item != null && item.Any() ? new AttributeValue { SS = item.ToList() } : new AttributeValue { NULL = true })).ToList() } : new AttributeValue { NULL = true }";
+        var expected = "model.Tags != null ? AttributeValue.FromList(model.Tags.Select(item => (item != null && item.Any() ? AttributeValue.FromStringSet(item.ToList()) : AttributeValue.Null())).ToList()) : AttributeValue.Null()";
         await Assert.That(result)
             .IsEqualTo(expected)
             .Because("Nested string collection should use the lambda variable 'item' in the inner SS mapping");
@@ -712,7 +712,7 @@ public class CollectionTypeHandlerTests
 
         // Assert - The inner primitive collection mapping should use "item" (the outer lambda var),
         // not a hard-coded identifier that doesn't match the lambda parameter
-        var expected = "model.Scores != null ? new AttributeValue { L = model.Scores.Select(item => (item != null && item.Any() ? new AttributeValue { NS = item.Select(x => x.ToString(CultureInfo.InvariantCulture)).ToList() } : new AttributeValue { NULL = true })).ToList() } : new AttributeValue { NULL = true }";
+        var expected = "model.Scores != null ? AttributeValue.FromList(model.Scores.Select(item => (item != null && item.Any() ? AttributeValue.FromNumberSet(item.Select(x => x.ToString(CultureInfo.InvariantCulture)).ToList()) : AttributeValue.Null())).ToList()) : AttributeValue.Null()";
         await Assert.That(result)
             .IsEqualTo(expected)
             .Because("Nested int collection should use the lambda variable 'item' in the inner NS mapping");

@@ -68,9 +68,9 @@ public sealed class DynamoConversationStore : IConversationStore
             [_configuration.PartitionKeyName] = _configuration.ConversationPkFormat(conversationId),
             [_configuration.SortKeyName] = _configuration.ConversationSkValue,
             [IdAttribute] = conversationId,
-            [CreatedAtAttribute] = new AttributeValue { N = now.ToUnixTimeSeconds().ToString() },
-            [UpdatedAtAttribute] = new AttributeValue { N = now.ToUnixTimeSeconds().ToString() },
-            [MessageCountAttribute] = new AttributeValue { N = "0" }
+            [CreatedAtAttribute] = AttributeValue.Number(now.ToUnixTimeSeconds().ToString()),
+            [UpdatedAtAttribute] = AttributeValue.Number(now.ToUnixTimeSeconds().ToString()),
+            [MessageCountAttribute] = AttributeValue.Number("0")
         };
 
         if (metadata is not null)
@@ -81,7 +81,7 @@ public sealed class DynamoConversationStore : IConversationStore
         if (_configuration.DefaultTtl.HasValue)
         {
             var expiresAt = now.Add(_configuration.DefaultTtl.Value).ToUnixTimeSeconds();
-            item[_configuration.TtlAttributeName] = new AttributeValue { N = expiresAt.ToString() };
+            item[_configuration.TtlAttributeName] = AttributeValue.Number(expiresAt.ToString());
         }
 
         var request = new PutItemRequest
@@ -261,9 +261,9 @@ public sealed class DynamoConversationStore : IConversationStore
                 [_configuration.SortKeyName] = _configuration.MessageSkFormat(conversationId, sequenceNumber),
                 [IdAttribute] = messageId,
                 [ConversationIdAttribute] = conversationId,
-                [SequenceNumberAttribute] = new AttributeValue { N = sequenceNumber.ToString() },
+                [SequenceNumberAttribute] = AttributeValue.Number(sequenceNumber.ToString()),
                 [RoleAttribute] = role.ToString(),
-                [CreatedAtAttribute] = new AttributeValue { N = now.ToUnixTimeSeconds().ToString() }
+                [CreatedAtAttribute] = AttributeValue.Number(now.ToUnixTimeSeconds().ToString())
             };
 
             // Serialize content blocks
@@ -275,14 +275,14 @@ public sealed class DynamoConversationStore : IConversationStore
                     return serialized.Errors;
                 contentList.Add(serialized.Value);
             }
-            messageItem[ContentAttribute] = new AttributeValue { L = contentList };
+            messageItem[ContentAttribute] = AttributeValue.FromList(contentList);
 
             // Add token usage if present
             if (tokenUsage is not null)
             {
-                messageItem[InputTokensAttribute] = new AttributeValue { N = tokenUsage.InputTokens.ToString() };
-                messageItem[OutputTokensAttribute] = new AttributeValue { N = tokenUsage.OutputTokens.ToString() };
-                messageItem[TokensAttribute] = new AttributeValue { N = tokenUsage.TotalTokens.ToString() };
+                messageItem[InputTokensAttribute] = AttributeValue.Number(tokenUsage.InputTokens.ToString());
+                messageItem[OutputTokensAttribute] = AttributeValue.Number(tokenUsage.OutputTokens.ToString());
+                messageItem[TokensAttribute] = AttributeValue.Number(tokenUsage.TotalTokens.ToString());
 
                 totalInputTokens += tokenUsage.InputTokens;
                 totalOutputTokens += tokenUsage.OutputTokens;
@@ -298,18 +298,18 @@ public sealed class DynamoConversationStore : IConversationStore
                     var tagValues = new List<AttributeValue>();
                     foreach (var value in kvp.Value)
                     {
-                        tagValues.Add(new AttributeValue { S = value });
+                        tagValues.Add(AttributeValue.String(value));
                     }
-                    tagsMap[kvp.Key] = new AttributeValue { L = tagValues };
+                    tagsMap[kvp.Key] = AttributeValue.FromList(tagValues);
                 }
-                messageItem[ExtractedTagsAttribute] = new AttributeValue { M = tagsMap };
+                messageItem[ExtractedTagsAttribute] = AttributeValue.FromMap(tagsMap);
             }
 
             // Inherit conversation TTL
             if (_configuration.DefaultTtl.HasValue)
             {
                 var expiresAt = now.Add(_configuration.DefaultTtl.Value).ToUnixTimeSeconds();
-                messageItem[_configuration.TtlAttributeName] = new AttributeValue { N = expiresAt.ToString() };
+                messageItem[_configuration.TtlAttributeName] = AttributeValue.Number(expiresAt.ToString());
             }
 
             transactItems.Add(new TransactWriteItem
@@ -343,8 +343,8 @@ public sealed class DynamoConversationStore : IConversationStore
 
         var updateExpressionValues = new Dictionary<string, AttributeValue>
         {
-            [":msgCount"] = new AttributeValue { N = messageList.Count.ToString() },
-            [":updatedAt"] = new AttributeValue { N = now.ToUnixTimeSeconds().ToString() }
+            [":msgCount"] = AttributeValue.Number(messageList.Count.ToString()),
+            [":updatedAt"] = AttributeValue.Number(now.ToUnixTimeSeconds().ToString())
         };
 
         if (totalTokens > 0)
@@ -352,10 +352,10 @@ public sealed class DynamoConversationStore : IConversationStore
             updateParts.Add($"{TotalInputTokensAttribute} = if_not_exists({TotalInputTokensAttribute}, :zero) + :inputTokens");
             updateParts.Add($"{TotalOutputTokensAttribute} = if_not_exists({TotalOutputTokensAttribute}, :zero) + :outputTokens");
             updateParts.Add($"{TotalTokensAttribute} = if_not_exists({TotalTokensAttribute}, :zero) + :totalTokens");
-            updateExpressionValues[":zero"] = new AttributeValue { N = "0" };
-            updateExpressionValues[":inputTokens"] = new AttributeValue { N = totalInputTokens.ToString() };
-            updateExpressionValues[":outputTokens"] = new AttributeValue { N = totalOutputTokens.ToString() };
-            updateExpressionValues[":totalTokens"] = new AttributeValue { N = totalTokens.ToString() };
+            updateExpressionValues[":zero"] = AttributeValue.Number("0");
+            updateExpressionValues[":inputTokens"] = AttributeValue.Number(totalInputTokens.ToString());
+            updateExpressionValues[":outputTokens"] = AttributeValue.Number(totalOutputTokens.ToString());
+            updateExpressionValues[":totalTokens"] = AttributeValue.Number(totalTokens.ToString());
         }
 
         transactItems.Add(new TransactWriteItem
@@ -396,7 +396,7 @@ public sealed class DynamoConversationStore : IConversationStore
         var updateParts = new List<string> { $"{UpdatedAtAttribute} = :updatedAt" };
         var expressionAttributeValues = new Dictionary<string, AttributeValue>
         {
-            [":updatedAt"] = new AttributeValue { N = now.ToUnixTimeSeconds().ToString() }
+            [":updatedAt"] = AttributeValue.Number(now.ToUnixTimeSeconds().ToString())
         };
         var expressionAttributeNames = new Dictionary<string, string>();
 
@@ -415,7 +415,7 @@ public sealed class DynamoConversationStore : IConversationStore
         if (metadata.Tags.Count > 0)
         {
             updateParts.Add($"{TagsAttribute} = :tags");
-            expressionAttributeValues[":tags"] = new AttributeValue { SS = metadata.Tags };
+            expressionAttributeValues[":tags"] = AttributeValue.FromStringSet(metadata.Tags);
         }
 
         if (metadata.CustomData.Count > 0)
@@ -427,7 +427,7 @@ public sealed class DynamoConversationStore : IConversationStore
             {
                 customDataMap[kvp.Key] = kvp.Value;
             }
-            expressionAttributeValues[":customData"] = new AttributeValue { M = customDataMap };
+            expressionAttributeValues[":customData"] = AttributeValue.FromMap(customDataMap);
         }
 
         var updateRequest = new UpdateItemRequest
@@ -488,8 +488,8 @@ public sealed class DynamoConversationStore : IConversationStore
             {
                 allItems.Add(new Dictionary<string, AttributeValue>
                 {
-                    [_configuration.PartitionKeyName] = item[_configuration.PartitionKeyName]!,
-                    [_configuration.SortKeyName] = item[_configuration.SortKeyName]!
+                    [_configuration.PartitionKeyName] = item[_configuration.PartitionKeyName]!.Value,
+                    [_configuration.SortKeyName] = item[_configuration.SortKeyName]!.Value
                 });
             }
 
@@ -535,7 +535,7 @@ public sealed class DynamoConversationStore : IConversationStore
             item[ModelIdAttribute] = metadata.ModelId;
 
         if (metadata.Tags.Count > 0)
-            item[TagsAttribute] = new AttributeValue { SS = metadata.Tags };
+            item[TagsAttribute] = AttributeValue.FromStringSet(metadata.Tags);
 
         if (metadata.CustomData.Count > 0)
         {
@@ -544,7 +544,7 @@ public sealed class DynamoConversationStore : IConversationStore
             {
                 customDataMap[kvp.Key] = kvp.Value;
             }
-            item[CustomDataAttribute] = new AttributeValue { M = customDataMap };
+            item[CustomDataAttribute] = AttributeValue.FromMap(customDataMap);
         }
     }
 
