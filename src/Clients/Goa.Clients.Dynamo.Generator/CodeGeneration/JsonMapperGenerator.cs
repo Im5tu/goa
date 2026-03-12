@@ -115,6 +115,7 @@ public class JsonMapperGenerator : ICodeGenerator
         builder.AppendLine("default:");
         builder.Indent();
         builder.AppendLine($"Throw.InvalidOperation($\"Unknown concrete type: {{model.GetType().FullName}} for abstract type {type.FullName}\");");
+        builder.AppendLine("return;");
         builder.Unindent();
         builder.CloseBrace();
     }
