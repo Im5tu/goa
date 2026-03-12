@@ -41,19 +41,19 @@ public sealed class ResponseHeaders
         if (headers.TryGetValues(AmznRequestId, out var values)
             || headers.TryGetValues(AmzRequestId, out values))
         {
-            requestId = values.FirstOrDefault();
+            foreach (var v in values) { requestId = v; break; }
         }
 
         string? errorType = null;
         if (headers.TryGetValues(AmznErrorType, out var typeValues))
         {
-            errorType = typeValues.FirstOrDefault();
+            foreach (var v in typeValues) { errorType = v; break; }
         }
 
         string? errorMessage = null;
         if (headers.TryGetValues(AmznErrorMessage, out var errorValues))
         {
-            errorMessage = errorValues.FirstOrDefault();
+            foreach (var v in errorValues) { errorMessage = v; break; }
         }
 
         return new ResponseHeaders
