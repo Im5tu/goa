@@ -163,7 +163,7 @@ public static class DynamoExtensions
             var result = await client.QueryAsync(request, cancellationToken);
             if (result.IsError)
             {
-                throw new DynamoPaginationException(result.FirstError);
+                DynamoPaginationException.Throw(result.FirstError);
             }
 
             foreach (var item in result.Value.Items)
@@ -200,7 +200,7 @@ public static class DynamoExtensions
             var result = await client.ScanAsync(request, cancellationToken);
             if (result.IsError)
             {
-                throw new DynamoPaginationException(result.FirstError);
+                DynamoPaginationException.Throw(result.FirstError);
             }
 
             foreach (var item in result.Value.Items)
@@ -232,7 +232,7 @@ public static class DynamoExtensions
             var result = await client.QueryAsync(request, itemReader, cancellationToken);
             if (result.IsError)
             {
-                throw new DynamoPaginationException(result.FirstError);
+                DynamoPaginationException.Throw(result.FirstError);
             }
 
             foreach (var item in result.Value.Items)
@@ -264,7 +264,7 @@ public static class DynamoExtensions
             var result = await client.ScanAsync(request, itemReader, cancellationToken);
             if (result.IsError)
             {
-                throw new DynamoPaginationException(result.FirstError);
+                DynamoPaginationException.Throw(result.FirstError);
             }
 
             foreach (var item in result.Value.Items)
@@ -302,7 +302,7 @@ public static class DynamoExtensions
             var result = await client.BatchGetItemAsync(request, cancellationToken);
             if (result.IsError)
             {
-                throw new DynamoPaginationException(result.FirstError);
+                DynamoPaginationException.Throw(result.FirstError);
             }
 
             foreach (var tableResponse in result.Value.Responses)
@@ -320,7 +320,7 @@ public static class DynamoExtensions
 
             if (attempts >= maxAttempts)
             {
-                throw new DynamoPaginationException(
+                DynamoPaginationException.Throw(
                     ErrorOr.Error.Failure("Goa.DynamoDb.MaxRetriesExceeded", $"BatchGetItem still has unprocessed keys after {maxAttempts} retry attempts."));
             }
 
@@ -350,7 +350,7 @@ public static class DynamoExtensions
             var result = await client.BatchGetItemAsync(request, itemReader, cancellationToken);
             if (result.IsError)
             {
-                throw new DynamoPaginationException(result.FirstError);
+                DynamoPaginationException.Throw(result.FirstError);
             }
 
             foreach (var tableResponse in result.Value.Responses)
@@ -368,7 +368,7 @@ public static class DynamoExtensions
 
             if (attempts >= maxAttempts)
             {
-                throw new DynamoPaginationException(
+                DynamoPaginationException.Throw(
                     ErrorOr.Error.Failure("Goa.DynamoDb.MaxRetriesExceeded", $"BatchGetItem still has unprocessed keys after {maxAttempts} retry attempts."));
             }
 

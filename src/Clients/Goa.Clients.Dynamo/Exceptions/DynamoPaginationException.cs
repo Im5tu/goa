@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using ErrorOr;
 
 namespace Goa.Clients.Dynamo.Exceptions;
@@ -33,4 +34,7 @@ public sealed class DynamoPaginationException : Exception
     {
         Error = error;
     }
+
+    [DoesNotReturn]
+    internal static void Throw(Error error) => throw new DynamoPaginationException(error);
 }
