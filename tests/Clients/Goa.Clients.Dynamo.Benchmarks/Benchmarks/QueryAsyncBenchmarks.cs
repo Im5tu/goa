@@ -3,6 +3,7 @@ using BenchmarkDotNet.Order;
 using EfficientDynamoDb;
 using EfficientDynamoDb.Attributes;
 using Goa.Clients.Dynamo.Benchmarks.Infrastructure;
+using Goa.Clients.Dynamo;
 using EfficientAttributeValue = EfficientDynamoDb.DocumentModel.AttributeValue;
 using GoaModels = Goa.Clients.Dynamo.Models;
 using GoaQueryRequest = Goa.Clients.Dynamo.Operations.Query.QueryRequest;
@@ -11,6 +12,7 @@ using EfficientQueryRequest = EfficientDynamoDb.Operations.Query.QueryRequest;
 namespace Goa.Clients.Dynamo.Benchmarks.Benchmarks;
 
 [DynamoDbTable("benchmark-table")]
+[DynamoModel(PK = "<Pk>", SK = "<Sk>", PKName = "pk", SKName = "sk")]
 public class BenchmarkEntity
 {
     [DynamoDbProperty("pk", DynamoDbAttributeType.PartitionKey)]
@@ -19,13 +21,13 @@ public class BenchmarkEntity
     [DynamoDbProperty("sk", DynamoDbAttributeType.SortKey)]
     public string Sk { get; set; } = "";
 
-    [DynamoDbProperty("data")]
+    [DynamoDbProperty("data"), SerializedName("data")]
     public string Data { get; set; } = "";
 
-    [DynamoDbProperty("number")]
+    [DynamoDbProperty("number"), SerializedName("number")]
     public int Number { get; set; }
 
-    [DynamoDbProperty("status")]
+    [DynamoDbProperty("status"), SerializedName("status")]
     public string Status { get; set; } = "";
 }
 
@@ -190,7 +192,7 @@ public class QueryAsyncBenchmarks
     //     Dictionary<string, GoaModels.AttributeValue>? lastKey = null;
     //     do
     //     {
-    //         var result = await _fixture.GoaClient.QueryAsync<BenchmarkItem>(new GoaQueryRequest
+    //         var result = await _fixture.GoaClient.QueryAsync<BenchmarkEntity>(new GoaQueryRequest
     //         {
     //             TableName = _fixture.TableName,
     //             KeyConditionExpression = "pk = :pk",
@@ -200,7 +202,7 @@ public class QueryAsyncBenchmarks
     //             },
     //             Limit = 5,
     //             ExclusiveStartKey = lastKey
-    //         }, DynamoItemReaderRegistry.Get<BenchmarkItem>());
+    //         }, DynamoItemReaderRegistry.Get<BenchmarkEntity>());
     //         count += result.Value.Items.Count;
     //         lastKey = result.Value.HasMoreResults ? result.Value.LastEvaluatedKey : null;
     //     } while (lastKey != null);
@@ -299,29 +301,29 @@ public class QueryAsyncBenchmarks
         return count;
     }
 
-    // [Benchmark, BenchmarkCategory("100 Items")]
-    // public async Task<int> Goa_Query_100Items_Typed()
-    // {
-    //     var count = 0;
-    //     Dictionary<string, GoaModels.AttributeValue>? lastKey = null;
-    //     do
-    //     {
-    //         var result = await _fixture.GoaClient.QueryAsync<BenchmarkItem>(new GoaQueryRequest
-    //         {
-    //             TableName = _fixture.TableName,
-    //             KeyConditionExpression = "pk = :pk",
-    //             ExpressionAttributeValues = new Dictionary<string, GoaModels.AttributeValue>
-    //             {
-    //                 [":pk"] = GoaModels.AttributeValue.String("query-100")
-    //             },
-    //             Limit = 25,
-    //             ExclusiveStartKey = lastKey
-    //         }, DynamoItemReaderRegistry.Get<BenchmarkItem>());
-    //         count += result.Value.Items.Count;
-    //         lastKey = result.Value.HasMoreResults ? result.Value.LastEvaluatedKey : null;
-    //     } while (lastKey != null);
-    //     return count;
-    // }
+    [Benchmark, BenchmarkCategory("100 Items")]
+    public async Task<int> Goa_Query_100Items_Typed()
+    {
+        var count = 0;
+        Dictionary<string, GoaModels.AttributeValue>? lastKey = null;
+        do
+        {
+            var result = await _fixture.GoaClient.QueryAsync<BenchmarkEntity>(new GoaQueryRequest
+            {
+                TableName = _fixture.TableName,
+                KeyConditionExpression = "pk = :pk",
+                ExpressionAttributeValues = new Dictionary<string, GoaModels.AttributeValue>
+                {
+                    [":pk"] = GoaModels.AttributeValue.String("query-100")
+                },
+                Limit = 25,
+                ExclusiveStartKey = lastKey
+            }, DynamoItemReaderRegistry.Get<BenchmarkEntity>());
+            count += result.Value.Items.Count;
+            lastKey = result.Value.HasMoreResults ? result.Value.LastEvaluatedKey : null;
+        } while (lastKey != null);
+        return count;
+    }
 
     [Benchmark, BenchmarkCategory("100 Items")]
     public async Task<int> Efficient_Query_100Items()
@@ -420,7 +422,7 @@ public class QueryAsyncBenchmarks
     //     Dictionary<string, GoaModels.AttributeValue>? lastKey = null;
     //     do
     //     {
-    //         var result = await _fixture.GoaClient.QueryAsync<BenchmarkItem>(new GoaQueryRequest
+    //         var result = await _fixture.GoaClient.QueryAsync<BenchmarkEntity>(new GoaQueryRequest
     //         {
     //             TableName = _fixture.TableName,
     //             KeyConditionExpression = "pk = :pk",
@@ -429,7 +431,7 @@ public class QueryAsyncBenchmarks
     //                 [":pk"] = GoaModels.AttributeValue.String("nonexistent-pk")
     //             },
     //             ExclusiveStartKey = lastKey
-    //         }, DynamoItemReaderRegistry.Get<BenchmarkItem>());
+    //         }, DynamoItemReaderRegistry.Get<BenchmarkEntity>());
     //         count += result.Value.Items.Count;
     //         lastKey = result.Value.HasMoreResults ? result.Value.LastEvaluatedKey : null;
     //     } while (lastKey != null);

@@ -1,4 +1,5 @@
-﻿using Goa.Clients.Dynamo.Models;
+using System.Text.Json.Serialization;
+using Goa.Clients.Dynamo.Models;
 
 namespace Goa.Clients.Dynamo.Operations.Scan;
 
@@ -10,14 +11,16 @@ public class ScanResult
     /// <summary>
     /// The items returned by the Scan operation.
     /// </summary>
+    [JsonPropertyName("Items")]
     public List<DynamoRecord> Items { get; set; } = new();
-    
+
     /// <summary>
     /// The primary key of the item where the operation stopped, inclusive of the previous result set.
     /// Use this value to start a new operation, excluding this value in the new request.
     /// </summary>
+    [JsonPropertyName("LastEvaluatedKey")]
     public Dictionary<string, AttributeValue>? LastEvaluatedKey { get; set; }
-    
+
     /// <summary>
     /// Gets the number of items in the response. This is deliberately computed from <see cref="Items"/>
     /// because DynamoDB's Count always equals the number of items returned (post-filter).
@@ -34,12 +37,14 @@ public class ScanResult
     /// The number of items evaluated before any filter expression was applied.
     /// If no filter was used, this equals <see cref="Count"/>.
     /// </summary>
+    [JsonPropertyName("ScannedCount")]
     public int ScannedCount { get; set; }
 
     /// <summary>
-    /// The number of capacity units consumed by the operation.
+    /// The capacity consumed by the operation.
     /// </summary>
-    public double ConsumedCapacityUnits { get; set; }
+    [JsonPropertyName("ConsumedCapacity")]
+    public ConsumedCapacity? ConsumedCapacity { get; set; }
 }
 
 /// <summary>
@@ -49,9 +54,11 @@ public class ScanResult
 public class ScanResult<T>
 {
     /// <inheritdoc cref="ScanResult.Items"/>
+    [JsonPropertyName("Items")]
     public List<T> Items { get; set; } = new();
 
     /// <inheritdoc cref="ScanResult.LastEvaluatedKey"/>
+    [JsonPropertyName("LastEvaluatedKey")]
     public Dictionary<string, AttributeValue>? LastEvaluatedKey { get; set; }
 
     /// <inheritdoc cref="ScanResult.Count"/>
@@ -61,10 +68,12 @@ public class ScanResult<T>
     public bool HasMoreResults => LastEvaluatedKey?.Count > 0;
 
     /// <inheritdoc cref="ScanResult.ScannedCount"/>
+    [JsonPropertyName("ScannedCount")]
     public int ScannedCount { get; set; }
 
     /// <summary>
     /// The capacity consumed by the operation.
     /// </summary>
+    [JsonPropertyName("ConsumedCapacity")]
     public ConsumedCapacity? ConsumedCapacity { get; set; }
 }

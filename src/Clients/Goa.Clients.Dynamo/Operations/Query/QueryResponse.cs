@@ -1,5 +1,5 @@
-using Goa.Clients.Dynamo.Models;
 using System.Text.Json.Serialization;
+using Goa.Clients.Dynamo.Models;
 
 namespace Goa.Clients.Dynamo.Operations.Query;
 
@@ -11,12 +11,14 @@ public class QueryResponse
     /// <summary>
     /// An array of item attributes that match the query criteria.
     /// </summary>
+    [JsonPropertyName("Items")]
     public List<DynamoRecord> Items { get; set; } = new();
 
     /// <summary>
     /// The primary key of the item where the operation stopped, inclusive of the previous result set.
     /// Use this value to start a new operation, excluding this value in the new request.
     /// </summary>
+    [JsonPropertyName("LastEvaluatedKey")]
     public Dictionary<string, AttributeValue>? LastEvaluatedKey { get; set; }
 
     /// <summary>
@@ -34,10 +36,12 @@ public class QueryResponse
     /// <summary>
     /// The number of items evaluated, before any QueryFilter is applied.
     /// </summary>
+    [JsonPropertyName("ScannedCount")]
     public int ScannedCount { get; set; }
 
     /// <summary>
     /// The capacity units consumed by the operation.
     /// </summary>
+    [JsonPropertyName("ConsumedCapacity")]
     public ConsumedCapacity? ConsumedCapacity { get; set; }
 }

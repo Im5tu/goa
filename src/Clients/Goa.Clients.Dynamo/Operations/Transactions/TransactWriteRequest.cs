@@ -1,4 +1,5 @@
-﻿using Goa.Clients.Dynamo.Enums;
+using System.Text.Json.Serialization;
+using Goa.Clients.Dynamo.Enums;
 
 namespace Goa.Clients.Dynamo.Operations.Transactions;
 
@@ -10,21 +11,25 @@ public class TransactWriteRequest
     /// <summary>
     /// An ordered array of up to 100 TransactWriteItem objects, each of which contains a ConditionCheck, Put, Update, or Delete operation.
     /// </summary>
+    [JsonPropertyName("TransactItems")]
     public List<TransactWriteItem> TransactItems { get; set; } = new();
 
     /// <summary>
     /// Determines the level of detail about provisioned throughput consumption that is returned in the response.
     /// </summary>
+    [JsonPropertyName("ReturnConsumedCapacity")]
     public ReturnConsumedCapacity ReturnConsumedCapacity { get; set; } = ReturnConsumedCapacity.NONE;
 
     /// <summary>
     /// Determines whether item collection metrics are returned.
     /// </summary>
+    [JsonPropertyName("ReturnItemCollectionMetrics")]
     public ReturnItemCollectionMetrics ReturnItemCollectionMetrics { get; set; } = ReturnItemCollectionMetrics.NONE;
 
     /// <summary>
     /// Providing a ClientRequestToken makes the call to TransactWriteItems idempotent,
     /// meaning that multiple identical calls have the same effect as one single call.
     /// </summary>
+    [JsonPropertyName("ClientRequestToken")]
     public string? ClientRequestToken { get; set; }
 }

@@ -1,3 +1,4 @@
+using System.Text.Json.Serialization;
 using Goa.Clients.Dynamo.Models;
 
 namespace Goa.Clients.Dynamo.Operations.PutItem;
@@ -8,18 +9,21 @@ namespace Goa.Clients.Dynamo.Operations.PutItem;
 public class PutItemResponse
 {
     /// <summary>
-    /// The attribute values as they appeared before the PutItem operation, 
+    /// The attribute values as they appeared before the PutItem operation,
     /// but only if ReturnValues is specified as something other than NONE in the request.
     /// </summary>
+    [JsonPropertyName("Attributes")]
     public DynamoRecord? Attributes { get; set; }
-    
+
     /// <summary>
     /// The capacity units consumed by the operation.
     /// </summary>
+    [JsonPropertyName("ConsumedCapacity")]
     public ConsumedCapacity? ConsumedCapacity { get; set; }
-    
+
     /// <summary>
     /// Information about item collections, if any, that were affected by the operation.
     /// </summary>
-    public Dictionary<string, List<Dictionary<string, AttributeValue>>>? ItemCollectionMetrics { get; set; }
+    [JsonPropertyName("ItemCollectionMetrics")]
+    public ItemCollectionMetrics? ItemCollectionMetrics { get; set; }
 }

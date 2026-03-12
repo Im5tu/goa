@@ -95,4 +95,34 @@ public interface IDynamoClient
     /// <param name="cancellationToken">A cancellation token to cancel the operation.</param>
     /// <returns>The transact get response with items in the same order as the requests, or an error if the operation failed.</returns>
     Task<ErrorOr<TransactGetItemResponse>> TransactGetItemsAsync(TransactGetRequest request, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Queries items from a DynamoDB table with direct typed deserialization.
+    /// </summary>
+    Task<ErrorOr<QueryResult<T>>> QueryAsync<T>(QueryRequest request, DynamoItemReader<T> itemReader, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Scans items from a DynamoDB table with direct typed deserialization.
+    /// </summary>
+    Task<ErrorOr<ScanResult<T>>> ScanAsync<T>(ScanRequest request, DynamoItemReader<T> itemReader, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Gets an item from a DynamoDB table with direct typed deserialization.
+    /// </summary>
+    Task<ErrorOr<T?>> GetItemAsync<T>(GetItemRequest request, DynamoItemReader<T> itemReader, CancellationToken cancellationToken = default) where T : class;
+
+    /// <summary>
+    /// Puts a typed item into a DynamoDB table using a direct item writer for zero-copy serialization.
+    /// </summary>
+    Task<ErrorOr<PutItemResponse>> PutItemAsync<T>(string tableName, T item, DynamoItemWriter<T> itemWriter, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Gets multiple items from DynamoDB tables with direct typed deserialization.
+    /// </summary>
+    Task<ErrorOr<BatchGetResult<T>>> BatchGetItemAsync<T>(BatchGetItemRequest request, DynamoItemReader<T> itemReader, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Executes a transactional get with direct typed deserialization.
+    /// </summary>
+    Task<ErrorOr<TransactGetResult<T>>> TransactGetItemsAsync<T>(TransactGetRequest request, DynamoItemReader<T> itemReader, CancellationToken cancellationToken = default);
 }
