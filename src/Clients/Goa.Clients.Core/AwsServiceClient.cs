@@ -24,6 +24,17 @@ public abstract class AwsServiceClient<T> where T : AwsServiceConfiguration
     /// </summary>
     public const string XAmzErrorType = "x-amzn-ErrorType";
 
+    private const string LogKeyClient = "Client";
+    private const string LogKeyRegion = "Region";
+    private const string LogKeyService = "Service";
+    private const string LogKeySigningService = "SigningService";
+    private const string LogKeyTarget = "Target";
+    private const string LogKeyApiVersion = "ApiVersion";
+    private const string LogKeyMethod = "Method";
+    private const string LogKeyUri = "Uri";
+    private const string LogKeyStatusCode = "StatusCode";
+    private const string LogKeyReasonPhrase = "ReasonPhrase";
+
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly string _clientType;
     private Uri? _cachedBaseUri;
@@ -70,14 +81,14 @@ public abstract class AwsServiceClient<T> where T : AwsServiceConfiguration
 
         using var logContext = Logger.IsEnabled(Configuration.LogLevel)
             ? Logger.BeginScope(new LogScope8(
-                new("Client", _clientType),
-                new("Region", Configuration.Region),
-                new("Service", Configuration.Service),
-                new("SigningService", Configuration.SigningService),
-                new("Target", target),
-                new("ApiVersion", Configuration.ApiVersion),
-                new("Method", request.Method.Method),
-                new("Uri", request.RequestUri?.AbsoluteUri ?? "Unknown")
+                new(LogKeyClient, _clientType),
+                new(LogKeyRegion, Configuration.Region),
+                new(LogKeyService, Configuration.Service),
+                new(LogKeySigningService, Configuration.SigningService),
+                new(LogKeyTarget, target),
+                new(LogKeyApiVersion, Configuration.ApiVersion),
+                new(LogKeyMethod, request.Method.Method),
+                new(LogKeyUri, request.RequestUri?.AbsoluteUri ?? "Unknown")
             ))
             : null;
 
@@ -91,8 +102,8 @@ public abstract class AwsServiceClient<T> where T : AwsServiceConfiguration
             // Log fixed response fields with zero-allocation scope
             using var responseLogContext = Logger.IsEnabled(Configuration.LogLevel)
                 ? Logger.BeginScope(new LogScope2(
-                    new("StatusCode", GetStatusCodeString((int)response.StatusCode)),
-                    new("ReasonPhrase", response.ReasonPhrase ?? response.StatusCode.ToString())
+                    new(LogKeyStatusCode, GetStatusCodeString((int)response.StatusCode)),
+                    new(LogKeyReasonPhrase, response.ReasonPhrase ?? response.StatusCode.ToString())
                 ))
                 : null;
 
