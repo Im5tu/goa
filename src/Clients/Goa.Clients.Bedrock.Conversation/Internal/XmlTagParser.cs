@@ -43,7 +43,7 @@ internal static partial class XmlTagParser
         var cleanedText = XmlTagRegex().Replace(text, string.Empty).Trim();
 
         // Convert to read-only dictionary
-        var result = new Dictionary<string, IReadOnlyList<string>>();
+        var result = new Dictionary<string, IReadOnlyList<string>>(tags.Count);
         foreach (var kvp in tags)
         {
             result[kvp.Key] = kvp.Value;

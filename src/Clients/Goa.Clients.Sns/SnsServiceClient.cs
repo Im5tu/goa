@@ -70,7 +70,7 @@ internal sealed class SnsServiceClient : AwsServiceClient<SnsServiceClientConfig
     /// </summary>
     private static string SerializeToQueryParameters(PublishRequest request)
     {
-        var parameters = new List<string>
+        var parameters = new List<string>(12)
         {
             "Action=Publish",
             "Version=2010-03-31"
