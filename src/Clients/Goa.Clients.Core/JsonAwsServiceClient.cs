@@ -144,40 +144,6 @@ public abstract class JsonAwsServiceClient<T> : AwsServiceClient<T> where T : Aw
     protected abstract JsonTypeInfo<TValue> ResolveJsonTypeInfo<TValue>();
 
     /// <summary>
-    /// Applies AWS-specific error header processing to the error object.
-    /// </summary>
-    protected ApiError ProcessAwsErrorHeaders(HttpResponseMessage response, ApiError error)
-    {
-        // Logic: https://github.com/aws/aws-sdk-net/blob/a9aa4e78a927e1021114b6531e21fc25f87e0dd9/sdk/src/Core/Amazon.Runtime/Internal/Transform/JsonErrorResponseUnmarshaller.cs#L79
-        if (response.Headers.TryGetValues(XAmznErrorMessage, out var messages))
-        {
-            error = error with { Message = string.Join(", ", messages) };
-        }
-
-        // Logic: https://github.com/aws/aws-sdk-net/blob/a9aa4e78a927e1021114b6531e21fc25f87e0dd9/sdk/src/Core/Amazon.Runtime/Internal/Transform/JsonErrorResponseUnmarshaller.cs#L60
-        if (string.IsNullOrWhiteSpace(error.Type) && response.Headers.TryGetValues(XAmzErrorType, out var types))
-        {
-            error = error with { Type = string.Join(", ", types) };
-        }
-
-        // Logic: https://github.com/aws/aws-sdk-net/blob/a9aa4e78a927e1021114b6531e21fc25f87e0dd9/sdk/src/Core/Amazon.Runtime/Internal/Transform/JsonErrorResponseUnmarshaller.cs#L68
-        var infoSeparator = error.Type?.LastIndexOf(':') ?? -1;
-        if (infoSeparator > 0)
-        {
-            error = error with { Type = error.Type![..infoSeparator] };
-        }
-
-        // Logic: https://github.com/aws/aws-sdk-net/blob/a9aa4e78a927e1021114b6531e21fc25f87e0dd9/sdk/src/Core/Amazon.Runtime/Internal/Transform/JsonErrorResponseUnmarshaller.cs#L95
-        var typeSeparator = error.Type?.LastIndexOf('#') ?? -1;
-        if (typeSeparator > 0)
-        {
-            error = error with { Type = error.Type![(typeSeparator + 1)..] };
-        }
-
-        return error;
-    }
-
-    /// <summary>
     /// Deserializes JSON error response content to an ApiError.
     /// </summary>
     protected ApiError? DeserializeJsonError(string content) => ApiErrorReader.ReadApiError(content);

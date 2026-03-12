@@ -121,36 +121,6 @@ public abstract class XmlAwsServiceClient<T> : AwsServiceClient<T> where T : Aws
     }
 
     /// <summary>
-    /// Applies AWS-specific error header processing to the error object.
-    /// </summary>
-    private ApiError ProcessAwsErrorHeaders(HttpResponseMessage response, ApiError error)
-    {
-        if (response.Headers.TryGetValues(XAmznErrorMessage, out var messages))
-        {
-            error = error with { Message = string.Join(", ", messages) };
-        }
-
-        if (string.IsNullOrWhiteSpace(error.Type) && response.Headers.TryGetValues(XAmzErrorType, out var types))
-        {
-            error = error with { Type = string.Join(", ", types) };
-        }
-
-        var infoSeparator = error.Type?.LastIndexOf(':') ?? -1;
-        if (infoSeparator > 0)
-        {
-            error = error with { Type = error.Type![..infoSeparator] };
-        }
-
-        var typeSeparator = error.Type?.LastIndexOf('#') ?? -1;
-        if (typeSeparator > 0)
-        {
-            error = error with { Type = error.Type![(typeSeparator + 1)..] };
-        }
-
-        return error;
-    }
-
-    /// <summary>
     /// Serializes a request object to UTF-8 bytes using the ISerializeToXml interface.
     /// </summary>
     private static byte[] SerializeToXmlBytes(object request)
