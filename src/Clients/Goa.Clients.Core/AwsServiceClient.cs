@@ -85,18 +85,23 @@ public abstract class AwsServiceClient<T> where T : AwsServiceConfiguration
             var start = Stopwatch.GetTimestamp();
             var response = await client.SendAsync(request, cancellationToken);
 
-            // Ensure that we log the applicable response headers and status code
-            var context = new Dictionary<string, object>
-            {
-                ["StatusCode"] = ((int)response.StatusCode).ToString(),
-                ["ReasonPhrase"] = response.ReasonPhrase ?? response.StatusCode.ToString()
-            };
+            // Log fixed response fields with zero-allocation scope
+            using var responseLogContext = Logger.BeginScope(new LogScope2(
+                new("StatusCode", ((int)response.StatusCode).ToString()),
+                new("ReasonPhrase", response.ReasonPhrase ?? response.StatusCode.ToString())
+            ));
+
+            // Log x-amz response headers separately with capacity hint
+            Dictionary<string, object>? amzHeaders = null;
             foreach (var header in response.Headers)
             {
                 if (header.Key.StartsWith("x-amz", StringComparison.OrdinalIgnoreCase))
-                    context[header.Key] = string.Join(", ", header.Value);
+                {
+                    amzHeaders ??= new Dictionary<string, object>(4);
+                    amzHeaders[header.Key] = string.Join(", ", header.Value);
+                }
             }
-            using var responseLogContext = Logger.BeginScope(context);
+            using var amzLogContext = amzHeaders is not null ? Logger.BeginScope(amzHeaders) : null;
 
             Logger.RequestComplete(Configuration.LogLevel, Stopwatch.GetElapsedTime(start).TotalMilliseconds);
 
