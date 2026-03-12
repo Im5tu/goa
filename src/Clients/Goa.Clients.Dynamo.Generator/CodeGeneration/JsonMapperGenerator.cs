@@ -32,6 +32,7 @@ public class JsonMapperGenerator : ICodeGenerator
         builder.AppendLine("using System.Collections.Generic;");
         builder.AppendLine("using System.Globalization;");
         builder.AppendLine("using System.Text.Json;");
+        builder.AppendLine("using Goa.Clients.Core;");
 
         foreach (var ns in typesByNamespace)
         {
@@ -113,7 +114,7 @@ public class JsonMapperGenerator : ICodeGenerator
 
         builder.AppendLine("default:");
         builder.Indent();
-        builder.AppendLine($"throw new InvalidOperationException($\"Unknown concrete type: {{model.GetType().FullName}} for abstract type {type.FullName}\");");
+        builder.AppendLine($"Throw.InvalidOperation($\"Unknown concrete type: {{model.GetType().FullName}} for abstract type {type.FullName}\");");
         builder.Unindent();
         builder.CloseBrace();
     }
@@ -527,7 +528,7 @@ public class JsonMapperGenerator : ICodeGenerator
         builder.CloseBrace();
         builder.AppendLine();
         builder.AppendLine($"if (typeDiscriminator == null)");
-        builder.Indent().AppendLine($"throw new InvalidOperationException(\"Missing {typeNameField} discriminator for abstract type {type.FullName}\");").Unindent();
+        builder.Indent().AppendLine($"Throw.InvalidOperation(\"Missing {typeNameField} discriminator for abstract type {type.FullName}\");").Unindent();
         builder.AppendLine();
         builder.OpenBraceWithLine("return typeDiscriminator switch");
 
@@ -540,7 +541,7 @@ public class JsonMapperGenerator : ICodeGenerator
             }
         }
 
-        builder.AppendLine($"_ => throw new InvalidOperationException($\"Unknown type: {{typeDiscriminator}} for abstract type {type.FullName}\")");
+        builder.AppendLine($"_ => Throw.InvalidOperation<{type.FullName}>($\"Unknown type: {{typeDiscriminator}} for abstract type {type.FullName}\")");
         builder.CloseBrace().Append(";");
         builder.AppendLine();
     }
