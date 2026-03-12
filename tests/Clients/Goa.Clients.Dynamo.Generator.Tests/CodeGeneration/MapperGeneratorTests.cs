@@ -602,7 +602,7 @@ public class MapperGeneratorTests
         await Assert.That(result)
             .Contains("TestNamespace.ConcreteEntity concrete => DynamoMapper.ConcreteEntity.ToDynamoRecord(concrete),");
         await Assert.That(result)
-            .Contains("_ => throw new InvalidOperationException($\"Unknown concrete type: {model.GetType().FullName} for abstract type TestNamespace.BaseEntity\")");
+            .Contains("_ => Throw.InvalidOperation<DynamoRecord>($\"Unknown concrete type: {model.GetType().FullName} for abstract type TestNamespace.BaseEntity\")");
     }
 
     private static TypeHandlerRegistry CreateTypeHandlerRegistry()
