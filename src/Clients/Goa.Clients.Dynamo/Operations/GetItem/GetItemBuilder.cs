@@ -7,7 +7,7 @@ namespace Goa.Clients.Dynamo.Operations.GetItem;
 /// Fluent builder for constructing DynamoDB GetItem requests with a user-friendly API.
 /// </summary>
 /// <param name="tableName">The name of the table to get the item from.</param>
-public class GetItemBuilder(string tableName)
+public sealed class GetItemBuilder(string tableName)
 {
     private readonly GetItemRequest _request = new()
     {

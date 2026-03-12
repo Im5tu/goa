@@ -21,7 +21,7 @@ namespace Goa.Clients.Dynamo;
 /// High-performance DynamoDB service client that implements IDynamoClient using AWS service client infrastructure.
 /// Provides strongly-typed DynamoDB operations with built-in error handling, logging, and AWS authentication.
 /// </summary>
-public class DynamoServiceClient : JsonAwsServiceClient<DynamoServiceClientConfiguration>, IDynamoClient
+public sealed class DynamoServiceClient : JsonAwsServiceClient<DynamoServiceClientConfiguration>, IDynamoClient
 {
     /// <summary>
     /// Initializes a new instance of the DynamoServiceClient class.

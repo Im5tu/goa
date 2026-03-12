@@ -5,7 +5,7 @@ namespace Goa.Clients.Dynamo.Operations.Transactions;
 /// <summary>
 /// Individual transact write item.
 /// </summary>
-public class TransactWriteItem
+public sealed class TransactWriteItem
 {
     /// <summary>
     /// A request to perform a PutItem operation.

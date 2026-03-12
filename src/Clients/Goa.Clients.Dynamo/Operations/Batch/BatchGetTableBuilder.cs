@@ -5,7 +5,7 @@ namespace Goa.Clients.Dynamo.Operations.Batch;
 /// <summary>
 /// Fluent builder for configuring table-specific requests within a BatchGetItem operation.
 /// </summary>
-public class BatchGetTableBuilder
+public sealed class BatchGetTableBuilder
 {
     private readonly BatchGetRequestItem _request = new()
     {

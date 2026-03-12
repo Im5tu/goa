@@ -8,7 +8,7 @@ namespace Goa.Clients.Dynamo.Operations.PutItem;
 /// Fluent builder for constructing DynamoDB PutItem requests with a user-friendly API.
 /// </summary>
 /// <param name="tableName">The name of the table to put the item into.</param>
-public class PutItemBuilder(string tableName)
+public sealed class PutItemBuilder(string tableName)
 {
     private readonly PutItemRequest _request = new()
     {

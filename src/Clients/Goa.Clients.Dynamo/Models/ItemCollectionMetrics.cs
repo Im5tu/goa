@@ -5,7 +5,7 @@ namespace Goa.Clients.Dynamo.Models;
 /// <summary>
 /// Information about item collections, if any, that were affected by the operation.
 /// </summary>
-public class ItemCollectionMetrics
+public sealed class ItemCollectionMetrics
 {
     /// <summary>
     /// The partition key value of the item collection.

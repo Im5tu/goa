@@ -5,7 +5,7 @@ namespace Goa.Clients.Dynamo.Models;
 /// <summary>
 /// Detailed capacity information for DynamoDB operations.
 /// </summary>
-public class CapacityDetail
+public sealed class CapacityDetail
 {
     /// <summary>
     /// The number of read capacity units consumed by the operation.

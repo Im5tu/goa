@@ -5,7 +5,7 @@ namespace Goa.Clients.Dynamo.Models;
 /// <summary>
 /// Represents consumed capacity information for DynamoDB operations.
 /// </summary>
-public class ConsumedCapacity
+public sealed class ConsumedCapacity
 {
     /// <summary>
     /// The name of the table that was affected by the operation.

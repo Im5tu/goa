@@ -7,7 +7,7 @@ namespace Goa.Clients.Dynamo.Operations.UpdateItem;
 /// <summary>
 /// Request for updating an item in DynamoDB.
 /// </summary>
-public class UpdateItemRequest
+public sealed class UpdateItemRequest
 {
     /// <summary>
     /// The name of the table containing the item to update.

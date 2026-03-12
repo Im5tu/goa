@@ -3,7 +3,7 @@ namespace Goa.Clients.Bedrock.Conversation.Entities;
 /// <summary>
 /// Metadata associated with a conversation.
 /// </summary>
-public class ConversationMetadata
+public sealed class ConversationMetadata
 {
     /// <summary>
     /// The title of the conversation.

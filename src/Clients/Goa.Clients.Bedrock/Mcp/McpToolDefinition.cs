@@ -5,7 +5,7 @@ namespace Goa.Clients.Bedrock.Mcp;
 /// <summary>
 /// Represents an MCP tool definition that can be converted to Bedrock format.
 /// </summary>
-public class McpToolDefinition
+public sealed class McpToolDefinition
 {
     /// <summary>
     /// The name of the tool.

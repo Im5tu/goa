@@ -5,7 +5,7 @@ namespace Goa.Clients.Dynamo;
 /// By default, ignores the property in both directions (reading and writing).
 /// </summary>
 [AttributeUsage(AttributeTargets.Property, AllowMultiple = false, Inherited = true)]
-public class IgnoreAttribute : Attribute
+public sealed class IgnoreAttribute : Attribute
 {
     /// <summary>
     /// The direction in which to ignore the property. Defaults to Always.

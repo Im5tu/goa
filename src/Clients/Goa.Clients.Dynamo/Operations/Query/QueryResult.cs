@@ -6,7 +6,7 @@ namespace Goa.Clients.Dynamo.Operations.Query;
 /// <summary>
 /// Result wrapper for Query operations with pagination support.
 /// </summary>
-public class QueryResult
+public sealed class QueryResult
 {
     /// <summary>
     /// The items returned by the Query operation.
@@ -51,7 +51,7 @@ public class QueryResult
 /// Typed result wrapper for Query operations with direct deserialization support.
 /// </summary>
 /// <typeparam name="T">The type of the deserialized items.</typeparam>
-public class QueryResult<T>
+public sealed class QueryResult<T>
 {
     /// <inheritdoc cref="QueryResult.Items"/>
     [JsonPropertyName("Items")]

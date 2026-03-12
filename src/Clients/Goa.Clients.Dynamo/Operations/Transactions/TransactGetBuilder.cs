@@ -6,7 +6,7 @@ namespace Goa.Clients.Dynamo.Operations.Transactions;
 /// <summary>
 /// Fluent builder for constructing DynamoDB TransactGet requests with a user-friendly API.
 /// </summary>
-public class TransactGetBuilder
+public sealed class TransactGetBuilder
 {
     private readonly TransactGetRequest _request = new();
 

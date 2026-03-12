@@ -6,7 +6,7 @@ namespace Goa.Clients.Dynamo.Operations.PutItem;
 /// <summary>
 /// Response for PutItem operations.
 /// </summary>
-public class PutItemResponse
+public sealed class PutItemResponse
 {
     /// <summary>
     /// The attribute values as they appeared before the PutItem operation,

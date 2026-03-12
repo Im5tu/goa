@@ -8,7 +8,7 @@ namespace Goa.Clients.Dynamo.Operations.Scan;
 /// Fluent builder for constructing DynamoDB Scan requests with a user-friendly API.
 /// </summary>
 /// <param name="tableName">The name of the table to scan.</param>
-public class ScanBuilder(string tableName)
+public sealed class ScanBuilder(string tableName)
 {
     private readonly ScanRequest _request = new()
     {

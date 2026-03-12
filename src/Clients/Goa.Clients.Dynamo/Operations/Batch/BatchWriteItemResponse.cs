@@ -6,7 +6,7 @@ namespace Goa.Clients.Dynamo.Operations.Batch;
 /// <summary>
 /// Response for BatchWriteItem operations.
 /// </summary>
-public class BatchWriteItemResponse
+public sealed class BatchWriteItemResponse
 {
     /// <summary>
     /// A map of tables and requests against those tables that were not processed.

@@ -6,7 +6,7 @@ namespace Goa.Clients.Dynamo.Operations.Transactions;
 /// <summary>
 /// Get request within a transact get operation.
 /// </summary>
-public class TransactGetItemRequest
+public sealed class TransactGetItemRequest
 {
     /// <summary>
     /// The name of the table containing the requested item.

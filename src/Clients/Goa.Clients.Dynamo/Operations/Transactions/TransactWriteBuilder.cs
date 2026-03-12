@@ -6,7 +6,7 @@ namespace Goa.Clients.Dynamo.Operations.Transactions;
 /// <summary>
 /// Fluent builder for constructing DynamoDB TransactWrite requests with a user-friendly API.
 /// </summary>
-public class TransactWriteBuilder
+public sealed class TransactWriteBuilder
 {
     private readonly TransactWriteRequest _request = new()
     {

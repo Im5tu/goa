@@ -3,7 +3,7 @@ namespace Goa.Clients.Bedrock.Models;
 /// <summary>
 /// Configuration for model inference parameters.
 /// </summary>
-public class InferenceConfiguration
+public sealed class InferenceConfiguration
 {
     /// <summary>
     /// The maximum number of tokens to generate in the response.

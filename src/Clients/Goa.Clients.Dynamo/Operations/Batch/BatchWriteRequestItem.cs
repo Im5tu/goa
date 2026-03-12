@@ -5,7 +5,7 @@ namespace Goa.Clients.Dynamo.Operations.Batch;
 /// <summary>
 /// Individual write request within a BatchWriteItem operation.
 /// </summary>
-public class BatchWriteRequestItem
+public sealed class BatchWriteRequestItem
 {
     /// <summary>
     /// A request to perform a PutItem operation.

@@ -7,7 +7,7 @@ namespace Goa.Clients.Dynamo.Operations.Transactions;
 /// <summary>
 /// Update operation in a transaction.
 /// </summary>
-public class TransactUpdateItem
+public sealed class TransactUpdateItem
 {
     /// <summary>
     /// The name of the table containing the item to be updated.

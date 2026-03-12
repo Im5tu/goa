@@ -6,7 +6,7 @@ namespace Goa.Clients.Dynamo.Operations;
 /// <summary>
 /// Represents a condition expression for DynamoDB operations with associated attribute names and values.
 /// </summary>
-public class Condition
+public sealed class Condition
 {
     /// <summary>
     /// Gets the condition expression string.

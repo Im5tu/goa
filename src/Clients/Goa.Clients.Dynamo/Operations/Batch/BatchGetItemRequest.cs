@@ -6,7 +6,7 @@ namespace Goa.Clients.Dynamo.Operations.Batch;
 /// <summary>
 /// Request for batch getting items from DynamoDB.
 /// </summary>
-public class BatchGetItemRequest
+public sealed class BatchGetItemRequest
 {
     /// <summary>
     /// A map of one or more table names and, for each table, a map that describes one or more items to retrieve from that table.

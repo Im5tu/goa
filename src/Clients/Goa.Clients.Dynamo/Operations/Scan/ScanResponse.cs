@@ -6,7 +6,7 @@ namespace Goa.Clients.Dynamo.Operations.Scan;
 /// <summary>
 /// Response for Scan operations with pagination support.
 /// </summary>
-public class ScanResponse
+public sealed class ScanResponse
 {
     /// <summary>
     /// An array of item attributes that match the scan criteria.

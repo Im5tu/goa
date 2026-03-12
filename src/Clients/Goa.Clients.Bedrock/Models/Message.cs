@@ -5,7 +5,7 @@ namespace Goa.Clients.Bedrock.Models;
 /// <summary>
 /// A message in a conversation with a model.
 /// </summary>
-public class Message
+public sealed class Message
 {
     /// <summary>
     /// The role of the entity sending the message.

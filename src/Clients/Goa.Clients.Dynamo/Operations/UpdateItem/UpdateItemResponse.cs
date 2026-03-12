@@ -6,7 +6,7 @@ namespace Goa.Clients.Dynamo.Operations.UpdateItem;
 /// <summary>
 /// Response for UpdateItem operations.
 /// </summary>
-public class UpdateItemResponse
+public sealed class UpdateItemResponse
 {
     /// <summary>
     /// A map of attribute names to AttributeValue objects representing the item as it appeared before it was updated.

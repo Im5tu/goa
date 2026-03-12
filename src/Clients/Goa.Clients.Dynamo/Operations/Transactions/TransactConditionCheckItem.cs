@@ -7,7 +7,7 @@ namespace Goa.Clients.Dynamo.Operations.Transactions;
 /// <summary>
 /// Condition check operation in a transaction.
 /// </summary>
-public class TransactConditionCheckItem
+public sealed class TransactConditionCheckItem
 {
     /// <summary>
     /// The name of the table containing the requested item.

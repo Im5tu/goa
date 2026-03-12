@@ -3,7 +3,7 @@ namespace Goa.Clients.Dynamo.Exceptions;
 /// <summary>
 /// Exception thrown when a required DynamoDB attribute is missing or null.
 /// </summary>
-public class MissingAttributeException : Exception
+public sealed class MissingAttributeException : Exception
 {
     /// <summary>
     /// Gets the name of the missing attribute.

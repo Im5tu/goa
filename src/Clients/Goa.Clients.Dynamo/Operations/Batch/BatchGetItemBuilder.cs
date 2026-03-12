@@ -5,7 +5,7 @@ namespace Goa.Clients.Dynamo.Operations.Batch;
 /// <summary>
 /// Fluent builder for constructing DynamoDB BatchGetItem requests with a user-friendly API.
 /// </summary>
-public class BatchGetItemBuilder
+public sealed class BatchGetItemBuilder
 {
     private readonly BatchGetItemRequest _request = new()
     {

@@ -8,7 +8,7 @@ namespace Goa.Clients.Dynamo.Operations.DeleteItem;
 /// Fluent builder for constructing DynamoDB DeleteItem requests with a user-friendly API.
 /// </summary>
 /// <param name="tableName">The name of the table to delete the item from.</param>
-public class DeleteItemBuilder(string tableName)
+public sealed class DeleteItemBuilder(string tableName)
 {
     private readonly DeleteItemRequest _request = new()
     {

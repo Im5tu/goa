@@ -5,7 +5,7 @@
 /// This attribute is inherited, allowing base classes to define common GSI patterns.
 /// </summary>
 [AttributeUsage(AttributeTargets.Class, AllowMultiple = true, Inherited = true)]
-public class GlobalSecondaryIndexAttribute : Attribute
+public sealed class GlobalSecondaryIndexAttribute : Attribute
 {
     /// <summary>
     /// The name of the Global Secondary Index in DynamoDB.

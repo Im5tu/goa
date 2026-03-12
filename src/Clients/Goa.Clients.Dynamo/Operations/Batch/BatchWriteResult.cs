@@ -6,7 +6,7 @@ namespace Goa.Clients.Dynamo.Operations.Batch;
 /// <summary>
 /// Result wrapper for BatchWrite operations.
 /// </summary>
-public class BatchWriteResult
+public sealed class BatchWriteResult
 {
     /// <summary>
     /// Put items that were not processed during the BatchWriteItem operation.

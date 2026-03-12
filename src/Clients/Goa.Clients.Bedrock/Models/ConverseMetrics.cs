@@ -3,7 +3,7 @@ namespace Goa.Clients.Bedrock.Models;
 /// <summary>
 /// Performance metrics for a conversation request.
 /// </summary>
-public class ConverseMetrics
+public sealed class ConverseMetrics
 {
     /// <summary>
     /// The latency of the request in milliseconds.

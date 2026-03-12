@@ -3,7 +3,7 @@ namespace Goa.Clients.Bedrock.Models;
 /// <summary>
 /// A tool result block containing the response from a tool invocation.
 /// </summary>
-public class ToolResultBlock
+public sealed class ToolResultBlock
 {
     /// <summary>
     /// The identifier of the tool use request this is a response to.

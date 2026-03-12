@@ -3,7 +3,7 @@ namespace Goa.Clients.Bedrock.Conversation.Entities;
 /// <summary>
 /// Represents a conversation with its associated messages.
 /// </summary>
-public class ConversationWithMessages
+public sealed class ConversationWithMessages
 {
     /// <summary>
     /// The conversation.

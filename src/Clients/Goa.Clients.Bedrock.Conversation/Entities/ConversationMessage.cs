@@ -6,7 +6,7 @@ namespace Goa.Clients.Bedrock.Conversation.Entities;
 /// <summary>
 /// Represents a message within a conversation.
 /// </summary>
-public class ConversationMessage
+public sealed class ConversationMessage
 {
     /// <summary>
     /// The unique identifier for the message.

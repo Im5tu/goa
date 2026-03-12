@@ -7,7 +7,7 @@ namespace Goa.Clients.Bedrock.Operations.Converse;
 /// <summary>
 /// Request for the Bedrock Converse API.
 /// </summary>
-public class ConverseRequest
+public sealed class ConverseRequest
 {
     /// <summary>
     /// The identifier of the model to use.
@@ -73,7 +73,7 @@ public class ConverseRequest
 /// <summary>
 /// A system content block for providing context.
 /// </summary>
-public class SystemContentBlock
+public sealed class SystemContentBlock
 {
     /// <summary>
     /// Text content for the system prompt.
@@ -91,7 +91,7 @@ public class SystemContentBlock
 /// <summary>
 /// Request metadata including service tier.
 /// </summary>
-public class RequestMetadata
+public sealed class RequestMetadata
 {
     /// <summary>
     /// The service tier for request processing.
