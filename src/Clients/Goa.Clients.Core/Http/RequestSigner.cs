@@ -59,7 +59,7 @@ internal sealed class RequestSigner
                 if (i != 0) sb.Append("; ");
                 sb.Append(errs[i].Description);
             }
-            ThrowInvalidOperationException($"Failed to retrieve AWS credentials: {sb}");
+            Throw.InvalidOperation($"Failed to retrieve AWS credentials: {sb}");
         }
         var credentials = credentialsResult.Value;
 
@@ -146,7 +146,7 @@ internal sealed class RequestSigner
                 if (i != 0) sb.Append("; ");
                 sb.Append(errs[i].Description);
             }
-            ThrowInvalidOperationException($"Failed to retrieve AWS credentials: {sb}");
+            Throw.InvalidOperation($"Failed to retrieve AWS credentials: {sb}");
         }
         var credentials = credentialsResult.Value;
 
@@ -885,10 +885,10 @@ internal sealed class RequestSigner
             region = regionOption;
 
         if (string.IsNullOrWhiteSpace(region))
-            ThrowInvalidOperationException("Region is required");
+            Throw.InvalidOperation("Region is required");
 
         if (!request.Options.TryGetValue(HttpOptions.Service, out var service) || string.IsNullOrWhiteSpace(service))
-            ThrowInvalidOperationException("Service name is required");
+            Throw.InvalidOperation("Service name is required");
 
         return (region!, service);
     }
@@ -1108,17 +1108,6 @@ internal sealed class RequestSigner
                string.Equals(headerName, "x-amz-api-version", StringComparison.OrdinalIgnoreCase) ||
                string.Equals(headerName, "x-amz-security-token", StringComparison.OrdinalIgnoreCase);
     }
-
-    /// <summary>
-    /// Exception helpers with no-inlining to keep hot paths small.
-    /// </summary>
-    [MethodImpl(MethodImplOptions.NoInlining)]
-    [DoesNotReturn]
-    private static void ThrowInvalidOperationException(string message) => throw new InvalidOperationException(message);
-
-    [MethodImpl(MethodImplOptions.NoInlining)]
-    [DoesNotReturn]
-    private static void ThrowArgumentNullException(string paramName) => throw new ArgumentNullException(paramName);
 
     /// <summary>
     /// Creates credential scope string for AWS signature computation.
