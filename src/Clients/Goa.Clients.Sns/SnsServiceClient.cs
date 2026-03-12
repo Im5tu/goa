@@ -11,6 +11,7 @@ namespace Goa.Clients.Sns;
 
 internal sealed class SnsServiceClient : AwsServiceClient<SnsServiceClientConfiguration>, ISnsClient
 {
+    private static readonly MediaTypeHeaderValue FormUrlEncodedContentType = new("application/x-www-form-urlencoded");
     private static readonly ApiError DeserializationError = new("Failed to deserialize response", "DeserializationError");
 
     public SnsServiceClient(
@@ -47,7 +48,7 @@ internal sealed class SnsServiceClient : AwsServiceClient<SnsServiceClientConfig
                 HttpMethod.Post,
                 "/",
                 content,
-                new MediaTypeHeaderValue("application/x-www-form-urlencoded"));
+                FormUrlEncodedContentType);
 
             // Send request and get raw HTTP response
             var httpResponse = await SendAsync(requestMessage, "Publish", cancellationToken);

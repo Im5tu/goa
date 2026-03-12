@@ -15,6 +15,7 @@ namespace Goa.Clients.Core;
 /// <typeparam name="T">The configuration type that extends AwsServiceConfiguration.</typeparam>
 public abstract class XmlAwsServiceClient<T> : AwsServiceClient<T> where T : AwsServiceConfiguration
 {
+    private static readonly MediaTypeHeaderValue XmlContentType = new("application/xml");
     private readonly ApiError _deserializationError = new("Failed to deserialize response", "DeserializationError");
 
     /// <summary>
@@ -57,7 +58,7 @@ public abstract class XmlAwsServiceClient<T> : AwsServiceClient<T> where T : Aws
             }
         }
 
-        using var requestMessage = CreateRequestMessage(method, requestUri + $"?Action={UrlEncoder.Default.Encode(target)}", content, new MediaTypeHeaderValue("application/xml"), headers);
+        using var requestMessage = CreateRequestMessage(method, requestUri + $"?Action={UrlEncoder.Default.Encode(target)}", content, XmlContentType, headers);
         using var response = await SendAsync(requestMessage, target, cancellationToken);
 
         return await ProcessXmlResponseAsync<TResponse>(response, cancellationToken);
