@@ -152,7 +152,7 @@ public abstract class JsonAwsServiceClient<T> : AwsServiceClient<T> where T : Aw
     /// </summary>
     private static bool IsJsonSerialized(string input)
     {
-        var trimmed = input.TrimStart();
-        return trimmed.StartsWith('{') || trimmed.StartsWith('[');
+        var trimmed = input.AsSpan().TrimStart();
+        return trimmed.StartsWith("{") || trimmed.StartsWith("[");
     }
 }

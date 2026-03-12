@@ -162,6 +162,6 @@ public abstract class XmlAwsServiceClient<T> : AwsServiceClient<T> where T : Aws
     /// </summary>
     private static bool IsXmlSerialized(string input)
     {
-        return input.TrimStart().StartsWith('<');
+        return input.AsSpan().TrimStart().StartsWith("<");
     }
 }
