@@ -61,7 +61,7 @@ public class TimeOnlyTypeHandlerTests
         
         var result = _handler.GenerateToAttributeValue(property);
         
-        var expected = "new AttributeValue { S = model.StartTime.ToString(\"HH:mm:ss.fffffff\") }";
+        var expected = "AttributeValue.String(model.StartTime.ToString(\"HH:mm:ss.fffffff\"))";
         await Assert.That(result).IsEqualTo(expected);
     }
 

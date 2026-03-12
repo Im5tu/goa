@@ -35,8 +35,8 @@ public class UnixTimestampTypeHandler : ITypeHandler
         else
         {
             return isMilliseconds
-                ? $"new AttributeValue {{ N = ((DateTimeOffset)model.{propertyName}).ToUnixTimeMilliseconds().ToString() }}"
-                : $"new AttributeValue {{ N = ((DateTimeOffset)model.{propertyName}).ToUnixTimeSeconds().ToString() }}";
+                ? $"AttributeValue.Number(((DateTimeOffset)model.{propertyName}).ToUnixTimeMilliseconds().ToString())"
+                : $"AttributeValue.Number(((DateTimeOffset)model.{propertyName}).ToUnixTimeSeconds().ToString())";
         }
     }
     
@@ -57,11 +57,11 @@ public class UnixTimestampTypeHandler : ITypeHandler
         return isMilliseconds
             ? $@"if (model.{propertyName}.HasValue)
 {{
-    {recordVariable}[""{dynamoAttributeName}""] = new AttributeValue {{ N = ((DateTimeOffset)model.{propertyName}.Value).ToUnixTimeMilliseconds().ToString() }};
+    {recordVariable}[""{dynamoAttributeName}""] = AttributeValue.Number(((DateTimeOffset)model.{propertyName}.Value).ToUnixTimeMilliseconds().ToString());
 }}"
             : $@"if (model.{propertyName}.HasValue)
 {{
-    {recordVariable}[""{dynamoAttributeName}""] = new AttributeValue {{ N = ((DateTimeOffset)model.{propertyName}.Value).ToUnixTimeSeconds().ToString() }};
+    {recordVariable}[""{dynamoAttributeName}""] = AttributeValue.Number(((DateTimeOffset)model.{propertyName}.Value).ToUnixTimeSeconds().ToString());
 }}";
     }
     

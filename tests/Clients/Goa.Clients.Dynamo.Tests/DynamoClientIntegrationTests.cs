@@ -25,10 +25,10 @@ public class DynamoClientIntegrationTests
     {
         var item = new Dictionary<string, AttributeValue>
         {
-            ["pk"] = new() { S = "test-pk" },
-            ["sk"] = new() { S = "test-sk" },
-            ["data"] = new() { S = "test-data" },
-            ["number"] = new() { N = "123" }
+            ["pk"] = AttributeValue.String("test-pk"),
+            ["sk"] = AttributeValue.String("test-sk"),
+            ["data"] = AttributeValue.String("test-data"),
+            ["number"] = AttributeValue.Number("123")
         };
 
         var request = new PutItemRequest
@@ -47,9 +47,9 @@ public class DynamoClientIntegrationTests
     {
         var putItem = new Dictionary<string, AttributeValue>
         {
-            ["pk"] = new() { S = "get-test-pk" },
-            ["sk"] = new() { S = "get-test-sk" },
-            ["data"] = new() { S = "retrieved-data" }
+            ["pk"] = AttributeValue.String("get-test-pk"),
+            ["sk"] = AttributeValue.String("get-test-sk"),
+            ["data"] = AttributeValue.String("retrieved-data")
         };
 
         var putRequest = new PutItemRequest
@@ -65,8 +65,8 @@ public class DynamoClientIntegrationTests
             TableName = _fixture.TestTableName,
             Key = new Dictionary<string, AttributeValue>
             {
-                ["pk"] = new() { S = "get-test-pk" },
-                ["sk"] = new() { S = "get-test-sk" }
+                ["pk"] = AttributeValue.String("get-test-pk"),
+                ["sk"] = AttributeValue.String("get-test-sk")
             }
         };
 
@@ -76,7 +76,7 @@ public class DynamoClientIntegrationTests
         await Assert.That(() => response.Value.Item).IsNotNull();
         var attribute = (response.Value.Item!)["data"];
         await Assert.That(attribute).IsNotNull();
-        await Assert.That(attribute!.S).IsEqualTo("retrieved-data");
+        await Assert.That(attribute!.Value.S).IsEqualTo("retrieved-data");
     }
 
     [Test]
@@ -87,8 +87,8 @@ public class DynamoClientIntegrationTests
             TableName = _fixture.TestTableName,
             Key = new Dictionary<string, AttributeValue>
             {
-                ["pk"] = new() { S = "non-existent-pk" },
-                ["sk"] = new() { S = "non-existent-sk" }
+                ["pk"] = AttributeValue.String("non-existent-pk"),
+                ["sk"] = AttributeValue.String("non-existent-sk")
             }
         };
 
@@ -103,10 +103,10 @@ public class DynamoClientIntegrationTests
     {
         var initialItem = new Dictionary<string, AttributeValue>
         {
-            ["pk"] = new() { S = "update-test-pk" },
-            ["sk"] = new() { S = "update-test-sk" },
-            ["data"] = new() { S = "initial-data" },
-            ["counter"] = new() { N = "1" }
+            ["pk"] = AttributeValue.String("update-test-pk"),
+            ["sk"] = AttributeValue.String("update-test-sk"),
+            ["data"] = AttributeValue.String("initial-data"),
+            ["counter"] = AttributeValue.Number("1")
         };
 
         var putRequest = new PutItemRequest
@@ -122,8 +122,8 @@ public class DynamoClientIntegrationTests
             TableName = _fixture.TestTableName,
             Key = new Dictionary<string, AttributeValue>
             {
-                ["pk"] = new() { S = "update-test-pk" },
-                ["sk"] = new() { S = "update-test-sk" }
+                ["pk"] = AttributeValue.String("update-test-pk"),
+                ["sk"] = AttributeValue.String("update-test-sk")
             },
             UpdateExpression = "SET #data = :newData, #counter = #counter + :inc",
             ExpressionAttributeNames = new Dictionary<string, string>
@@ -133,8 +133,8 @@ public class DynamoClientIntegrationTests
             },
             ExpressionAttributeValues = new Dictionary<string, AttributeValue>
             {
-                [":newData"] = new() { S = "updated-data" },
-                [":inc"] = new() { N = "1" }
+                [":newData"] = AttributeValue.String("updated-data"),
+                [":inc"] = AttributeValue.Number("1")
             },
             ReturnValues = ReturnValues.ALL_NEW
         };
@@ -156,9 +156,9 @@ public class DynamoClientIntegrationTests
     {
         var item = new Dictionary<string, AttributeValue>
         {
-            ["pk"] = new() { S = "delete-test-pk" },
-            ["sk"] = new() { S = "delete-test-sk" },
-            ["data"] = new() { S = "to-be-deleted" }
+            ["pk"] = AttributeValue.String("delete-test-pk"),
+            ["sk"] = AttributeValue.String("delete-test-sk"),
+            ["data"] = AttributeValue.String("to-be-deleted")
         };
 
         var putRequest = new PutItemRequest
@@ -174,8 +174,8 @@ public class DynamoClientIntegrationTests
             TableName = _fixture.TestTableName,
             Key = new Dictionary<string, AttributeValue>
             {
-                ["pk"] = new() { S = "delete-test-pk" },
-                ["sk"] = new() { S = "delete-test-sk" }
+                ["pk"] = AttributeValue.String("delete-test-pk"),
+                ["sk"] = AttributeValue.String("delete-test-sk")
             },
             ReturnValues = ReturnValues.ALL_OLD
         };
@@ -192,8 +192,8 @@ public class DynamoClientIntegrationTests
             TableName = _fixture.TestTableName,
             Key = new Dictionary<string, AttributeValue>
             {
-                ["pk"] = new() { S = "delete-test-pk" },
-                ["sk"] = new() { S = "delete-test-sk" }
+                ["pk"] = AttributeValue.String("delete-test-pk"),
+                ["sk"] = AttributeValue.String("delete-test-sk")
             }
         };
 
@@ -208,21 +208,21 @@ public class DynamoClientIntegrationTests
         {
             new Dictionary<string, AttributeValue>
             {
-                ["pk"] = new() { S = "query-test-pk" },
-                ["sk"] = new() { S = "item1" },
-                ["data"] = new() { S = "data1" }
+                ["pk"] = AttributeValue.String("query-test-pk"),
+                ["sk"] = AttributeValue.String("item1"),
+                ["data"] = AttributeValue.String("data1")
             },
             new Dictionary<string, AttributeValue>
             {
-                ["pk"] = new() { S = "query-test-pk" },
-                ["sk"] = new() { S = "item2" },
-                ["data"] = new() { S = "data2" }
+                ["pk"] = AttributeValue.String("query-test-pk"),
+                ["sk"] = AttributeValue.String("item2"),
+                ["data"] = AttributeValue.String("data2")
             },
             new Dictionary<string, AttributeValue>
             {
-                ["pk"] = new() { S = "different-pk" },
-                ["sk"] = new() { S = "item3" },
-                ["data"] = new() { S = "data3" }
+                ["pk"] = AttributeValue.String("different-pk"),
+                ["sk"] = AttributeValue.String("item3"),
+                ["data"] = AttributeValue.String("data3")
             }
         };
 
@@ -242,7 +242,7 @@ public class DynamoClientIntegrationTests
             KeyConditionExpression = "pk = :pk",
             ExpressionAttributeValues = new Dictionary<string, AttributeValue>
             {
-                [":pk"] = new() { S = "query-test-pk" }
+                [":pk"] = AttributeValue.String("query-test-pk")
             }
         };
 
@@ -260,15 +260,15 @@ public class DynamoClientIntegrationTests
         {
             new Dictionary<string, AttributeValue>
             {
-                ["pk"] = new() { S = "scan-test-pk1" },
-                ["sk"] = new() { S = "scan-item1" },
-                ["type"] = new() { S = "test" }
+                ["pk"] = AttributeValue.String("scan-test-pk1"),
+                ["sk"] = AttributeValue.String("scan-item1"),
+                ["type"] = AttributeValue.String("test")
             },
             new Dictionary<string, AttributeValue>
             {
-                ["pk"] = new() { S = "scan-test-pk2" },
-                ["sk"] = new() { S = "scan-item2" },
-                ["type"] = new() { S = "test" }
+                ["pk"] = AttributeValue.String("scan-test-pk2"),
+                ["sk"] = AttributeValue.String("scan-item2"),
+                ["type"] = AttributeValue.String("test")
             }
         };
 
@@ -292,7 +292,7 @@ public class DynamoClientIntegrationTests
             },
             ExpressionAttributeValues = new Dictionary<string, AttributeValue>
             {
-                [":type"] = new() { S = "test" }
+                [":type"] = AttributeValue.String("test")
             }
         };
 
@@ -310,15 +310,15 @@ public class DynamoClientIntegrationTests
         {
             new Dictionary<string, AttributeValue>
             {
-                ["pk"] = new() { S = "batch-get-pk1" },
-                ["sk"] = new() { S = "batch-get-sk1" },
-                ["data"] = new() { S = "batch-data1" }
+                ["pk"] = AttributeValue.String("batch-get-pk1"),
+                ["sk"] = AttributeValue.String("batch-get-sk1"),
+                ["data"] = AttributeValue.String("batch-data1")
             },
             new Dictionary<string, AttributeValue>
             {
-                ["pk"] = new() { S = "batch-get-pk2" },
-                ["sk"] = new() { S = "batch-get-sk2" },
-                ["data"] = new() { S = "batch-data2" }
+                ["pk"] = AttributeValue.String("batch-get-pk2"),
+                ["sk"] = AttributeValue.String("batch-get-sk2"),
+                ["data"] = AttributeValue.String("batch-data2")
             }
         };
 
@@ -342,13 +342,13 @@ public class DynamoClientIntegrationTests
                     {
                         new()
                         {
-                            ["pk"] = new() { S = "batch-get-pk1" },
-                            ["sk"] = new() { S = "batch-get-sk1" }
+                            ["pk"] = AttributeValue.String("batch-get-pk1"),
+                            ["sk"] = AttributeValue.String("batch-get-sk1")
                         },
                         new()
                         {
-                            ["pk"] = new() { S = "batch-get-pk2" },
-                            ["sk"] = new() { S = "batch-get-sk2" }
+                            ["pk"] = AttributeValue.String("batch-get-pk2"),
+                            ["sk"] = AttributeValue.String("batch-get-sk2")
                         }
                     }
                 }
@@ -366,16 +366,16 @@ public class DynamoClientIntegrationTests
     {
         var putItem = new Dictionary<string, AttributeValue>
         {
-            ["pk"] = new() { S = "batch-write-pk1" },
-            ["sk"] = new() { S = "batch-write-sk1" },
-            ["data"] = new() { S = "batch-put-data" }
+            ["pk"] = AttributeValue.String("batch-write-pk1"),
+            ["sk"] = AttributeValue.String("batch-write-sk1"),
+            ["data"] = AttributeValue.String("batch-put-data")
         };
 
         var existingItem = new Dictionary<string, AttributeValue>
         {
-            ["pk"] = new() { S = "batch-write-pk2" },
-            ["sk"] = new() { S = "batch-write-sk2" },
-            ["data"] = new() { S = "to-be-deleted" }
+            ["pk"] = AttributeValue.String("batch-write-pk2"),
+            ["sk"] = AttributeValue.String("batch-write-sk2"),
+            ["data"] = AttributeValue.String("to-be-deleted")
         };
 
         var putExistingRequest = new PutItemRequest
@@ -401,8 +401,8 @@ public class DynamoClientIntegrationTests
                         {
                             Key = new Dictionary<string, AttributeValue>
                             {
-                                ["pk"] = new() { S = "batch-write-pk2" },
-                                ["sk"] = new() { S = "batch-write-sk2" }
+                                ["pk"] = AttributeValue.String("batch-write-pk2"),
+                                ["sk"] = AttributeValue.String("batch-write-sk2")
                             }
                         }
                     }
@@ -419,8 +419,8 @@ public class DynamoClientIntegrationTests
             TableName = _fixture.TestTableName,
             Key = new Dictionary<string, AttributeValue>
             {
-                ["pk"] = new() { S = "batch-write-pk1" },
-                ["sk"] = new() { S = "batch-write-sk1" }
+                ["pk"] = AttributeValue.String("batch-write-pk1"),
+                ["sk"] = AttributeValue.String("batch-write-sk1")
             }
         };
 
@@ -432,12 +432,58 @@ public class DynamoClientIntegrationTests
             TableName = _fixture.TestTableName,
             Key = new Dictionary<string, AttributeValue>
             {
-                ["pk"] = new() { S = "batch-write-pk2" },
-                ["sk"] = new() { S = "batch-write-sk2" }
+                ["pk"] = AttributeValue.String("batch-write-pk2"),
+                ["sk"] = AttributeValue.String("batch-write-sk2")
             }
         };
 
         var getDeletedResponse = await _fixture.DynamoClient.GetItemAsync(getDeletedRequest);
         await Assert.That(() => getDeletedResponse.Value.Item).IsNull();
+    }
+
+    [Test]
+    public async Task QueryAsync_ShouldPaginate_WhenLimitIsSet()
+    {
+        // Insert 10 items
+        for (var i = 0; i < 10; i++)
+        {
+            await _fixture.DynamoClient.PutItemAsync(new PutItemRequest
+            {
+                TableName = _fixture.TestTableName,
+                Item = new Dictionary<string, AttributeValue>
+                {
+                    ["pk"] = AttributeValue.String("paginate-test"),
+                    ["sk"] = AttributeValue.String($"item-{i:D4}"),
+                    ["data"] = AttributeValue.String($"value-{i}")
+                }
+            });
+        }
+
+        var totalCount = 0;
+        var pageCount = 0;
+        Dictionary<string, AttributeValue>? lastKey = null;
+
+        do
+        {
+            var response = await _fixture.DynamoClient.QueryAsync(new QueryRequest
+            {
+                TableName = _fixture.TestTableName,
+                KeyConditionExpression = "pk = :pk",
+                ExpressionAttributeValues = new Dictionary<string, AttributeValue>
+                {
+                    [":pk"] = AttributeValue.String("paginate-test")
+                },
+                Limit = 3,
+                ExclusiveStartKey = lastKey
+            });
+
+            await Assert.That(response.IsError).IsFalse();
+            totalCount += response.Value.Items.Count;
+            pageCount++;
+            lastKey = response.Value.HasMoreResults ? response.Value.LastEvaluatedKey : null;
+        } while (lastKey != null);
+
+        await Assert.That(totalCount).IsEqualTo(10);
+        await Assert.That(pageCount).IsGreaterThanOrEqualTo(4); // 10 items / 3 per page = at least 4 pages
     }
 }

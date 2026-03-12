@@ -176,7 +176,7 @@ public class Condition
     public static Condition SizeEquals(string attributeName, int size)
     {
         return new Condition($"size(#{attributeName}) = :{attributeName}", [new KeyValuePair<string, string>($"#{attributeName}", attributeName)
-        ], [new KeyValuePair<string, AttributeValue>($":{attributeName}", new AttributeValue { N = size.ToString() })]);
+        ], [new KeyValuePair<string, AttributeValue>($":{attributeName}", AttributeValue.Number(size.ToString()))]);
     }
 
     /// <summary>
@@ -188,7 +188,7 @@ public class Condition
     public static Condition SizeNotEquals(string attributeName, int size)
     {
         return new Condition($"size(#{attributeName}) <> :{attributeName}", [new KeyValuePair<string, string>($"#{attributeName}", attributeName)
-        ], [new KeyValuePair<string, AttributeValue>($":{attributeName}", new AttributeValue { N = size.ToString() })]);
+        ], [new KeyValuePair<string, AttributeValue>($":{attributeName}", AttributeValue.Number(size.ToString()))]);
     }
 
     /// <summary>
@@ -200,7 +200,7 @@ public class Condition
     public static Condition SizeGreaterThan(string attributeName, int size)
     {
         return new Condition($"size(#{attributeName}) > :{attributeName}", [new KeyValuePair<string, string>($"#{attributeName}", attributeName)
-        ], [new KeyValuePair<string, AttributeValue>($":{attributeName}", new AttributeValue { N = size.ToString() })]);
+        ], [new KeyValuePair<string, AttributeValue>($":{attributeName}", AttributeValue.Number(size.ToString()))]);
     }
 
     /// <summary>
@@ -212,7 +212,7 @@ public class Condition
     public static Condition SizeGreaterThanOrEquals(string attributeName, int size)
     {
         return new Condition($"size(#{attributeName}) >= :{attributeName}", [new KeyValuePair<string, string>($"#{attributeName}", attributeName)
-        ], [new KeyValuePair<string, AttributeValue>($":{attributeName}", new AttributeValue { N = size.ToString() })]);
+        ], [new KeyValuePair<string, AttributeValue>($":{attributeName}", AttributeValue.Number(size.ToString()))]);
     }
 
     /// <summary>
@@ -224,7 +224,7 @@ public class Condition
     public static Condition SizeLessThan(string attributeName, int size)
     {
         return new Condition($"size(#{attributeName}) < :{attributeName}", [new KeyValuePair<string, string>($"#{attributeName}", attributeName)
-        ], [new KeyValuePair<string, AttributeValue>($":{attributeName}", new AttributeValue { N = size.ToString() })]);
+        ], [new KeyValuePair<string, AttributeValue>($":{attributeName}", AttributeValue.Number(size.ToString()))]);
     }
 
     /// <summary>
@@ -236,7 +236,7 @@ public class Condition
     public static Condition SizeLessThanOrEquals(string attributeName, int size)
     {
         return new Condition($"size(#{attributeName}) <= :{attributeName}", [new KeyValuePair<string, string>($"#{attributeName}", attributeName)
-        ], [new KeyValuePair<string, AttributeValue>($":{attributeName}", new AttributeValue { N = size.ToString() })]);
+        ], [new KeyValuePair<string, AttributeValue>($":{attributeName}", AttributeValue.Number(size.ToString()))]);
     }
 
     /// <summary>
@@ -270,7 +270,7 @@ public class Condition
     public static Condition AttributeType(string attributeName, string type)
     {
         return new Condition($"attribute_type(#{attributeName}, :{attributeName})", [new KeyValuePair<string, string>($"#{attributeName}", attributeName)
-        ], [new KeyValuePair<string, AttributeValue>($":{attributeName}", new AttributeValue { S = type })]);
+        ], [new KeyValuePair<string, AttributeValue>($":{attributeName}", AttributeValue.String(type))]);
     }
 
     /// <summary>

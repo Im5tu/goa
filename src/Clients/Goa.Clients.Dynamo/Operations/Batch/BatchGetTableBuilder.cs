@@ -33,7 +33,7 @@ public class BatchGetTableBuilder
     {
         _request.Keys.Add(new Dictionary<string, AttributeValue>
         {
-            [attributeName] = new AttributeValue { S = value }
+            [attributeName] = AttributeValue.String(value)
         });
         return this;
     }

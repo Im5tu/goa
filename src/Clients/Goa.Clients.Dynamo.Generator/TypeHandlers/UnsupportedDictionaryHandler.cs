@@ -25,7 +25,7 @@ public class UnsupportedDictionaryHandler : ITypeHandler
     public string GenerateToAttributeValue(PropertyInfo propertyInfo)
     {
         // Unsupported dictionary types always serialize as NULL
-        return "new AttributeValue { NULL = true }";
+        return "AttributeValue.Null()";
     }
     
     public string GenerateFromDynamoRecord(PropertyInfo propertyInfo, string recordVariableName, string pkVariable, string skVariable)

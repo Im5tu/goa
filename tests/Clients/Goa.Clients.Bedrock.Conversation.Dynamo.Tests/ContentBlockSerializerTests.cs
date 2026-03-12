@@ -180,14 +180,11 @@ public class ContentBlockSerializerTests
     [Test]
     public async Task Deserialize_TextBlock_ShouldDeserializeCorrectly()
     {
-        var attributeValue = new AttributeValue
+        var attributeValue = AttributeValue.FromMap(new Dictionary<string, AttributeValue>
         {
-            M = new Dictionary<string, AttributeValue>
-            {
-                ["type"] = new() { S = "text" },
-                ["text"] = new() { S = "Hello, world!" }
-            }
-        };
+            ["type"] = AttributeValue.String("text"),
+            ["text"] = AttributeValue.String("Hello, world!")
+        });
 
         var result = ContentBlockSerializer.Deserialize(attributeValue);
 
@@ -198,16 +195,13 @@ public class ContentBlockSerializerTests
     [Test]
     public async Task Deserialize_ImageBlock_ShouldDeserializeCorrectly()
     {
-        var attributeValue = new AttributeValue
+        var attributeValue = AttributeValue.FromMap(new Dictionary<string, AttributeValue>
         {
-            M = new Dictionary<string, AttributeValue>
-            {
-                ["type"] = new() { S = "image" },
-                ["format"] = new() { S = "png" },
-                ["s3Uri"] = new() { S = "s3://bucket/image.png" },
-                ["s3BucketOwner"] = new() { S = "123456789012" }
-            }
-        };
+            ["type"] = AttributeValue.String("image"),
+            ["format"] = AttributeValue.String("png"),
+            ["s3Uri"] = AttributeValue.String("s3://bucket/image.png"),
+            ["s3BucketOwner"] = AttributeValue.String("123456789012")
+        });
 
         var result = ContentBlockSerializer.Deserialize(attributeValue);
 
@@ -222,16 +216,13 @@ public class ContentBlockSerializerTests
     [Test]
     public async Task Deserialize_DocumentBlock_ShouldDeserializeCorrectly()
     {
-        var attributeValue = new AttributeValue
+        var attributeValue = AttributeValue.FromMap(new Dictionary<string, AttributeValue>
         {
-            M = new Dictionary<string, AttributeValue>
-            {
-                ["type"] = new() { S = "document" },
-                ["format"] = new() { S = "pdf" },
-                ["name"] = new() { S = "document.pdf" },
-                ["s3Uri"] = new() { S = "s3://bucket/document.pdf" }
-            }
-        };
+            ["type"] = AttributeValue.String("document"),
+            ["format"] = AttributeValue.String("pdf"),
+            ["name"] = AttributeValue.String("document.pdf"),
+            ["s3Uri"] = AttributeValue.String("s3://bucket/document.pdf")
+        });
 
         var result = ContentBlockSerializer.Deserialize(attributeValue);
 
@@ -245,16 +236,13 @@ public class ContentBlockSerializerTests
     [Test]
     public async Task Deserialize_ToolUseBlock_ShouldDeserializeCorrectly()
     {
-        var attributeValue = new AttributeValue
+        var attributeValue = AttributeValue.FromMap(new Dictionary<string, AttributeValue>
         {
-            M = new Dictionary<string, AttributeValue>
-            {
-                ["type"] = new() { S = "toolUse" },
-                ["toolUseId"] = new() { S = "tool-123" },
-                ["name"] = new() { S = "search" },
-                ["input"] = new() { S = "{\"query\":\"test\"}" }
-            }
-        };
+            ["type"] = AttributeValue.String("toolUse"),
+            ["toolUseId"] = AttributeValue.String("tool-123"),
+            ["name"] = AttributeValue.String("search"),
+            ["input"] = AttributeValue.String("{\"query\":\"test\"}")
+        });
 
         var result = ContentBlockSerializer.Deserialize(attributeValue);
 
@@ -268,29 +256,20 @@ public class ContentBlockSerializerTests
     [Test]
     public async Task Deserialize_ToolResultBlock_ShouldDeserializeCorrectly()
     {
-        var attributeValue = new AttributeValue
+        var attributeValue = AttributeValue.FromMap(new Dictionary<string, AttributeValue>
         {
-            M = new Dictionary<string, AttributeValue>
-            {
-                ["type"] = new() { S = "toolResult" },
-                ["toolUseId"] = new() { S = "tool-123" },
-                ["status"] = new() { S = "success" },
-                ["content"] = new()
+            ["type"] = AttributeValue.String("toolResult"),
+            ["toolUseId"] = AttributeValue.String("tool-123"),
+            ["status"] = AttributeValue.String("success"),
+            ["content"] = AttributeValue.FromList(
+            [
+                AttributeValue.FromMap(new Dictionary<string, AttributeValue>
                 {
-                    L =
-                    [
-                        new AttributeValue
-                        {
-                            M = new Dictionary<string, AttributeValue>
-                            {
-                                ["type"] = new() { S = "text" },
-                                ["text"] = new() { S = "Result" }
-                            }
-                        }
-                    ]
-                }
-            }
-        };
+                    ["type"] = AttributeValue.String("text"),
+                    ["text"] = AttributeValue.String("Result")
+                })
+            ])
+        });
 
         var result = ContentBlockSerializer.Deserialize(attributeValue);
 
@@ -305,7 +284,7 @@ public class ContentBlockSerializerTests
     [Test]
     public async Task Deserialize_InvalidFormat_ShouldReturnError()
     {
-        var attributeValue = new AttributeValue { S = "not a map" };
+        var attributeValue = AttributeValue.String("not a map");
 
         var result = ContentBlockSerializer.Deserialize(attributeValue);
 
@@ -316,13 +295,10 @@ public class ContentBlockSerializerTests
     [Test]
     public async Task Deserialize_MissingType_ShouldReturnError()
     {
-        var attributeValue = new AttributeValue
+        var attributeValue = AttributeValue.FromMap(new Dictionary<string, AttributeValue>
         {
-            M = new Dictionary<string, AttributeValue>
-            {
-                ["text"] = new() { S = "Hello" }
-            }
-        };
+            ["text"] = AttributeValue.String("Hello")
+        });
 
         var result = ContentBlockSerializer.Deserialize(attributeValue);
 
@@ -333,13 +309,10 @@ public class ContentBlockSerializerTests
     [Test]
     public async Task Deserialize_UnknownType_ShouldReturnError()
     {
-        var attributeValue = new AttributeValue
+        var attributeValue = AttributeValue.FromMap(new Dictionary<string, AttributeValue>
         {
-            M = new Dictionary<string, AttributeValue>
-            {
-                ["type"] = new() { S = "unknown" }
-            }
-        };
+            ["type"] = AttributeValue.String("unknown")
+        });
 
         var result = ContentBlockSerializer.Deserialize(attributeValue);
 
