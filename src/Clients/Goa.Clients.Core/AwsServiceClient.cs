@@ -267,7 +267,7 @@ public abstract class AwsServiceClient<T> where T : AwsServiceConfiguration
         if (headerLength is not null)
         {
             if (headerLength < 0 || headerLength > MaxResponseSize)
-                throw new InvalidOperationException($"Response Content-Length {headerLength} exceeds maximum {MaxResponseSize} bytes.");
+                Throw.InvalidOperation($"Response Content-Length {headerLength} exceeds maximum {MaxResponseSize} bytes.");
 
             var contentLength = (int)headerLength;
             var knownBuffer = ArrayPool<byte>.Shared.Rent(contentLength);
@@ -315,7 +315,7 @@ public abstract class AwsServiceClient<T> where T : AwsServiceConfiguration
                 totalRead += read;
 
                 if (totalRead > MaxResponseSize)
-                    throw new InvalidOperationException($"Response size exceeds maximum {MaxResponseSize} bytes.");
+                    Throw.InvalidOperation($"Response size exceeds maximum {MaxResponseSize} bytes.");
             }
 
             if (totalRead == 0)
