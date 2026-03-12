@@ -91,7 +91,7 @@ public abstract class AwsServiceClient<T> where T : AwsServiceConfiguration
             // Log fixed response fields with zero-allocation scope
             using var responseLogContext = Logger.IsEnabled(Configuration.LogLevel)
                 ? Logger.BeginScope(new LogScope2(
-                    new("StatusCode", ((int)response.StatusCode).ToString()),
+                    new("StatusCode", GetStatusCodeString((int)response.StatusCode)),
                     new("ReasonPhrase", response.ReasonPhrase ?? response.StatusCode.ToString())
                 ))
                 : null;
@@ -148,6 +148,16 @@ public abstract class AwsServiceClient<T> where T : AwsServiceConfiguration
 
         return error;
     }
+
+    private static string GetStatusCodeString(int statusCode) => statusCode switch
+    {
+        200 => "200", 201 => "201", 202 => "202", 204 => "204",
+        301 => "301", 302 => "302", 304 => "304",
+        400 => "400", 401 => "401", 403 => "403", 404 => "404",
+        409 => "409", 429 => "429",
+        500 => "500", 502 => "502", 503 => "503", 504 => "504",
+        _ => statusCode.ToString()
+    };
 
     /// <summary>
     /// Creates an HTTP request message with the specified content.
