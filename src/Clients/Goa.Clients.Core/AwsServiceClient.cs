@@ -2,6 +2,7 @@
 using Goa.Clients.Core.Http;
 using Goa.Clients.Core.Logging;
 using Microsoft.Extensions.Logging;
+using System.Buffers;
 using System.Diagnostics;
 using System.Net.Http.Headers;
 
@@ -243,5 +244,124 @@ public abstract class AwsServiceClient<T> where T : AwsServiceConfiguration
         }
 
         return requestMessage;
+    }
+
+    /// <summary>
+    /// Maximum allowed response size in bytes (4 MB).
+    /// </summary>
+    protected const int MaxResponseSize = 4 * 1024 * 1024;
+
+    /// <summary>
+    /// Reads the HTTP response body into a pooled byte buffer for zero-copy deserialization.
+    /// </summary>
+    /// <param name="response">The HTTP response message.</param>
+    /// <param name="cancellationToken">Token to cancel the operation.</param>
+    /// <returns>A pooled buffer containing the response bytes. Must be disposed after use.</returns>
+    protected static async Task<PooledBuffer> ReadResponseBytesAsync(
+        HttpResponseMessage response, CancellationToken cancellationToken)
+    {
+        var headerLength = response.Content.Headers.ContentLength;
+        if (headerLength is 0)
+            return default;
+
+        if (headerLength is not null)
+        {
+            if (headerLength < 0 || headerLength > MaxResponseSize)
+                throw new InvalidOperationException($"Response Content-Length {headerLength} exceeds maximum {MaxResponseSize} bytes.");
+
+            var contentLength = (int)headerLength;
+            var knownBuffer = ArrayPool<byte>.Shared.Rent(contentLength);
+            try
+            {
+                var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
+                var totalRead = 0;
+                while (totalRead < contentLength)
+                {
+                    var read = await stream.ReadAsync(knownBuffer.AsMemory(totalRead, contentLength - totalRead), cancellationToken);
+                    if (read == 0) break;
+                    totalRead += read;
+                }
+                return new PooledBuffer(knownBuffer, totalRead);
+            }
+            catch
+            {
+                ArrayPool<byte>.Shared.Return(knownBuffer);
+                throw;
+            }
+        }
+
+        const int initialSize = 4096;
+        var buffer = ArrayPool<byte>.Shared.Rent(initialSize);
+        try
+        {
+            var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
+            var totalRead = 0;
+            while (true)
+            {
+                if (totalRead == buffer.Length)
+                {
+                    var newSize = buffer.Length * 2;
+                    if (newSize > MaxResponseSize)
+                        newSize = MaxResponseSize + 1; // allow one more read to detect overflow
+
+                    var newBuffer = ArrayPool<byte>.Shared.Rent(newSize);
+                    buffer.AsSpan(0, totalRead).CopyTo(newBuffer);
+                    ArrayPool<byte>.Shared.Return(buffer);
+                    buffer = newBuffer;
+                }
+
+                var read = await stream.ReadAsync(buffer.AsMemory(totalRead, buffer.Length - totalRead), cancellationToken);
+                if (read == 0) break;
+                totalRead += read;
+
+                if (totalRead > MaxResponseSize)
+                    throw new InvalidOperationException($"Response size exceeds maximum {MaxResponseSize} bytes.");
+            }
+
+            if (totalRead == 0)
+            {
+                ArrayPool<byte>.Shared.Return(buffer);
+                return default;
+            }
+
+            return new PooledBuffer(buffer, totalRead);
+        }
+        catch
+        {
+            ArrayPool<byte>.Shared.Return(buffer);
+            throw;
+        }
+    }
+
+    /// <summary>
+    /// A disposable buffer backed by ArrayPool for zero-allocation response reading.
+    /// </summary>
+    protected struct PooledBuffer : IDisposable
+    {
+        private byte[]? _buffer;
+
+        /// <summary>The number of valid bytes in the buffer.</summary>
+        public readonly int Length;
+
+        /// <summary>Creates a new PooledBuffer wrapping the given rented array.</summary>
+        public PooledBuffer(byte[] buffer, int length)
+        {
+            _buffer = buffer;
+            Length = length;
+        }
+
+        /// <summary>Gets a read-only span over the valid portion of the buffer.</summary>
+        public readonly ReadOnlySpan<byte> Span => _buffer is null ? default : _buffer.AsSpan(0, Length);
+
+        /// <summary>Returns the rented buffer to the shared ArrayPool.</summary>
+        public void Dispose()
+        {
+            var buf = _buffer;
+            if (buf is not null)
+            {
+                _buffer = null;
+                ArrayPool<byte>.Shared.Return(buf);
+            }
+        }
     }
 }

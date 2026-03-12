@@ -60,26 +60,27 @@ public abstract class XmlAwsServiceClient<T> : AwsServiceClient<T> where T : Aws
         using var requestMessage = CreateRequestMessage(method, requestUri + $"?Action={UrlEncoder.Default.Encode(target)}", content, new MediaTypeHeaderValue("application/xml"), headers);
         using var response = await SendAsync(requestMessage, target, cancellationToken);
 
-        return await ProcessXmlResponseAsync<TResponse>(response);
+        return await ProcessXmlResponseAsync<TResponse>(response, cancellationToken);
     }
 
     /// <summary>
     /// Processes an HTTP response and converts it to an API response with XML deserialization.
     /// </summary>
-    private async Task<ApiResponse<TResponse>> ProcessXmlResponseAsync<TResponse>(HttpResponseMessage response)
+    private async Task<ApiResponse<TResponse>> ProcessXmlResponseAsync<TResponse>(HttpResponseMessage response, CancellationToken cancellationToken)
         where TResponse : class, IDeserializeFromXml, new()
     {
         var headers = ResponseHeaders.FromHttpResponse(response.Headers);
 
         if (!response.IsSuccessStatusCode)
         {
-            var errorPayload = await response.Content.ReadAsStringAsync();
-            if (string.IsNullOrWhiteSpace(errorPayload))
+            using var errorBuffer = await ReadResponseBytesAsync(response, cancellationToken);
+            if (errorBuffer.Length == 0)
             {
                 Logger.RequestFailed("No payload present");
                 return new ApiResponse<TResponse>(new ApiError("Request not successful.") { StatusCode = response.StatusCode });
             }
 
+            var errorPayload = Encoding.UTF8.GetString(errorBuffer.Span);
             var error = DeserializeXmlError(errorPayload);
             if (error is not null)
             {
@@ -101,7 +102,8 @@ public abstract class XmlAwsServiceClient<T> : AwsServiceClient<T> where T : Aws
             return new ApiResponse<TResponse>(error ?? _deserializationError);
         }
 
-        var contentPayload = await response.Content.ReadAsStringAsync();
+        using var pooledBuffer = await ReadResponseBytesAsync(response, cancellationToken);
+        var contentPayload = pooledBuffer.Length > 0 ? Encoding.UTF8.GetString(pooledBuffer.Span) : string.Empty;
         Debug.WriteLine("RESPONSE: " + contentPayload);
 
         // Handle string responses specially

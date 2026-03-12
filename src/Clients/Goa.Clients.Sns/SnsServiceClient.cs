@@ -53,7 +53,7 @@ internal sealed class SnsServiceClient : AwsServiceClient<SnsServiceClientConfig
             var httpResponse = await SendAsync(requestMessage, "Publish", cancellationToken);
 
             // Process the response
-            var apiResponse = await ProcessSnsResponseAsync<PublishResponse>(httpResponse);
+            var apiResponse = await ProcessSnsResponseAsync<PublishResponse>(httpResponse, cancellationToken);
 
             return ConvertApiResponse(apiResponse);
         }
@@ -126,20 +126,21 @@ internal sealed class SnsServiceClient : AwsServiceClient<SnsServiceClientConfig
     /// <summary>
     /// Processes an SNS HTTP response and converts it to an API response.
     /// </summary>
-    private async Task<ApiResponse<TResponse>> ProcessSnsResponseAsync<TResponse>(HttpResponseMessage response)
+    private async Task<ApiResponse<TResponse>> ProcessSnsResponseAsync<TResponse>(HttpResponseMessage response, CancellationToken cancellationToken)
         where TResponse : class, IDeserializeFromXml, new()
     {
         var headers = ResponseHeaders.FromHttpResponse(response.Headers);
 
         if (!response.IsSuccessStatusCode)
         {
-            var errorPayload = await response.Content.ReadAsStringAsync();
-            if (string.IsNullOrWhiteSpace(errorPayload))
+            using var errorBuffer = await ReadResponseBytesAsync(response, cancellationToken);
+            if (errorBuffer.Length == 0)
             {
                 Logger.RequestFailed("No payload present");
                 return new ApiResponse<TResponse>(new ApiError("Request not successful.") { StatusCode = response.StatusCode });
             }
 
+            var errorPayload = Encoding.UTF8.GetString(errorBuffer.Span);
             var error = DeserializeSnsError(errorPayload);
             if (error is not null)
             {
@@ -161,7 +162,8 @@ internal sealed class SnsServiceClient : AwsServiceClient<SnsServiceClientConfig
             return new ApiResponse<TResponse>(error ?? DeserializationError);
         }
 
-        var contentPayload = await response.Content.ReadAsStringAsync();
+        using var pooledBuffer = await ReadResponseBytesAsync(response, cancellationToken);
+        var contentPayload = pooledBuffer.Length > 0 ? Encoding.UTF8.GetString(pooledBuffer.Span) : string.Empty;
 
         if (string.IsNullOrWhiteSpace(contentPayload))
         {
