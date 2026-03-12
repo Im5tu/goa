@@ -108,16 +108,22 @@ public abstract class AwsServiceClient<T> where T : AwsServiceConfiguration
                 : null;
 
             // Log x-amz response headers separately with capacity hint
-            Dictionary<string, object>? amzHeaders = null;
-            foreach (var header in response.Headers)
+            IDisposable? amzLogContext = null;
+            if (Logger.IsEnabled(Configuration.LogLevel))
             {
-                if (header.Key.StartsWith("x-amz", StringComparison.OrdinalIgnoreCase))
+                Dictionary<string, object>? amzHeaders = null;
+                foreach (var header in response.Headers)
                 {
-                    amzHeaders ??= new Dictionary<string, object>(4);
-                    amzHeaders[header.Key] = string.Join(", ", header.Value);
+                    if (header.Key.StartsWith("x-amz", StringComparison.OrdinalIgnoreCase))
+                    {
+                        amzHeaders ??= new Dictionary<string, object>(4);
+                        amzHeaders[header.Key] = string.Join(", ", header.Value);
+                    }
                 }
+                if (amzHeaders is not null)
+                    amzLogContext = Logger.BeginScope(amzHeaders);
             }
-            using var amzLogContext = amzHeaders is not null ? Logger.BeginScope(amzHeaders) : null;
+            using var _ = amzLogContext;
 
             Logger.RequestComplete(Configuration.LogLevel, Stopwatch.GetElapsedTime(start).TotalMilliseconds);
 
