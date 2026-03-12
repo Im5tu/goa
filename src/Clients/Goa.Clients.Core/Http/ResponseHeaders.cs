@@ -7,6 +7,11 @@ namespace Goa.Clients.Core.Http;
 /// </summary>
 public sealed class ResponseHeaders
 {
+    private const string AmznRequestId = "x-amzn-RequestId";
+    private const string AmzRequestId = "x-amz-request-id";
+    private const string AmznErrorType = "x-amzn-ErrorType";
+    private const string AmznErrorMessage = "x-amzn-ErrorMessage";
+
     /// <summary>
     /// Gets the AWS request ID from the response headers.
     /// </summary>
@@ -33,20 +38,20 @@ public sealed class ResponseHeaders
     internal static ResponseHeaders FromHttpResponse(HttpResponseHeaders headers, HttpContentHeaders? contentHeaders = null)
     {
         string? requestId = null;
-        if (headers.TryGetValues("x-amzn-RequestId", out var values)
-            || headers.TryGetValues("x-amz-request-id", out values))
+        if (headers.TryGetValues(AmznRequestId, out var values)
+            || headers.TryGetValues(AmzRequestId, out values))
         {
             requestId = values.FirstOrDefault();
         }
 
         string? errorType = null;
-        if (headers.TryGetValues("x-amzn-ErrorType", out var typeValues))
+        if (headers.TryGetValues(AmznErrorType, out var typeValues))
         {
             errorType = typeValues.FirstOrDefault();
         }
 
         string? errorMessage = null;
-        if (headers.TryGetValues("x-amzn-ErrorMessage", out var errorValues))
+        if (headers.TryGetValues(AmznErrorMessage, out var errorValues))
         {
             errorMessage = errorValues.FirstOrDefault();
         }
