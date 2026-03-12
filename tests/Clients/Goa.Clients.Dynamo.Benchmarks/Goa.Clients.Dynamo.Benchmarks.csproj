@@ -20,6 +20,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\..\src\Clients\Goa.Clients.Dynamo\Goa.Clients.Dynamo.csproj" />
+    <ProjectReference Include="..\..\..\src\Clients\Goa.Clients.Dynamo.Generator\Goa.Clients.Dynamo.Generator.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
   </ItemGroup>
 
 </Project>
