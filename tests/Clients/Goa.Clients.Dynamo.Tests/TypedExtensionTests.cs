@@ -20,7 +20,7 @@ public class TypedExtensionTests
         var mock = new Mock<IDynamoClient>();
         var lastKey = new Dictionary<string, AttributeValue>
         {
-            ["pk"] = new AttributeValue { S = "lastPk" }
+            ["pk"] = AttributeValue.String("lastPk")
         };
 
         ErrorOr<QueryResult<TestModel>> firstPage = new QueryResult<TestModel>
@@ -53,7 +53,7 @@ public class TypedExtensionTests
         var mock = new Mock<IDynamoClient>();
         var lastKey = new Dictionary<string, AttributeValue>
         {
-            ["pk"] = new AttributeValue { S = "lastPk" }
+            ["pk"] = AttributeValue.String("lastPk")
         };
 
         ErrorOr<ScanResult<TestModel>> firstPage = new ScanResult<TestModel>
@@ -86,7 +86,7 @@ public class TypedExtensionTests
         var mock = new Mock<IDynamoClient>();
         var lastKey = new Dictionary<string, AttributeValue>
         {
-            ["pk"] = new AttributeValue { S = "lastPk" }
+            ["pk"] = AttributeValue.String("lastPk")
         };
 
         ErrorOr<QueryResult<TestModel>> firstPage = new QueryResult<TestModel>
