@@ -30,6 +30,7 @@ internal static class DynamoResponseReaderRegistry
 
         static Cache()
         {
+#pragma warning disable GOA1503 // One-time method group allocations cached in static readonly fields
             if (typeof(T) == typeof(QueryResponse))
                 Reader = (JsonReader<T>)(object)(JsonReader<QueryResponse>)ReadQueryResponse;
             else if (typeof(T) == typeof(ScanResponse))
@@ -42,6 +43,7 @@ internal static class DynamoResponseReaderRegistry
                 Reader = (JsonReader<T>)(object)(JsonReader<TransactGetItemResponse>)ReadTransactGetItemResponse;
             else
                 Reader = FallbackReader;
+#pragma warning restore GOA1503
         }
 
         private static T FallbackReader(ref Utf8JsonReader reader)
@@ -55,55 +57,26 @@ internal static class DynamoResponseReaderRegistry
 
     private static QueryResponse ReadQueryResponse(ref Utf8JsonReader reader)
     {
-        var result = DynamoResponseReader.ReadQueryResponse(ref reader, DynamoResponseReader.ReadDynamoRecordItem);
-        return new QueryResponse
-        {
-            Items = result.Items,
-            LastEvaluatedKey = result.LastEvaluatedKey,
-            ScannedCount = result.ScannedCount,
-            ConsumedCapacity = result.ConsumedCapacity
-        };
+        return DynamoResponseReader.ReadDynamoRecordQueryResponse(ref reader);
     }
 
     private static ScanResponse ReadScanResponse(ref Utf8JsonReader reader)
     {
-        var result = DynamoResponseReader.ReadScanResponse(ref reader, DynamoResponseReader.ReadDynamoRecordItem);
-        return new ScanResponse
-        {
-            Items = result.Items,
-            LastEvaluatedKey = result.LastEvaluatedKey,
-            ScannedCount = result.ScannedCount,
-            ConsumedCapacity = result.ConsumedCapacity
-        };
+        return DynamoResponseReader.ReadDynamoRecordScanResponse(ref reader);
     }
 
     private static GetItemResponse ReadGetItemResponse(ref Utf8JsonReader reader)
     {
-        var item = DynamoResponseReader.ReadGetItemResponse(ref reader, DynamoResponseReader.ReadDynamoRecordItem);
-        return new GetItemResponse { Item = item };
+        return DynamoResponseReader.ReadDynamoRecordGetItemResponse(ref reader);
     }
 
     private static BatchGetItemResponse ReadBatchGetItemResponse(ref Utf8JsonReader reader)
     {
-        var result = DynamoResponseReader.ReadBatchGetItemResponse(ref reader, DynamoResponseReader.ReadDynamoRecordItem);
-        return new BatchGetItemResponse
-        {
-            Responses = result.Responses,
-            UnprocessedKeys = result.UnprocessedKeys,
-            ConsumedCapacity = result.ConsumedCapacity
-        };
+        return DynamoResponseReader.ReadDynamoRecordBatchGetItemResponse(ref reader);
     }
 
     private static TransactGetItemResponse ReadTransactGetItemResponse(ref Utf8JsonReader reader)
     {
-        var result = DynamoResponseReader.ReadTransactGetItemResponse(ref reader, DynamoResponseReader.ReadDynamoRecordItem);
-        var responses = new List<TransactGetResult>(result.Items.Count);
-        foreach (var item in result.Items)
-            responses.Add(new TransactGetResult { Item = item });
-        return new TransactGetItemResponse
-        {
-            Responses = responses,
-            ConsumedCapacity = result.ConsumedCapacity
-        };
+        return DynamoResponseReader.ReadDynamoRecordTransactGetItemResponse(ref reader);
     }
 }

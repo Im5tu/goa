@@ -1,6 +1,7 @@
 using System.Text.Json;
 using Goa.Clients.Dynamo.Models;
 using Goa.Clients.Dynamo.Operations.Batch;
+using Goa.Clients.Dynamo.Operations.GetItem;
 using Goa.Clients.Dynamo.Operations.Query;
 using Goa.Clients.Dynamo.Operations.Scan;
 using Goa.Clients.Dynamo.Operations.Transactions;
@@ -159,6 +160,228 @@ internal static class DynamoResponseReader
             record[key] = ReadAttributeValue(ref reader);
         }
         return record;
+    }
+
+    internal static QueryResponse ReadDynamoRecordQueryResponse(ref Utf8JsonReader reader)
+    {
+        var cache = new PropertyNameCache();
+        var result = new QueryResponse();
+
+        reader.Read(); // StartObject
+        while (reader.Read() && reader.TokenType == JsonTokenType.PropertyName)
+        {
+            if (reader.ValueTextEquals("Items"u8))
+            {
+                reader.Read();
+                result.Items = ReadDynamoRecordItems(ref reader, ref cache);
+            }
+            else if (reader.ValueTextEquals("Count"u8))
+            {
+                reader.Read();
+                // DynamoDB Count always equals Items.Count (post-filter); ScannedCount is the pre-filter total
+                reader.GetInt32();
+            }
+            else if (reader.ValueTextEquals("ScannedCount"u8))
+            {
+                reader.Read();
+                result.ScannedCount = reader.GetInt32();
+            }
+            else if (reader.ValueTextEquals("LastEvaluatedKey"u8))
+            {
+                reader.Read();
+                result.LastEvaluatedKey = ReadAttributeMap(ref reader);
+            }
+            else if (reader.ValueTextEquals("ConsumedCapacity"u8))
+            {
+                reader.Read();
+                result.ConsumedCapacity = ReadConsumedCapacity(ref reader);
+            }
+            else
+            {
+                reader.Read();
+                reader.Skip();
+            }
+        }
+
+        return result;
+    }
+
+    internal static ScanResponse ReadDynamoRecordScanResponse(ref Utf8JsonReader reader)
+    {
+        var cache = new PropertyNameCache();
+        var result = new ScanResponse();
+
+        reader.Read(); // StartObject
+        while (reader.Read() && reader.TokenType == JsonTokenType.PropertyName)
+        {
+            if (reader.ValueTextEquals("Items"u8))
+            {
+                reader.Read();
+                result.Items = ReadDynamoRecordItems(ref reader, ref cache);
+            }
+            else if (reader.ValueTextEquals("Count"u8))
+            {
+                reader.Read();
+                reader.GetInt32();
+            }
+            else if (reader.ValueTextEquals("ScannedCount"u8))
+            {
+                reader.Read();
+                result.ScannedCount = reader.GetInt32();
+            }
+            else if (reader.ValueTextEquals("LastEvaluatedKey"u8))
+            {
+                reader.Read();
+                result.LastEvaluatedKey = ReadAttributeMap(ref reader);
+            }
+            else if (reader.ValueTextEquals("ConsumedCapacity"u8))
+            {
+                reader.Read();
+                result.ConsumedCapacity = ReadConsumedCapacity(ref reader);
+            }
+            else
+            {
+                reader.Read();
+                reader.Skip();
+            }
+        }
+
+        return result;
+    }
+
+    internal static GetItemResponse ReadDynamoRecordGetItemResponse(ref Utf8JsonReader reader)
+    {
+        var cache = new PropertyNameCache();
+        var result = new GetItemResponse();
+
+        reader.Read(); // StartObject
+        while (reader.Read() && reader.TokenType == JsonTokenType.PropertyName)
+        {
+            if (reader.ValueTextEquals("Item"u8))
+            {
+                reader.Read();
+                result.Item = ReadDynamoRecordItemCached(ref reader, ref cache);
+            }
+            else if (reader.ValueTextEquals("ConsumedCapacity"u8))
+            {
+                reader.Read();
+                result.ConsumedCapacity = ReadConsumedCapacity(ref reader);
+            }
+            else
+            {
+                reader.Read();
+                reader.Skip();
+            }
+        }
+
+        return result;
+    }
+
+    internal static BatchGetItemResponse ReadDynamoRecordBatchGetItemResponse(ref Utf8JsonReader reader)
+    {
+        var cache = new PropertyNameCache();
+        var result = new BatchGetItemResponse();
+
+        reader.Read(); // StartObject
+        while (reader.Read() && reader.TokenType == JsonTokenType.PropertyName)
+        {
+            if (reader.ValueTextEquals("Responses"u8))
+            {
+                reader.Read();
+                result.Responses = ReadDynamoRecordTableResponses(ref reader, ref cache);
+            }
+            else if (reader.ValueTextEquals("UnprocessedKeys"u8))
+            {
+                reader.Read();
+                result.UnprocessedKeys = ReadUnprocessedKeys(ref reader);
+            }
+            else if (reader.ValueTextEquals("ConsumedCapacity"u8))
+            {
+                reader.Read();
+                result.ConsumedCapacity = ReadConsumedCapacityList(ref reader);
+            }
+            else
+            {
+                reader.Read();
+                reader.Skip();
+            }
+        }
+
+        return result;
+    }
+
+    internal static TransactGetItemResponse ReadDynamoRecordTransactGetItemResponse(ref Utf8JsonReader reader)
+    {
+        var cache = new PropertyNameCache();
+        var result = new TransactGetItemResponse();
+
+        reader.Read(); // StartObject
+        while (reader.Read() && reader.TokenType == JsonTokenType.PropertyName)
+        {
+            if (reader.ValueTextEquals("Responses"u8))
+            {
+                reader.Read();
+                result.Responses = ReadDynamoRecordTransactGetResponses(ref reader, ref cache);
+            }
+            else if (reader.ValueTextEquals("ConsumedCapacity"u8))
+            {
+                reader.Read();
+                result.ConsumedCapacity = ReadConsumedCapacityList(ref reader);
+            }
+            else
+            {
+                reader.Read();
+                reader.Skip();
+            }
+        }
+
+        return result;
+    }
+
+    private static List<DynamoRecord> ReadDynamoRecordItems(ref Utf8JsonReader reader, ref PropertyNameCache cache)
+    {
+        var items = new List<DynamoRecord>();
+        if (reader.TokenType == JsonTokenType.Null)
+            return items;
+        while (reader.Read() && reader.TokenType != JsonTokenType.EndArray)
+            items.Add(ReadDynamoRecordItemCached(ref reader, ref cache));
+        return items;
+    }
+
+    private static Dictionary<string, List<DynamoRecord>> ReadDynamoRecordTableResponses(ref Utf8JsonReader reader, ref PropertyNameCache cache)
+    {
+        var responses = new Dictionary<string, List<DynamoRecord>>();
+        while (reader.Read() && reader.TokenType != JsonTokenType.EndObject)
+        {
+            var tableName = reader.GetString()!;
+            reader.Read(); // StartArray
+            responses[tableName] = ReadDynamoRecordItems(ref reader, ref cache);
+        }
+        return responses;
+    }
+
+    private static List<TransactGetResult> ReadDynamoRecordTransactGetResponses(ref Utf8JsonReader reader, ref PropertyNameCache cache)
+    {
+        var items = new List<TransactGetResult>();
+        while (reader.Read() && reader.TokenType != JsonTokenType.EndArray)
+        {
+            DynamoRecord? item = null;
+            while (reader.Read() && reader.TokenType != JsonTokenType.EndObject)
+            {
+                if (reader.ValueTextEquals("Item"u8))
+                {
+                    reader.Read();
+                    item = ReadDynamoRecordItemCached(ref reader, ref cache);
+                }
+                else
+                {
+                    reader.Read();
+                    reader.Skip();
+                }
+            }
+            items.Add(new TransactGetResult { Item = item });
+        }
+        return items;
     }
 
     private static List<T> ReadItems<T>(ref Utf8JsonReader reader, DynamoItemReader<T> itemReader)
