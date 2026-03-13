@@ -366,7 +366,9 @@ public sealed class DynamoServiceClient : JsonAwsServiceClient<DynamoServiceClie
         var metadata = new Dictionary<string, object>
         {
             ["Payload"] = errorPayload,
+#pragma warning disable GOA1501 // Boxing unavoidable with Dictionary<string, object> on error path
             ["StatusCode"] = response.StatusCode
+#pragma warning restore GOA1501
         };
         return Error.Failure(
             code: MapErrorCodeToDynamo(errorType),
