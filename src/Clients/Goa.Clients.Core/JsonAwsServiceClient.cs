@@ -116,22 +116,22 @@ public abstract class JsonAwsServiceClient<T> : AwsServiceClient<T> where T : Aw
             return new ApiResponse<TResponse>(error);
         }
 
-        var headers = ResponseHeaders.FromHttpResponse(response.Headers, response.Content.Headers);
+        var contentType = response.Content.Headers.ContentType?.MediaType;
         using var pooledBuffer = await ReadResponseBytesAsync(response, cancellationToken);
 
         if (typeof(TResponse) == typeof(string))
         {
             var str = pooledBuffer.Length > 0 ? Encoding.UTF8.GetString(pooledBuffer.Span) : string.Empty;
-            return new ApiResponse<TResponse>(str as TResponse, headers);
+            return new ApiResponse<TResponse>(str as TResponse, contentType);
         }
 
         if (pooledBuffer.Length == 0)
-            return new ApiResponse<TResponse>(default(TResponse), headers);
+            return new ApiResponse<TResponse>(default(TResponse), contentType);
 
         var typeInfo = ResolveJsonTypeInfo<TResponse>();
         var jsonReader = new Utf8JsonReader(pooledBuffer.Span);
         var result = JsonSerializer.Deserialize(ref jsonReader, typeInfo);
-        return new ApiResponse<TResponse>(result, headers);
+        return new ApiResponse<TResponse>(result, contentType);
     }
 
     /// <summary>

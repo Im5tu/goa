@@ -111,7 +111,7 @@ public sealed class BedrockServiceClient : JsonAwsServiceClient<BedrockServiceCl
         return new InvokeModelResponse
         {
             Body = response.Value ?? string.Empty,
-            ContentType = response.Headers?.ContentType
+            ContentType = response.ContentType
         };
     }
 

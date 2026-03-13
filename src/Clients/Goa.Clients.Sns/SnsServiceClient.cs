@@ -130,8 +130,6 @@ internal sealed class SnsServiceClient : AwsServiceClient<SnsServiceClientConfig
     private async Task<ApiResponse<TResponse>> ProcessSnsResponseAsync<TResponse>(HttpResponseMessage response, CancellationToken cancellationToken)
         where TResponse : class, IDeserializeFromXml, new()
     {
-        var headers = ResponseHeaders.FromHttpResponse(response.Headers);
-
         if (!response.IsSuccessStatusCode)
         {
             using var errorBuffer = await ReadResponseBytesAsync(response, cancellationToken);
@@ -168,12 +166,12 @@ internal sealed class SnsServiceClient : AwsServiceClient<SnsServiceClientConfig
 
         if (string.IsNullOrWhiteSpace(contentPayload))
         {
-            return new ApiResponse<TResponse>(default(TResponse), headers);
+            return new ApiResponse<TResponse>(default(TResponse));
         }
 
         var result = new TResponse();
         result.DeserializeFromXml(contentPayload);
-        return new ApiResponse<TResponse>(result, headers);
+        return new ApiResponse<TResponse>(result);
     }
 
     /// <summary>

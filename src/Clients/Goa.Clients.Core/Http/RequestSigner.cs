@@ -1,6 +1,7 @@
 using Goa.Clients.Core.Credentials;
 using System.Buffers;
 using System.Diagnostics.CodeAnalysis;
+using System.Net.Http.Headers;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Security.Cryptography;
@@ -235,11 +236,11 @@ internal sealed class RequestSigner
         // ---- Build Canonical Request with precise memory management ----
         // Enumerate headers ONCE into rented arrays to avoid repeated GetEnumeratorCore allocations
         const int InitialHeaderCapacity = 16;
-        var reqHeaders = ArrayPool<KeyValuePair<string, IEnumerable<string>>>.Shared.Rent(InitialHeaderCapacity);
-        var contentHeaders = ArrayPool<KeyValuePair<string, IEnumerable<string>>>.Shared.Rent(InitialHeaderCapacity);
+        var reqHeaders = ArrayPool<KeyValuePair<string, HeaderStringValues>>.Shared.Rent(InitialHeaderCapacity);
+        var contentHeaders = ArrayPool<KeyValuePair<string, HeaderStringValues>>.Shared.Rent(InitialHeaderCapacity);
         int rhIndex = 0, chIndex = 0;
 
-        foreach (var kv in request.Headers)
+        foreach (var kv in request.Headers.NonValidated)
         {
             if (rhIndex == reqHeaders.Length)
                 reqHeaders = GrowArray(reqHeaders, ref rhIndex);
@@ -247,7 +248,7 @@ internal sealed class RequestSigner
         }
 
         if (request.Content?.Headers is not null)
-            foreach (var kv in request.Content.Headers)
+            foreach (var kv in request.Content.Headers.NonValidated)
             {
                 if (chIndex == contentHeaders.Length)
                     contentHeaders = GrowArray(contentHeaders, ref chIndex);
@@ -467,8 +468,8 @@ internal sealed class RequestSigner
 
         // Return rented arrays
         ArrayPool<HeaderRef>.Shared.Return(headerRefs);
-        ArrayPool<KeyValuePair<string, IEnumerable<string>>>.Shared.Return(reqHeaders);
-        ArrayPool<KeyValuePair<string, IEnumerable<string>>>.Shared.Return(contentHeaders);
+        ArrayPool<KeyValuePair<string, HeaderStringValues>>.Shared.Return(reqHeaders);
+        ArrayPool<KeyValuePair<string, HeaderStringValues>>.Shared.Return(contentHeaders);
 
         return (signature, signedHeaders);
     }
@@ -670,8 +671,8 @@ internal sealed class RequestSigner
         in HeaderRef r,
         HttpRequestMessage req,
         AwsCredentials creds,
-        KeyValuePair<string, IEnumerable<string>>[] reqHeaders,
-        KeyValuePair<string, IEnumerable<string>>[] contentHeaders,
+        KeyValuePair<string, HeaderStringValues>[] reqHeaders,
+        KeyValuePair<string, HeaderStringValues>[] contentHeaders,
         ReadOnlySpan<char> longDate,
         ReadOnlySpan<byte> payloadHashBytes)
     {
@@ -735,7 +736,7 @@ internal sealed class RequestSigner
     /// Collapses whitespace and joins with commas as per HTTP/AWS specifications.
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static int WriteNormalizedJoined(Span<char> dest, IEnumerable<string> values)
+    private static int WriteNormalizedJoined(Span<char> dest, HeaderStringValues values)
     {
         var pos = 0; var firstVal = true;
         foreach (var raw in values)
@@ -762,8 +763,8 @@ internal sealed class RequestSigner
     private static int EstimateHeadersCharCount(
         HeaderRef[] refs, int count,
         HttpRequestMessage req, AwsCredentials creds,
-        KeyValuePair<string, IEnumerable<string>>[] reqHeaders,
-        KeyValuePair<string, IEnumerable<string>>[] contentHeaders)
+        KeyValuePair<string, HeaderStringValues>[] reqHeaders,
+        KeyValuePair<string, HeaderStringValues>[] contentHeaders)
     {
         var total = 0;
         for (var i = 0; i < count; i++)

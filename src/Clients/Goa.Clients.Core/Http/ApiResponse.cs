@@ -17,9 +17,9 @@ public sealed class ApiResponse<T>
     public ApiError? Error { get; }
 
     /// <summary>
-    /// Gets the HTTP response headers.
+    /// Gets the Content-Type of the response body.
     /// </summary>
-    public ResponseHeaders? Headers { get; }
+    public string? ContentType { get; }
 
     /// <summary>
     /// Gets a value indicating whether the operation was successful.
@@ -36,14 +36,14 @@ public sealed class ApiResponse<T>
     }
 
     /// <summary>
-    /// Initializes a new instance with a successful response value and headers.
+    /// Initializes a new instance with a successful response value and content type.
     /// </summary>
     /// <param name="value">The successful response value.</param>
-    /// <param name="headers">The HTTP response headers.</param>
-    public ApiResponse(T? value, ResponseHeaders? headers)
+    /// <param name="contentType">The Content-Type of the response body.</param>
+    public ApiResponse(T? value, string? contentType)
     {
         Value = value;
-        Headers = headers;
+        ContentType = contentType;
     }
 
     /// <summary>

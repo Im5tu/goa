@@ -102,8 +102,8 @@ public abstract class AwsServiceClient<T> where T : AwsServiceConfiguration
             // Log fixed response fields with zero-allocation scope
             using var responseLogContext = Logger.IsEnabled(Configuration.LogLevel)
                 ? Logger.BeginScope(new LogScope2(
-                    new(LogKeyStatusCode, GetStatusCodeString((int)response.StatusCode)),
-                    new(LogKeyReasonPhrase, response.ReasonPhrase ?? response.StatusCode.ToString())
+                    new(LogKeyStatusCode, GetStatusCodeString(response.StatusCode)),
+                    new(LogKeyReasonPhrase, response.ReasonPhrase ?? GetStatusCodeString(response.StatusCode))
                 ))
                 : null;
 
@@ -112,12 +112,14 @@ public abstract class AwsServiceClient<T> where T : AwsServiceConfiguration
             if (Logger.IsEnabled(Configuration.LogLevel))
             {
                 Dictionary<string, object>? amzHeaders = null;
-                foreach (var header in response.Headers)
+                foreach (var header in response.Headers.NonValidated)
                 {
                     if (header.Key.StartsWith("x-amz", StringComparison.OrdinalIgnoreCase))
                     {
                         amzHeaders ??= new Dictionary<string, object>(4);
+#pragma warning disable GOA1501 // Boxing HeaderStringValues to object is required for ILogger.BeginScope
                         amzHeaders[header.Key] = string.Join(", ", header.Value);
+#pragma warning restore GOA1501
                     }
                 }
                 if (amzHeaders is not null)
@@ -166,14 +168,14 @@ public abstract class AwsServiceClient<T> where T : AwsServiceConfiguration
         return error;
     }
 
-    private static string GetStatusCodeString(int statusCode) => statusCode switch
+    private static string GetStatusCodeString(System.Net.HttpStatusCode statusCode) => statusCode switch
     {
-        200 => "200", 201 => "201", 202 => "202", 204 => "204",
-        301 => "301", 302 => "302", 304 => "304",
-        400 => "400", 401 => "401", 403 => "403", 404 => "404",
-        409 => "409", 429 => "429",
-        500 => "500", 502 => "502", 503 => "503", 504 => "504",
-        _ => statusCode.ToString()
+        System.Net.HttpStatusCode.OK => "200", System.Net.HttpStatusCode.Created => "201", System.Net.HttpStatusCode.Accepted => "202", System.Net.HttpStatusCode.NoContent => "204",
+        System.Net.HttpStatusCode.MovedPermanently => "301", System.Net.HttpStatusCode.Found => "302", System.Net.HttpStatusCode.NotModified => "304",
+        System.Net.HttpStatusCode.BadRequest => "400", System.Net.HttpStatusCode.Unauthorized => "401", System.Net.HttpStatusCode.Forbidden => "403", System.Net.HttpStatusCode.NotFound => "404",
+        System.Net.HttpStatusCode.Conflict => "409", System.Net.HttpStatusCode.TooManyRequests => "429",
+        System.Net.HttpStatusCode.InternalServerError => "500", System.Net.HttpStatusCode.BadGateway => "502", System.Net.HttpStatusCode.ServiceUnavailable => "503", System.Net.HttpStatusCode.GatewayTimeout => "504",
+        _ => ((int)statusCode).ToString()
     };
 
     /// <summary>

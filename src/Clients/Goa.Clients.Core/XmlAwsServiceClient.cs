@@ -70,8 +70,6 @@ public abstract class XmlAwsServiceClient<T> : AwsServiceClient<T> where T : Aws
     private async Task<ApiResponse<TResponse>> ProcessXmlResponseAsync<TResponse>(HttpResponseMessage response, CancellationToken cancellationToken)
         where TResponse : class, IDeserializeFromXml, new()
     {
-        var headers = ResponseHeaders.FromHttpResponse(response.Headers);
-
         if (!response.IsSuccessStatusCode)
         {
             using var errorBuffer = await ReadResponseBytesAsync(response, cancellationToken);
@@ -110,17 +108,17 @@ public abstract class XmlAwsServiceClient<T> : AwsServiceClient<T> where T : Aws
         // Handle string responses specially
         if (typeof(TResponse) == typeof(string))
         {
-            return new ApiResponse<TResponse>(contentPayload as TResponse, headers);
+            return new ApiResponse<TResponse>(contentPayload as TResponse);
         }
 
         if (string.IsNullOrWhiteSpace(contentPayload))
         {
-            return new ApiResponse<TResponse>(default(TResponse), headers);
+            return new ApiResponse<TResponse>(default(TResponse));
         }
 
         var result = new TResponse();
         result.DeserializeFromXml(contentPayload);
-        return new ApiResponse<TResponse>(result, headers);
+        return new ApiResponse<TResponse>(result);
     }
 
     /// <summary>
@@ -152,7 +150,9 @@ public abstract class XmlAwsServiceClient<T> : AwsServiceClient<T> where T : Aws
         }
         catch (Exception ex)
         {
+#pragma warning disable GOA1001 // Error-handling path: params allocation is acceptable here
             Logger.LogWarning(ex, "Failed to deserialize XML error response: {Content}", content);
+#pragma warning restore GOA1001
             return null;
         }
     }

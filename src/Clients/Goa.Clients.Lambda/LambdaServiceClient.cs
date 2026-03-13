@@ -66,7 +66,7 @@ internal sealed class LambdaServiceClient : JsonAwsServiceClient<LambdaServiceCl
                 return ConvertApiError(response.Error!);
 
             // TODO: Lambda-specific headers (X-Amz-Function-Error, X-Amz-Log-Result, X-Amz-Executed-Version)
-            // are not captured by ResponseHeaders. Will be addressed when Lambda invoke is refactored
+            // are not captured. Will be addressed when Lambda invoke is refactored
             // to read directly from HttpResponseMessage.
             var invokeResponse = InvokeResponse.FromHttpResponse(
                 200,
