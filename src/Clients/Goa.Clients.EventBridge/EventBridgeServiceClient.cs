@@ -47,7 +47,7 @@ internal sealed class EventBridgeServiceClient : JsonAwsServiceClient<EventBridg
         }
         catch (Exception ex)
         {
-            Logger.LogError(ex, "Failed to put events to EventBridge");
+            Logger.PutEventsFailed(ex);
             return Error.Failure("EventBridge.PutEvents.Failed", "Failed to put events to EventBridge");
         }
     }

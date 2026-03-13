@@ -61,7 +61,7 @@ internal sealed class SnsServiceClient : AwsServiceClient<SnsServiceClientConfig
         catch (Exception ex)
         {
             var target = request.TopicArn ?? request.TargetArn ?? request.PhoneNumber;
-            Logger.LogError(ex, "Failed to publish message to SNS target {Target}", target);
+            Logger.PublishFailed(ex, target);
             return Error.Failure("SNS.Publish.Failed", $"Failed to publish message to SNS target {target}");
         }
     }
@@ -190,7 +190,7 @@ internal sealed class SnsServiceClient : AwsServiceClient<SnsServiceClientConfig
         }
         catch (Exception ex)
         {
-            Logger.LogWarning(ex, "Failed to deserialize SNS XML error response: {Content}", content);
+            Logger.DeserializeSnsErrorFailed(ex, content);
             return null;
         }
     }
