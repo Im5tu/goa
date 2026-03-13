@@ -16,7 +16,12 @@ public static class ErrorExtensions
     public static bool IsBedrockError<T>(this ErrorOr<T> errorOr)
     {
         if (!errorOr.IsError) return false;
-        return errorOr.Errors.Any(e => e.Code.StartsWith("Goa.Bedrock.", StringComparison.Ordinal));
+        foreach (var e in errorOr.Errors)
+        {
+            if (e.Code.StartsWith("Goa.Bedrock.", StringComparison.Ordinal))
+                return true;
+        }
+        return false;
     }
 
     /// <summary>
@@ -28,9 +33,13 @@ public static class ErrorExtensions
     public static bool IsBedrockThrottlingError<T>(this ErrorOr<T> errorOr)
     {
         if (!errorOr.IsError) return false;
-        return errorOr.Errors.Any(e =>
-            e.Code == BedrockErrorCodes.ThrottlingException ||
-            e.Code == BedrockErrorCodes.ServiceQuotaExceededException);
+        foreach (var e in errorOr.Errors)
+        {
+            if (e.Code == BedrockErrorCodes.ThrottlingException ||
+                e.Code == BedrockErrorCodes.ServiceQuotaExceededException)
+                return true;
+        }
+        return false;
     }
 
     /// <summary>
@@ -42,9 +51,13 @@ public static class ErrorExtensions
     public static bool IsBedrockValidationError<T>(this ErrorOr<T> errorOr)
     {
         if (!errorOr.IsError) return false;
-        return errorOr.Errors.Any(e =>
-            e.Code == BedrockErrorCodes.ValidationException ||
-            e.Type == ErrorType.Validation);
+        foreach (var e in errorOr.Errors)
+        {
+            if (e.Code == BedrockErrorCodes.ValidationException ||
+                e.Type == ErrorType.Validation)
+                return true;
+        }
+        return false;
     }
 
     /// <summary>
@@ -56,10 +69,14 @@ public static class ErrorExtensions
     public static bool IsBedrockModelError<T>(this ErrorOr<T> errorOr)
     {
         if (!errorOr.IsError) return false;
-        return errorOr.Errors.Any(e =>
-            e.Code == BedrockErrorCodes.ModelErrorException ||
-            e.Code == BedrockErrorCodes.ModelNotReadyException ||
-            e.Code == BedrockErrorCodes.ModelTimeoutException);
+        foreach (var e in errorOr.Errors)
+        {
+            if (e.Code == BedrockErrorCodes.ModelErrorException ||
+                e.Code == BedrockErrorCodes.ModelNotReadyException ||
+                e.Code == BedrockErrorCodes.ModelTimeoutException)
+                return true;
+        }
+        return false;
     }
 
     /// <summary>
@@ -72,7 +89,13 @@ public static class ErrorExtensions
     public static bool IsBedrockRetryableError<T>(this ErrorOr<T> errorOr)
     {
         if (!errorOr.IsError) return false;
-        return errorOr.IsBedrockThrottlingError() ||
-               errorOr.Errors.Any(e => e.Code == BedrockErrorCodes.ModelTimeoutException);
+        foreach (var e in errorOr.Errors)
+        {
+            if (e.Code == BedrockErrorCodes.ThrottlingException ||
+                e.Code == BedrockErrorCodes.ServiceQuotaExceededException ||
+                e.Code == BedrockErrorCodes.ModelTimeoutException)
+                return true;
+        }
+        return false;
     }
 }

@@ -22,7 +22,9 @@ public static class CollectionExtensions
     {
         if (source is not Dictionary<TKey, TValue> result)
         {
-            result = new Dictionary<TKey, TValue>(source);
+            result = new Dictionary<TKey, TValue>(source.Count);
+            foreach (var (key, value) in source)
+                result[key] = value;
         }
 
         foreach (var (key, value) in items)

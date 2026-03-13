@@ -103,7 +103,7 @@ public sealed class ScanBuilder(string tableName)
     /// <returns>The ScanBuilder instance for method chaining.</returns>
     public ScanBuilder WithProjection(IEnumerable<string> attributes)
     {
-        if (attributes?.Any() == true)
+        if (attributes is ICollection<string> { Count: > 0 })
         {
             _request.ProjectionExpression = string.Join(", ", attributes);
             return WithSelectionMode(Select.SPECIFIC_ATTRIBUTES);

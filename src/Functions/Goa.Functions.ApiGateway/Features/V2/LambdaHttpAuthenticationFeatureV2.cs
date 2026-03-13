@@ -30,11 +30,10 @@ internal sealed class LambdaHttpAuthenticationFeatureV2 : IHttpAuthenticationFea
 
         if (authorizer?.Jwt?.Claims != null)
         {
-            // Use the authorizer's JWT claims to build the ClaimsPrincipal
-            User = new ClaimsPrincipal(new ClaimsIdentity(
-                claims.Concat(authorizer.Jwt.Claims.Select(kvp => new Claim(kvp.Key, kvp.Value))),
-                "Jwt"
-            ));
+            foreach (var kvp in authorizer.Jwt.Claims)
+                claims.Add(new Claim(kvp.Key, kvp.Value));
+
+            User = new ClaimsPrincipal(new ClaimsIdentity(claims, "Jwt"));
         }
         else if (authorizer?.IAM is not null)
         {
@@ -48,13 +47,10 @@ internal sealed class LambdaHttpAuthenticationFeatureV2 : IHttpAuthenticationFea
         }
         else if (authentication?.ClientCert != null)
         {
-            // Fallback to client certificate details
-            User = new ClaimsPrincipal(new ClaimsIdentity(claims.Concat(new[]
-            {
-                new Claim(ClaimTypes.Name, authentication.ClientCert.SubjectDN ?? "Anonymous"),
-                new Claim("Issuer", authentication.ClientCert.IssuerDN ?? string.Empty),
-                new Claim("SerialNumber", authentication.ClientCert.SerialNumber ?? string.Empty)
-            }), "ClientCert"));
+            claims.Add(new Claim(ClaimTypes.Name, authentication.ClientCert.SubjectDN ?? "Anonymous"));
+            claims.Add(new Claim("Issuer", authentication.ClientCert.IssuerDN ?? string.Empty));
+            claims.Add(new Claim("SerialNumber", authentication.ClientCert.SerialNumber ?? string.Empty));
+            User = new ClaimsPrincipal(new ClaimsIdentity(claims, "ClientCert"));
         }
         else
         {
@@ -74,11 +70,20 @@ internal sealed class LambdaHttpAuthenticationFeatureV2 : IHttpAuthenticationFea
 
         var token = handler.ReadJwtToken(jwt);
 
-        // Create claims from JWT payload
-        claims.AddRange(token.Claims.ToList());
+        claims.AddRange(token.Claims);
 
         // Optionally add the token's subject as a Name claim if it exists
-        if (!string.IsNullOrEmpty(token.Subject) && claims.All(c => c.Type != ClaimTypes.NameIdentifier))
+        var hasNameIdentifier = false;
+        foreach (var c in claims)
+        {
+            if (c.Type == ClaimTypes.NameIdentifier)
+            {
+                hasNameIdentifier = true;
+                break;
+            }
+        }
+
+        if (!string.IsNullOrEmpty(token.Subject) && !hasNameIdentifier)
         {
             claims.Add(new Claim(ClaimTypes.NameIdentifier, token.Subject));
         }

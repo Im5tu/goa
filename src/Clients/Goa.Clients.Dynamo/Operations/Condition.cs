@@ -41,8 +41,14 @@ public sealed class Condition
     public Condition(string expression, IEnumerable<KeyValuePair<string, string>> expressionNames, IEnumerable<KeyValuePair<string, AttributeValue>> expressionValues)
     {
         Expression = expression;
-        ExpressionNames = expressionNames.ToDictionary();
-        ExpressionValues = expressionValues.ToDictionary();
+        var names = new Dictionary<string, string>();
+        foreach (var kvp in expressionNames)
+            names[kvp.Key] = kvp.Value;
+        ExpressionNames = names;
+        var values = new Dictionary<string, AttributeValue>();
+        foreach (var kvp in expressionValues)
+            values[kvp.Key] = kvp.Value;
+        ExpressionValues = values;
     }
 
     /// <summary>
@@ -294,10 +300,19 @@ public sealed class Condition
     /// <returns>A condition representing the logical AND of all conditions.</returns>
     public static Condition And(params Condition[] conditions)
     {
-        var expression = string.Join(" AND ", conditions.Select(c => c.Expression));
-        var expressionNames = conditions.SelectMany(c => c.ExpressionNames).ToDictionary();
-        var expressionValues = conditions.SelectMany(c => c.ExpressionValues).ToDictionary();
-        return new Condition(expression, expressionNames, expressionValues);
+        var sb = new System.Text.StringBuilder();
+        var expressionNames = new Dictionary<string, string>();
+        var expressionValues = new Dictionary<string, AttributeValue>();
+        for (var i = 0; i < conditions.Length; i++)
+        {
+            if (i > 0) sb.Append(" AND ");
+            sb.Append(conditions[i].Expression);
+            foreach (var kvp in conditions[i].ExpressionNames)
+                expressionNames[kvp.Key] = kvp.Value;
+            foreach (var kvp in conditions[i].ExpressionValues)
+                expressionValues[kvp.Key] = kvp.Value;
+        }
+        return new Condition(sb.ToString(), expressionNames, expressionValues);
     }
 
     /// <summary>
@@ -321,10 +336,19 @@ public sealed class Condition
     /// <returns>A condition representing the logical OR of all conditions.</returns>
     public static Condition Or(params Condition[] conditions)
     {
-        var expression = string.Join(" OR ", conditions.Select(c => c.Expression));
-        var expressionNames = conditions.SelectMany(c => c.ExpressionNames).ToDictionary();
-        var expressionValues = conditions.SelectMany(c => c.ExpressionValues).ToDictionary();
-        return new Condition(expression, expressionNames, expressionValues);
+        var sb = new System.Text.StringBuilder();
+        var expressionNames = new Dictionary<string, string>();
+        var expressionValues = new Dictionary<string, AttributeValue>();
+        for (var i = 0; i < conditions.Length; i++)
+        {
+            if (i > 0) sb.Append(" OR ");
+            sb.Append(conditions[i].Expression);
+            foreach (var kvp in conditions[i].ExpressionNames)
+                expressionNames[kvp.Key] = kvp.Value;
+            foreach (var kvp in conditions[i].ExpressionValues)
+                expressionValues[kvp.Key] = kvp.Value;
+        }
+        return new Condition(sb.ToString(), expressionNames, expressionValues);
     }
 
     /// <summary>
@@ -338,10 +362,17 @@ public sealed class Condition
         if (values is null || values.Length == 0)
             throw new ArgumentException("At least one value must be provided for IN condition", nameof(values));
 
-        var valueParams = values.Select((_, i) => $":{attributeName}{i}").ToArray();
+#pragma warning disable GOA1401 // Explicit arrays required for building expression parameters
+        var valueParams = new string[values.Length];
+        var expressionValues = new KeyValuePair<string, AttributeValue>[values.Length];
+        for (var i = 0; i < values.Length; i++)
+        {
+            valueParams[i] = $":{attributeName}{i}";
+            expressionValues[i] = new KeyValuePair<string, AttributeValue>($":{attributeName}{i}", values[i]);
+        }
         var expression = $"#{attributeName} IN ({string.Join(", ", valueParams)})";
-        var expressionNames = new[] { new KeyValuePair<string, string>($"#{attributeName}", attributeName) };
-        var expressionValues = values.Select((value, i) => new KeyValuePair<string, AttributeValue>($":{attributeName}{i}",  value));
+        var expressionNames = new KeyValuePair<string, string>[] { new($"#{attributeName}", attributeName) };
+#pragma warning restore GOA1401
         return new Condition(expression, expressionNames, expressionValues);
     }
 }

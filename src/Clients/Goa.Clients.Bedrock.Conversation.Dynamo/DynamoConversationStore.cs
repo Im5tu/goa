@@ -212,10 +212,10 @@ public sealed class DynamoConversationStore : IConversationStore
         IEnumerable<(ConversationRole Role, Message Message, TokenUsage? TokenUsage)> messages,
         CancellationToken ct)
     {
-        return AddMessagesInternalAsync(
-            conversationId,
-            messages.Select(m => (m.Role, m.Message, m.TokenUsage, (IReadOnlyDictionary<string, IReadOnlyList<string>>?)null)),
-            ct);
+        var expanded = new List<(ConversationRole Role, Message Message, TokenUsage? TokenUsage, IReadOnlyDictionary<string, IReadOnlyList<string>>? ExtractedTags)>();
+        foreach (var m in messages)
+            expanded.Add((m.Role, m.Message, m.TokenUsage, null));
+        return AddMessagesInternalAsync(conversationId, expanded, ct);
     }
 
     private async Task<ErrorOr<IReadOnlyList<ConversationMessage>>> AddMessagesInternalAsync(
@@ -223,7 +223,7 @@ public sealed class DynamoConversationStore : IConversationStore
         IEnumerable<(ConversationRole Role, Message Message, TokenUsage? TokenUsage, IReadOnlyDictionary<string, IReadOnlyList<string>>? ExtractedTags)> messages,
         CancellationToken ct)
     {
-        var messageList = messages.ToList();
+        var messageList = new List<(ConversationRole Role, Message Message, TokenUsage? TokenUsage, IReadOnlyDictionary<string, IReadOnlyList<string>>? ExtractedTags)>(messages);
         if (messageList.Count == 0)
             return Error.Validation(ConversationErrorCodes.MessagesEmpty, "At least one message must be provided");
 
@@ -503,15 +503,19 @@ public sealed class DynamoConversationStore : IConversationStore
         const int batchSize = 25;
         for (var i = 0; i < allItems.Count; i += batchSize)
         {
-            var batch = allItems.Skip(i).Take(batchSize).ToList();
-            var transactItems = batch.Select(key => new TransactWriteItem
+            var end = Math.Min(i + batchSize, allItems.Count);
+            var transactItems = new List<TransactWriteItem>(end - i);
+            for (var j = i; j < end; j++)
             {
-                Delete = new TransactDeleteItem
+                transactItems.Add(new TransactWriteItem
                 {
-                    TableName = _configuration.TableName,
-                    Key = key
-                }
-            }).ToList();
+                    Delete = new TransactDeleteItem
+                    {
+                        TableName = _configuration.TableName,
+                        Key = allItems[j]
+                    }
+                });
+            }
 
             var transactRequest = new TransactWriteRequest
             {
@@ -607,7 +611,7 @@ public sealed class DynamoConversationStore : IConversationStore
 
         if (record.TryGetStringSet(TagsAttribute, out var tags))
         {
-            metadata.Tags = tags.ToList();
+            metadata.Tags = new List<string>(tags);
             hasMetadata = true;
         }
 

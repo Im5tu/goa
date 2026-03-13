@@ -64,7 +64,7 @@ public sealed class GetItemBuilder(string tableName)
     /// <returns>The GetItemBuilder instance for method chaining.</returns>
     public GetItemBuilder WithProjection(IEnumerable<string> attributes)
     {
-        if (attributes?.Any() == true)
+        if (attributes is ICollection<string> { Count: > 0 })
         {
             _request.ProjectionExpression = string.Join(", ", attributes);
         }

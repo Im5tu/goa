@@ -16,7 +16,12 @@ public static class ErrorExtensions
     public static bool IsDynamoError<T>(this ErrorOr<T> errorOr)
     {
         if (!errorOr.IsError) return false;
-        return errorOr.Errors.Any(e => e.Code.StartsWith("Goa.DynamoDb.", StringComparison.Ordinal));
+        foreach (var e in errorOr.Errors)
+        {
+            if (e.Code.StartsWith("Goa.DynamoDb.", StringComparison.Ordinal))
+                return true;
+        }
+        return false;
     }
 
     /// <summary>
@@ -28,13 +33,17 @@ public static class ErrorExtensions
     public static bool IsDynamoConcurrencyError<T>(this ErrorOr<T> errorOr)
     {
         if (!errorOr.IsError) return false;
-        return errorOr.Errors.Any(e =>
-            e.Code == DynamoErrorCodes.ConditionalCheckFailedException ||
-            e.Code == DynamoErrorCodes.ConditionalCheckFailed ||
-            e.Code == DynamoErrorCodes.TransactionConflictException ||
-            e.Code == DynamoErrorCodes.TransactionConflict ||
-            e.Code == DynamoErrorCodes.ReplicatedWriteConflictException ||
-            (e.Code == DynamoErrorCodes.ValidationException && e.Description.Contains("condition", StringComparison.OrdinalIgnoreCase)));
+        foreach (var e in errorOr.Errors)
+        {
+            if (e.Code == DynamoErrorCodes.ConditionalCheckFailedException ||
+                e.Code == DynamoErrorCodes.ConditionalCheckFailed ||
+                e.Code == DynamoErrorCodes.TransactionConflictException ||
+                e.Code == DynamoErrorCodes.TransactionConflict ||
+                e.Code == DynamoErrorCodes.ReplicatedWriteConflictException ||
+                (e.Code == DynamoErrorCodes.ValidationException && e.Description.Contains("condition", StringComparison.OrdinalIgnoreCase)))
+                return true;
+        }
+        return false;
     }
 
     /// <summary>
@@ -46,15 +55,19 @@ public static class ErrorExtensions
     public static bool IsDynamoItemNotFoundError<T>(this ErrorOr<T> errorOr)
     {
         if (!errorOr.IsError) return false;
-        return errorOr.Errors.Any(e =>
-            e.Code == DynamoErrorCodes.ResourceNotFoundException ||
-            e.Code == DynamoErrorCodes.ItemNotFound ||
-            e.Code == DynamoErrorCodes.NotFound ||
-            e.Code == DynamoErrorCodes.TableNotFoundException ||
-            e.Code == DynamoErrorCodes.TableNotFound ||
-            e.Code == DynamoErrorCodes.IndexNotFoundException ||
-            e.Code == DynamoErrorCodes.IndexNotFound ||
-            e.Type == ErrorType.NotFound);
+        foreach (var e in errorOr.Errors)
+        {
+            if (e.Code == DynamoErrorCodes.ResourceNotFoundException ||
+                e.Code == DynamoErrorCodes.ItemNotFound ||
+                e.Code == DynamoErrorCodes.NotFound ||
+                e.Code == DynamoErrorCodes.TableNotFoundException ||
+                e.Code == DynamoErrorCodes.TableNotFound ||
+                e.Code == DynamoErrorCodes.IndexNotFoundException ||
+                e.Code == DynamoErrorCodes.IndexNotFound ||
+                e.Type == ErrorType.NotFound)
+                return true;
+        }
+        return false;
     }
 
     /// <summary>
@@ -66,13 +79,17 @@ public static class ErrorExtensions
     public static bool IsDynamoThrottlingError<T>(this ErrorOr<T> errorOr)
     {
         if (!errorOr.IsError) return false;
-        return errorOr.Errors.Any(e =>
-            e.Code == DynamoErrorCodes.ProvisionedThroughputExceededException ||
-            e.Code == DynamoErrorCodes.ProvisionedThroughputExceeded ||
-            e.Code == DynamoErrorCodes.RequestLimitExceeded ||
-            e.Code == DynamoErrorCodes.ThrottlingException ||
-            e.Code == DynamoErrorCodes.TooManyRequestsException ||
-            e.Code == DynamoErrorCodes.TooManyRequests);
+        foreach (var e in errorOr.Errors)
+        {
+            if (e.Code == DynamoErrorCodes.ProvisionedThroughputExceededException ||
+                e.Code == DynamoErrorCodes.ProvisionedThroughputExceeded ||
+                e.Code == DynamoErrorCodes.RequestLimitExceeded ||
+                e.Code == DynamoErrorCodes.ThrottlingException ||
+                e.Code == DynamoErrorCodes.TooManyRequestsException ||
+                e.Code == DynamoErrorCodes.TooManyRequests)
+                return true;
+        }
+        return false;
     }
 
     /// <summary>
@@ -84,13 +101,17 @@ public static class ErrorExtensions
     public static bool IsDynamoValidationError<T>(this ErrorOr<T> errorOr)
     {
         if (!errorOr.IsError) return false;
-        return errorOr.Errors.Any(e =>
-            e.Code == DynamoErrorCodes.ValidationException ||
-            e.Code == DynamoErrorCodes.InvalidParameterValueException ||
-            e.Code == DynamoErrorCodes.InvalidParameterValue ||
-            e.Code == DynamoErrorCodes.MissingParameterException ||
-            e.Code == DynamoErrorCodes.MissingParameter ||
-            e.Type == ErrorType.Validation);
+        foreach (var e in errorOr.Errors)
+        {
+            if (e.Code == DynamoErrorCodes.ValidationException ||
+                e.Code == DynamoErrorCodes.InvalidParameterValueException ||
+                e.Code == DynamoErrorCodes.InvalidParameterValue ||
+                e.Code == DynamoErrorCodes.MissingParameterException ||
+                e.Code == DynamoErrorCodes.MissingParameter ||
+                e.Type == ErrorType.Validation)
+                return true;
+        }
+        return false;
     }
 
     /// <summary>
@@ -102,16 +123,20 @@ public static class ErrorExtensions
     public static bool IsDynamoAuthError<T>(this ErrorOr<T> errorOr)
     {
         if (!errorOr.IsError) return false;
-        return errorOr.Errors.Any(e =>
-            e.Code == DynamoErrorCodes.UnauthorizedException ||
-            e.Code == DynamoErrorCodes.Unauthorized ||
-            e.Code == DynamoErrorCodes.AccessDeniedException ||
-            e.Code == DynamoErrorCodes.AccessDenied ||
-            e.Code == DynamoErrorCodes.InvalidUserPoolConfigurationException ||
-            e.Code == DynamoErrorCodes.InvalidUserPoolConfiguration ||
-            e.Code == DynamoErrorCodes.NotAuthorizedException ||
-            e.Code == DynamoErrorCodes.NotAuthorized ||
-            e.Type == ErrorType.Unauthorized);
+        foreach (var e in errorOr.Errors)
+        {
+            if (e.Code == DynamoErrorCodes.UnauthorizedException ||
+                e.Code == DynamoErrorCodes.Unauthorized ||
+                e.Code == DynamoErrorCodes.AccessDeniedException ||
+                e.Code == DynamoErrorCodes.AccessDenied ||
+                e.Code == DynamoErrorCodes.InvalidUserPoolConfigurationException ||
+                e.Code == DynamoErrorCodes.InvalidUserPoolConfiguration ||
+                e.Code == DynamoErrorCodes.NotAuthorizedException ||
+                e.Code == DynamoErrorCodes.NotAuthorized ||
+                e.Type == ErrorType.Unauthorized)
+                return true;
+        }
+        return false;
     }
 
     /// <summary>
@@ -123,13 +148,18 @@ public static class ErrorExtensions
     public static bool IsDynamoRetryableError<T>(this ErrorOr<T> errorOr)
     {
         if (!errorOr.IsError) return false;
-        return errorOr.IsDynamoThrottlingError() ||
-               errorOr.Errors.Any(e =>
-                   e.Code == DynamoErrorCodes.InternalServerError ||
-                   e.Code == DynamoErrorCodes.ServiceUnavailable ||
-                   e.Code == DynamoErrorCodes.RequestTimeoutException ||
-                   e.Code == DynamoErrorCodes.RequestTimeout ||
-                   (e.Type == ErrorType.Failure && !e.Description.Contains("permanent", StringComparison.OrdinalIgnoreCase)));
+        if (errorOr.IsDynamoThrottlingError())
+            return true;
+        foreach (var e in errorOr.Errors)
+        {
+            if (e.Code == DynamoErrorCodes.InternalServerError ||
+                e.Code == DynamoErrorCodes.ServiceUnavailable ||
+                e.Code == DynamoErrorCodes.RequestTimeoutException ||
+                e.Code == DynamoErrorCodes.RequestTimeout ||
+                (e.Type == ErrorType.Failure && !e.Description.Contains("permanent", StringComparison.OrdinalIgnoreCase)))
+                return true;
+        }
+        return false;
     }
 
     /// <summary>
@@ -141,9 +171,13 @@ public static class ErrorExtensions
     public static bool IsDynamoResourceStateError<T>(this ErrorOr<T> errorOr)
     {
         if (!errorOr.IsError) return false;
-        return errorOr.Errors.Any(e =>
-            e.Code == DynamoErrorCodes.ResourceInUseException ||
-            e.Code == DynamoErrorCodes.ResourceInUse);
+        foreach (var e in errorOr.Errors)
+        {
+            if (e.Code == DynamoErrorCodes.ResourceInUseException ||
+                e.Code == DynamoErrorCodes.ResourceInUse)
+                return true;
+        }
+        return false;
     }
 
     /// <summary>
