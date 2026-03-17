@@ -43,11 +43,11 @@ public sealed class Condition
         Expression = expression;
         var names = new Dictionary<string, string>();
         foreach (var kvp in expressionNames)
-            names[kvp.Key] = kvp.Value;
+            names.Add(kvp.Key, kvp.Value);
         ExpressionNames = names;
         var values = new Dictionary<string, AttributeValue>();
         foreach (var kvp in expressionValues)
-            values[kvp.Key] = kvp.Value;
+            values.Add(kvp.Key, kvp.Value);
         ExpressionValues = values;
     }
 
@@ -308,9 +308,9 @@ public sealed class Condition
             if (i > 0) sb.Append(" AND ");
             sb.Append(conditions[i].Expression);
             foreach (var kvp in conditions[i].ExpressionNames)
-                expressionNames[kvp.Key] = kvp.Value;
+                expressionNames.Add(kvp.Key, kvp.Value);
             foreach (var kvp in conditions[i].ExpressionValues)
-                expressionValues[kvp.Key] = kvp.Value;
+                expressionValues.Add(kvp.Key, kvp.Value);
         }
         return new Condition(sb.ToString(), expressionNames, expressionValues);
     }
@@ -344,9 +344,9 @@ public sealed class Condition
             if (i > 0) sb.Append(" OR ");
             sb.Append(conditions[i].Expression);
             foreach (var kvp in conditions[i].ExpressionNames)
-                expressionNames[kvp.Key] = kvp.Value;
+                expressionNames.Add(kvp.Key, kvp.Value);
             foreach (var kvp in conditions[i].ExpressionValues)
-                expressionValues[kvp.Key] = kvp.Value;
+                expressionValues.Add(kvp.Key, kvp.Value);
         }
         return new Condition(sb.ToString(), expressionNames, expressionValues);
     }

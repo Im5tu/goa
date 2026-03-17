@@ -218,9 +218,12 @@ public class DynamoMapperIncrementalGenerator : IIncrementalGenerator
         {
             var propertyType = member.Type;
 
-            // Skip system types that shouldn't be analyzed
-            if (IsSystemType(propertyType))
-                continue;
+            // Handle collection types first, before the system type check,
+            // so that system collections (e.g. List<T>) are unwrapped to their element type
+            if (IsCollectionType(propertyType, out var elementType))
+            {
+                propertyType = elementType;
+            }
 
             // Handle nullable types
             if (propertyType is INamedTypeSymbol nullableType && nullableType.IsGenericType)
@@ -228,11 +231,9 @@ public class DynamoMapperIncrementalGenerator : IIncrementalGenerator
                 propertyType = nullableType.TypeArguments[0];
             }
 
-            // Handle collection types
-            if (IsCollectionType(propertyType, out var elementType))
-            {
-                propertyType = elementType;
-            }
+            // Skip system types that shouldn't be analyzed
+            if (IsSystemType(propertyType))
+                continue;
 
             // Handle complex types
             if (propertyType is INamedTypeSymbol namedType &&
