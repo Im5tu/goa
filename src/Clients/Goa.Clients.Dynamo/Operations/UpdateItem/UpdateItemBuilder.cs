@@ -663,7 +663,7 @@ public partial class UpdateItemBuilder(string tableName)
             var valueKey = $":v{_request.ExpressionAttributeValues.Count}";
 
             _request.ExpressionAttributeNames[nameKey] = attributeName;
-            _request.ExpressionAttributeValues[valueKey] = AttributeValue.FromStringSet(values.ToList());
+            _request.ExpressionAttributeValues[valueKey] = AttributeValue.FromStringSet(new List<string>(values));
 
             _addActions.Add($"{nameKey} {valueKey}");
         }
@@ -686,8 +686,11 @@ public partial class UpdateItemBuilder(string tableName)
             var nameKey = $"#n{_request.ExpressionAttributeNames.Count}";
             var valueKey = $":v{_request.ExpressionAttributeValues.Count}";
 
+            var numberStrings = new List<string>(values.Length);
+            foreach (var v in values)
+                numberStrings.Add(v.ToString(CultureInfo.InvariantCulture));
             _request.ExpressionAttributeNames[nameKey] = attributeName;
-            _request.ExpressionAttributeValues[valueKey] = AttributeValue.FromNumberSet(values.Select(v => v.ToString(CultureInfo.InvariantCulture)).ToList());
+            _request.ExpressionAttributeValues[valueKey] = AttributeValue.FromNumberSet(numberStrings);
 
             _addActions.Add($"{nameKey} {valueKey}");
         }
@@ -754,7 +757,7 @@ public partial class UpdateItemBuilder(string tableName)
             var valueKey = $":v{_request.ExpressionAttributeValues.Count}";
 
             _request.ExpressionAttributeNames[nameKey] = attributeName;
-            _request.ExpressionAttributeValues[valueKey] = AttributeValue.FromStringSet(values.ToList());
+            _request.ExpressionAttributeValues[valueKey] = AttributeValue.FromStringSet(new List<string>(values));
 
             _deleteActions.Add($"{nameKey} {valueKey}");
         }
@@ -777,8 +780,11 @@ public partial class UpdateItemBuilder(string tableName)
             var nameKey = $"#n{_request.ExpressionAttributeNames.Count}";
             var valueKey = $":v{_request.ExpressionAttributeValues.Count}";
 
+            var numberStrings = new List<string>(values.Length);
+            foreach (var v in values)
+                numberStrings.Add(v.ToString(CultureInfo.InvariantCulture));
             _request.ExpressionAttributeNames[nameKey] = attributeName;
-            _request.ExpressionAttributeValues[valueKey] = AttributeValue.FromNumberSet(values.Select(v => v.ToString(CultureInfo.InvariantCulture)).ToList());
+            _request.ExpressionAttributeValues[valueKey] = AttributeValue.FromNumberSet(numberStrings);
 
             _deleteActions.Add($"{nameKey} {valueKey}");
         }
@@ -919,8 +925,9 @@ public partial class UpdateItemBuilder(string tableName)
         var matches = PathSegmentRegex().Matches(path);
         var expressionParts = new List<string>();
 
-        foreach (Match match in matches)
+        for (var i = 0; i < matches.Count; i++)
         {
+            var match = matches[i];
             if (match.Groups[1].Success)
             {
                 // Attribute name

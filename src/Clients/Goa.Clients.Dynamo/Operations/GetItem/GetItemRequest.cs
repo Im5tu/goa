@@ -7,7 +7,7 @@ namespace Goa.Clients.Dynamo.Operations.GetItem;
 /// <summary>
 /// Request for getting an item from DynamoDB.
 /// </summary>
-public class GetItemRequest
+public sealed class GetItemRequest
 {
     /// <summary>
     /// The name of the table containing the requested item.

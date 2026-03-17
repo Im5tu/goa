@@ -6,7 +6,7 @@ namespace Goa.Clients.Dynamo.Operations.Batch;
 /// <summary>
 /// Put request within a batch write operation.
 /// </summary>
-public class PutRequest
+public sealed class PutRequest
 {
     /// <summary>
     /// A map of attribute names to AttributeValue objects representing the item to be put.

@@ -3,7 +3,7 @@ namespace Goa.Clients.Bedrock.Conversation.Entities;
 /// <summary>
 /// Represents the result of listing conversations.
 /// </summary>
-public class ConversationListResult
+public sealed class ConversationListResult
 {
     /// <summary>
     /// The list of conversations.

@@ -45,15 +45,18 @@ internal sealed class LambdaRuntimeClient : ILambdaRuntimeClient
 
             if (response.Headers.TryGetValues("Lambda-Runtime-Aws-Request-Id", out var requestIdValues))
             {
-                requestId = requestIdValues.FirstOrDefault() ?? string.Empty;
+                requestId = string.Empty;
+                foreach (var v in requestIdValues) { requestId = v; break; }
             }
             if (response.Headers.TryGetValues("Lambda-Runtime-Deadline-Ms", out var deadlineMsValues))
             {
-                deadlineMs = deadlineMsValues.FirstOrDefault() ?? string.Empty;
+                deadlineMs = string.Empty;
+                foreach (var v in deadlineMsValues) { deadlineMs = v; break; }
             }
             if (response.Headers.TryGetValues("Lambda-Runtime-Invoked-Function-Arn", out var functionArnValues))
             {
-                functionArn = functionArnValues.FirstOrDefault() ?? string.Empty;
+                functionArn = string.Empty;
+                foreach (var v in functionArnValues) { functionArn = v; break; }
             }
 
             var payload = await response.Content.ReadAsStringAsync(cancellationToken);

@@ -149,7 +149,7 @@ public partial class QueryBuilder(string tableName)
     /// <returns>The QueryBuilder instance for method chaining.</returns>
     public QueryBuilder WithProjection(IEnumerable<string> attributes)
     {
-        if (attributes?.Any() == true)
+        if (attributes is ICollection<string> { Count: > 0 })
         {
             _request.ProjectionExpression = string.Join(", ", attributes);
             return WithSelectionMode(Select.SPECIFIC_ATTRIBUTES);

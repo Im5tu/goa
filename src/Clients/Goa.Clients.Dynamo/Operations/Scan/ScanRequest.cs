@@ -7,7 +7,7 @@ namespace Goa.Clients.Dynamo.Operations.Scan;
 /// <summary>
 /// Request for scanning items from DynamoDB.
 /// </summary>
-public class ScanRequest
+public sealed class ScanRequest
 {
     /// <summary>
     /// The name of the table containing the requested items.

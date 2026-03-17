@@ -8,7 +8,7 @@ namespace Goa.Clients.Dynamo.Operations.Scan;
 /// Fluent builder for constructing DynamoDB Scan requests with a user-friendly API.
 /// </summary>
 /// <param name="tableName">The name of the table to scan.</param>
-public class ScanBuilder(string tableName)
+public sealed class ScanBuilder(string tableName)
 {
     private readonly ScanRequest _request = new()
     {
@@ -103,7 +103,7 @@ public class ScanBuilder(string tableName)
     /// <returns>The ScanBuilder instance for method chaining.</returns>
     public ScanBuilder WithProjection(IEnumerable<string> attributes)
     {
-        if (attributes?.Any() == true)
+        if (attributes is ICollection<string> { Count: > 0 })
         {
             _request.ProjectionExpression = string.Join(", ", attributes);
             return WithSelectionMode(Select.SPECIFIC_ATTRIBUTES);

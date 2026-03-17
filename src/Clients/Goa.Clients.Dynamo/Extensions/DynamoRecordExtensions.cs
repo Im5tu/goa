@@ -541,9 +541,11 @@ public static class DynamoRecordExtensions
         if (attributeValue.NS == null)
             return false;
 
-        value = attributeValue.NS.Select(x => int.TryParse(x, out var val) ? val : (int?)null)
-                                  .Where(x => x.HasValue)
-                                  .Select(x => x!.Value);
+        var result = new List<int>();
+        foreach (var x in attributeValue.NS)
+            if (int.TryParse(x, out var val))
+                result.Add(val);
+        value = result;
         return true;
     }
 
@@ -569,9 +571,11 @@ public static class DynamoRecordExtensions
         if (attributeValue.NS == null)
             return false;
 
-        value = attributeValue.NS.Select(x => long.TryParse(x, out var val) ? val : (long?)null)
-                                  .Where(x => x.HasValue)
-                                  .Select(x => x!.Value);
+        var result = new List<long>();
+        foreach (var x in attributeValue.NS)
+            if (long.TryParse(x, out var val))
+                result.Add(val);
+        value = result;
         return true;
     }
 
@@ -597,9 +601,11 @@ public static class DynamoRecordExtensions
         if (attributeValue.NS == null)
             return false;
 
-        value = attributeValue.NS.Select(x => double.TryParse(x, out var val) ? val : (double?)null)
-                                  .Where(x => x.HasValue)
-                                  .Select(x => x!.Value);
+        var result = new List<double>();
+        foreach (var x in attributeValue.NS)
+            if (double.TryParse(x, out var val))
+                result.Add(val);
+        value = result;
         return true;
     }
 
@@ -626,9 +632,13 @@ public static class DynamoRecordExtensions
         if (attributeValue.SS == null)
             return false;
 
-        value = attributeValue.SS.Select(x => Enum.TryParse<T>(x, out var val) ? val : (T?)null)
-                                  .Where(x => x.HasValue)
-                                  .Select(x => x!.Value);
+        var result = new List<T>();
+        foreach (var x in attributeValue.SS)
+        {
+            if (Enum.TryParse<T>(x, out var val))
+                result.Add(val);
+        }
+        value = result;
         return true;
     }
 
@@ -1046,9 +1056,11 @@ public static class DynamoRecordExtensions
         if (attributeValue.SS == null)
             return false;
 
-        value = attributeValue.SS.Select(x => DateTime.TryParse(x, out var val) ? val : (DateTime?)null)
-                                  .Where(x => x.HasValue)
-                                  .Select(x => x!.Value);
+        var result = new List<DateTime>();
+        foreach (var x in attributeValue.SS)
+            if (DateTime.TryParse(x, out var val))
+                result.Add(val);
+        value = result;
         return true;
     }
 

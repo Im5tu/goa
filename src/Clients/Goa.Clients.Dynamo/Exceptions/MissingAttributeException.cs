@@ -1,9 +1,11 @@
+using System.Diagnostics.CodeAnalysis;
+
 namespace Goa.Clients.Dynamo.Exceptions;
 
 /// <summary>
 /// Exception thrown when a required DynamoDB attribute is missing or null.
 /// </summary>
-public class MissingAttributeException : Exception
+public sealed class MissingAttributeException : Exception
 {
     /// <summary>
     /// Gets the name of the missing attribute.
@@ -70,6 +72,8 @@ public class MissingAttributeException : Exception
     /// <param name="attributeName">The name of the missing attribute.</param>
     /// <returns>Never returns (always throws).</returns>
     /// <exception cref="MissingAttributeException">Always thrown.</exception>
+    [DoesNotReturn]
+
     public static T Throw<T>(string attributeName)
     {
         throw new MissingAttributeException(attributeName);
@@ -83,6 +87,8 @@ public class MissingAttributeException : Exception
     /// <param name="sortKey">The sort key value for context.</param>
     /// <returns>Never returns (always throws).</returns>
     /// <exception cref="MissingAttributeException">Always thrown.</exception>
+    [DoesNotReturn]
+
     public static T Throw<T>(string attributeName, string? partitionKey, string? sortKey)
     {
         throw new MissingAttributeException(attributeName, partitionKey, sortKey);
@@ -94,6 +100,8 @@ public class MissingAttributeException : Exception
     /// </summary>
     /// <param name="attributeName">The name of the missing attribute.</param>
     /// <exception cref="MissingAttributeException">Always thrown.</exception>
+    [DoesNotReturn]
+
     public static void Throw(string attributeName)
     {
         throw new MissingAttributeException(attributeName);
@@ -107,6 +115,8 @@ public class MissingAttributeException : Exception
     /// <param name="partitionKey">The partition key value for context.</param>
     /// <param name="sortKey">The sort key value for context.</param>
     /// <exception cref="MissingAttributeException">Always thrown.</exception>
+    [DoesNotReturn]
+
     public static void Throw(string attributeName, string? partitionKey, string? sortKey)
     {
         throw new MissingAttributeException(attributeName, partitionKey, sortKey);

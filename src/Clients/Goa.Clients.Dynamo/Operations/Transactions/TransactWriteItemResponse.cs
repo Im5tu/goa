@@ -6,7 +6,7 @@ namespace Goa.Clients.Dynamo.Operations.Transactions;
 /// <summary>
 /// Response for TransactWriteItem operations.
 /// </summary>
-public class TransactWriteItemResponse
+public sealed class TransactWriteItemResponse
 {
     /// <summary>
     /// The capacity units consumed by the entire TransactWriteItem operation.

@@ -6,7 +6,7 @@ namespace Goa.Clients.Dynamo.Operations.Scan;
 /// <summary>
 /// Result wrapper for Scan operations with pagination support.
 /// </summary>
-public class ScanResult
+public sealed class ScanResult
 {
     /// <summary>
     /// The items returned by the Scan operation.
@@ -51,7 +51,7 @@ public class ScanResult
 /// Typed result wrapper for Scan operations with direct deserialization support.
 /// </summary>
 /// <typeparam name="T">The type of the deserialized items.</typeparam>
-public class ScanResult<T>
+public sealed class ScanResult<T>
 {
     /// <inheritdoc cref="ScanResult.Items"/>
     [JsonPropertyName("Items")]

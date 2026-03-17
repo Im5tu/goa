@@ -5,7 +5,7 @@ namespace Goa.Clients.Bedrock.Models;
 /// <summary>
 /// A tool definition that the model can use.
 /// </summary>
-public class Tool
+public sealed class Tool
 {
     /// <summary>
     /// The specification of the tool.
@@ -16,7 +16,7 @@ public class Tool
 /// <summary>
 /// The specification of a tool including its name, description, and input schema.
 /// </summary>
-public class ToolSpec
+public sealed class ToolSpec
 {
     /// <summary>
     /// The name of the tool.
@@ -42,7 +42,7 @@ public class ToolSpec
 /// <summary>
 /// The input schema for a tool. This is a union type - only the Json member should be set.
 /// </summary>
-public class ToolInputSchema
+public sealed class ToolInputSchema
 {
     /// <summary>
     /// The JSON schema for the tool's input parameters.

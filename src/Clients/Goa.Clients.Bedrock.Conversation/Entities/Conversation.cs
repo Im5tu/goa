@@ -5,7 +5,7 @@ namespace Goa.Clients.Bedrock.Conversation.Entities;
 /// <summary>
 /// Represents a conversation with a Bedrock model.
 /// </summary>
-public class Conversation
+public sealed class Conversation
 {
     /// <summary>
     /// The unique identifier for the conversation.

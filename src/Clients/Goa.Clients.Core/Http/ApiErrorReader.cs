@@ -1,3 +1,5 @@
+using System.Buffers;
+using System.Text;
 using System.Text.Json;
 
 namespace Goa.Clients.Core.Http;
@@ -8,19 +10,19 @@ namespace Goa.Clients.Core.Http;
 internal static class ApiErrorReader
 {
     /// <summary>
-    /// Reads an ApiError from a JSON string using Utf8JsonReader.
+    /// Reads an ApiError from UTF-8 bytes using Utf8JsonReader.
     /// Matches fields case-insensitively: "message", "__type", "code".
     /// </summary>
-    /// <param name="content">The JSON string to deserialize.</param>
+    /// <param name="utf8Json">The UTF-8 encoded JSON bytes to deserialize.</param>
     /// <returns>The deserialized ApiError, or null if the input is malformed or empty.</returns>
-    public static ApiError? ReadApiError(string content)
+    public static ApiError? ReadApiError(ReadOnlySpan<byte> utf8Json)
     {
-        if (string.IsNullOrWhiteSpace(content))
+        if (utf8Json.IsEmpty)
             return null;
 
         try
         {
-            var reader = new Utf8JsonReader(System.Text.Encoding.UTF8.GetBytes(content));
+            var reader = new Utf8JsonReader(utf8Json);
 
             if (!reader.Read() || reader.TokenType != JsonTokenType.StartObject)
                 return null;
@@ -66,6 +68,38 @@ internal static class ApiErrorReader
         catch (Exception ex) when (ex is JsonException or InvalidOperationException)
         {
             return null;
+        }
+    }
+
+    /// <summary>
+    /// Reads an ApiError from a JSON string using Utf8JsonReader.
+    /// Uses stackalloc for small payloads, ArrayPool for larger ones.
+    /// </summary>
+    /// <param name="content">The JSON string to deserialize.</param>
+    /// <returns>The deserialized ApiError, or null if the input is malformed or empty.</returns>
+    public static ApiError? ReadApiError(string content)
+    {
+        if (string.IsNullOrWhiteSpace(content))
+            return null;
+
+        var byteCount = Encoding.UTF8.GetByteCount(content);
+
+        if (byteCount <= 1024)
+        {
+            Span<byte> buffer = stackalloc byte[byteCount];
+            Encoding.UTF8.GetBytes(content, buffer);
+            return ReadApiError((ReadOnlySpan<byte>)buffer);
+        }
+
+        var rented = ArrayPool<byte>.Shared.Rent(byteCount);
+        try
+        {
+            var written = Encoding.UTF8.GetBytes(content, rented);
+            return ReadApiError(rented.AsSpan(0, written));
+        }
+        finally
+        {
+            ArrayPool<byte>.Shared.Return(rented);
         }
     }
 }

@@ -2,7 +2,6 @@ using Goa.Clients.Core.Configuration;
 using Goa.Clients.Core.Http;
 using Goa.Clients.Core.Logging;
 using Microsoft.Extensions.Logging;
-using System.Buffers;
 
 using System.Net.Http.Headers;
 using System.Text;
@@ -95,8 +94,8 @@ public abstract class JsonAwsServiceClient<T> : AwsServiceClient<T> where T : Aw
                 return new ApiResponse<TResponse>(new ApiError("Request not successful.") { StatusCode = response.StatusCode });
             }
 
+            var error = ApiErrorReader.ReadApiError(errorBuffer.Span);
             var errorPayload = Encoding.UTF8.GetString(errorBuffer.Span);
-            var error = DeserializeJsonError(errorPayload);
             if (error is not null)
             {
                 error = error with
@@ -117,22 +116,22 @@ public abstract class JsonAwsServiceClient<T> : AwsServiceClient<T> where T : Aw
             return new ApiResponse<TResponse>(error);
         }
 
-        var headers = ResponseHeaders.FromHttpResponse(response.Headers, response.Content.Headers);
+        var contentType = response.Content.Headers.ContentType?.MediaType;
         using var pooledBuffer = await ReadResponseBytesAsync(response, cancellationToken);
 
         if (typeof(TResponse) == typeof(string))
         {
             var str = pooledBuffer.Length > 0 ? Encoding.UTF8.GetString(pooledBuffer.Span) : string.Empty;
-            return new ApiResponse<TResponse>(str as TResponse, headers);
+            return new ApiResponse<TResponse>(str as TResponse, contentType);
         }
 
         if (pooledBuffer.Length == 0)
-            return new ApiResponse<TResponse>(default(TResponse), headers);
+            return new ApiResponse<TResponse>(default(TResponse), contentType);
 
         var typeInfo = ResolveJsonTypeInfo<TResponse>();
         var jsonReader = new Utf8JsonReader(pooledBuffer.Span);
         var result = JsonSerializer.Deserialize(ref jsonReader, typeInfo);
-        return new ApiResponse<TResponse>(result, headers);
+        return new ApiResponse<TResponse>(result, contentType);
     }
 
     /// <summary>
@@ -144,40 +143,6 @@ public abstract class JsonAwsServiceClient<T> : AwsServiceClient<T> where T : Aw
     protected abstract JsonTypeInfo<TValue> ResolveJsonTypeInfo<TValue>();
 
     /// <summary>
-    /// Applies AWS-specific error header processing to the error object.
-    /// </summary>
-    protected ApiError ProcessAwsErrorHeaders(HttpResponseMessage response, ApiError error)
-    {
-        // Logic: https://github.com/aws/aws-sdk-net/blob/a9aa4e78a927e1021114b6531e21fc25f87e0dd9/sdk/src/Core/Amazon.Runtime/Internal/Transform/JsonErrorResponseUnmarshaller.cs#L79
-        if (response.Headers.TryGetValues(XAmznErrorMessage, out var messages))
-        {
-            error = error with { Message = string.Join(", ", messages) };
-        }
-
-        // Logic: https://github.com/aws/aws-sdk-net/blob/a9aa4e78a927e1021114b6531e21fc25f87e0dd9/sdk/src/Core/Amazon.Runtime/Internal/Transform/JsonErrorResponseUnmarshaller.cs#L60
-        if (string.IsNullOrWhiteSpace(error.Type) && response.Headers.TryGetValues(XAmzErrorType, out var types))
-        {
-            error = error with { Type = string.Join(", ", types) };
-        }
-
-        // Logic: https://github.com/aws/aws-sdk-net/blob/a9aa4e78a927e1021114b6531e21fc25f87e0dd9/sdk/src/Core/Amazon.Runtime/Internal/Transform/JsonErrorResponseUnmarshaller.cs#L68
-        var infoSeparator = error.Type?.LastIndexOf(':') ?? -1;
-        if (infoSeparator > 0)
-        {
-            error = error with { Type = error.Type![..infoSeparator] };
-        }
-
-        // Logic: https://github.com/aws/aws-sdk-net/blob/a9aa4e78a927e1021114b6531e21fc25f87e0dd9/sdk/src/Core/Amazon.Runtime/Internal/Transform/JsonErrorResponseUnmarshaller.cs#L95
-        var typeSeparator = error.Type?.LastIndexOf('#') ?? -1;
-        if (typeSeparator > 0)
-        {
-            error = error with { Type = error.Type![(typeSeparator + 1)..] };
-        }
-
-        return error;
-    }
-
-    /// <summary>
     /// Deserializes JSON error response content to an ApiError.
     /// </summary>
     protected ApiError? DeserializeJsonError(string content) => ApiErrorReader.ReadApiError(content);
@@ -187,126 +152,7 @@ public abstract class JsonAwsServiceClient<T> : AwsServiceClient<T> where T : Aw
     /// </summary>
     private static bool IsJsonSerialized(string input)
     {
-        var trimmed = input.TrimStart();
-        return trimmed.StartsWith('{') || trimmed.StartsWith('[');
-    }
-
-    /// <summary>
-    /// Maximum allowed response size in bytes (4 MB).
-    /// </summary>
-    protected const int MaxResponseSize = 4 * 1024 * 1024;
-
-    /// <summary>
-    /// Reads the HTTP response body into a pooled byte buffer for zero-copy deserialization.
-    /// </summary>
-    /// <param name="response">The HTTP response message.</param>
-    /// <param name="cancellationToken">Token to cancel the operation.</param>
-    /// <returns>A pooled buffer containing the response bytes. Must be disposed after use.</returns>
-    protected static async Task<PooledBuffer> ReadResponseBytesAsync(
-        HttpResponseMessage response, CancellationToken cancellationToken)
-    {
-        var headerLength = response.Content.Headers.ContentLength;
-        if (headerLength is 0)
-            return default;
-
-        if (headerLength is not null)
-        {
-            if (headerLength < 0 || headerLength > MaxResponseSize)
-                throw new InvalidOperationException($"Response Content-Length {headerLength} exceeds maximum {MaxResponseSize} bytes.");
-
-            var contentLength = (int)headerLength;
-            var knownBuffer = System.Buffers.ArrayPool<byte>.Shared.Rent(contentLength);
-            try
-            {
-                var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
-                var totalRead = 0;
-                while (totalRead < contentLength)
-                {
-                    var read = await stream.ReadAsync(knownBuffer.AsMemory(totalRead, contentLength - totalRead), cancellationToken);
-                    if (read == 0) break;
-                    totalRead += read;
-                }
-                return new PooledBuffer(knownBuffer, totalRead);
-            }
-            catch
-            {
-                System.Buffers.ArrayPool<byte>.Shared.Return(knownBuffer);
-                throw;
-            }
-        }
-
-        const int initialSize = 4096;
-        var buffer = System.Buffers.ArrayPool<byte>.Shared.Rent(initialSize);
-        try
-        {
-            var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
-            var totalRead = 0;
-            while (true)
-            {
-                if (totalRead == buffer.Length)
-                {
-                    var newSize = buffer.Length * 2;
-                    if (newSize > MaxResponseSize)
-                        newSize = MaxResponseSize + 1; // allow one more read to detect overflow
-
-                    var newBuffer = System.Buffers.ArrayPool<byte>.Shared.Rent(newSize);
-                    buffer.AsSpan(0, totalRead).CopyTo(newBuffer);
-                    System.Buffers.ArrayPool<byte>.Shared.Return(buffer);
-                    buffer = newBuffer;
-                }
-
-                var read = await stream.ReadAsync(buffer.AsMemory(totalRead, buffer.Length - totalRead), cancellationToken);
-                if (read == 0) break;
-                totalRead += read;
-
-                if (totalRead > MaxResponseSize)
-                    throw new InvalidOperationException($"Response size exceeds maximum {MaxResponseSize} bytes.");
-            }
-
-            if (totalRead == 0)
-            {
-                System.Buffers.ArrayPool<byte>.Shared.Return(buffer);
-                return default;
-            }
-
-            return new PooledBuffer(buffer, totalRead);
-        }
-        catch
-        {
-            System.Buffers.ArrayPool<byte>.Shared.Return(buffer);
-            throw;
-        }
-    }
-
-    /// <summary>
-    /// A disposable buffer backed by ArrayPool for zero-allocation response reading.
-    /// </summary>
-    protected struct PooledBuffer : IDisposable
-    {
-        private byte[]? _buffer;
-
-        /// <summary>The number of valid bytes in the buffer.</summary>
-        public readonly int Length;
-
-        /// <summary>Creates a new PooledBuffer wrapping the given rented array.</summary>
-        public PooledBuffer(byte[] buffer, int length)
-        {
-            _buffer = buffer;
-            Length = length;
-        }
-
-        /// <summary>Gets a read-only span over the valid portion of the buffer.</summary>
-        public readonly ReadOnlySpan<byte> Span => _buffer is null ? default : _buffer.AsSpan(0, Length);
-
-        /// <summary>Returns the rented buffer to the shared ArrayPool.</summary>
-        public void Dispose()
-        {
-            var buf = _buffer;
-            if (buf is not null)
-            {
-                _buffer = null;
-                System.Buffers.ArrayPool<byte>.Shared.Return(buf);
-            }
-        }
+        var trimmed = input.AsSpan().TrimStart();
+        return trimmed.StartsWith("{") || trimmed.StartsWith("[");
     }
 }

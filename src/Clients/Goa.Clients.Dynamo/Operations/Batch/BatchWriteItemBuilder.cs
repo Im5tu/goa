@@ -5,7 +5,7 @@ namespace Goa.Clients.Dynamo.Operations.Batch;
 /// <summary>
 /// Fluent builder for constructing DynamoDB BatchWriteItem requests with a user-friendly API.
 /// </summary>
-public class BatchWriteItemBuilder
+public sealed class BatchWriteItemBuilder
 {
     private readonly BatchWriteItemRequest _request = new()
     {

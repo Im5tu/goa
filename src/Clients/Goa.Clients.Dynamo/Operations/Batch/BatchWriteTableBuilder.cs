@@ -5,7 +5,7 @@ namespace Goa.Clients.Dynamo.Operations.Batch;
 /// <summary>
 /// Fluent builder for configuring table-specific requests within a BatchWriteItem operation.
 /// </summary>
-public class BatchWriteTableBuilder
+public sealed class BatchWriteTableBuilder
 {
     private readonly List<BatchWriteRequestItem> _requests = new();
 
@@ -30,7 +30,9 @@ public class BatchWriteTableBuilder
     /// <returns>The BatchWriteTableBuilder instance for method chaining.</returns>
     public BatchWriteTableBuilder WithDelete(IEnumerable<Dictionary<string, AttributeValue>> keys)
     {
+#pragma warning disable GOA1301 // Enumerator allocation unavoidable - IEnumerable is public API parameter type
         foreach (var key in keys)
+#pragma warning restore GOA1301
         {
             WithDelete(key);
         }
@@ -58,7 +60,9 @@ public class BatchWriteTableBuilder
     /// <returns>The BatchWriteTableBuilder instance for method chaining.</returns>
     public BatchWriteTableBuilder WithPut(IEnumerable<Dictionary<string, AttributeValue>> items)
     {
+#pragma warning disable GOA1301 // Enumerator allocation unavoidable - IEnumerable is public API parameter type
         foreach (var item in items)
+#pragma warning restore GOA1301
         {
             WithPut(item);
         }

@@ -6,7 +6,7 @@ namespace Goa.Clients.Dynamo.Operations.Transactions;
 /// <summary>
 /// Response for TransactGetItem operations.
 /// </summary>
-public class TransactGetItemResponse
+public sealed class TransactGetItemResponse
 {
     /// <summary>
     /// An ordered array of up to 100 response items, each of which corresponds to the TransactGetItem request in the same position.

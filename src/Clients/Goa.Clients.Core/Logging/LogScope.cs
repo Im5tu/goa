@@ -22,12 +22,14 @@ internal readonly struct LogScope8 : IReadOnlyList<KeyValuePair<string, object>>
 
     public int Count => 8;
 
-    public KeyValuePair<string, object> this[int index] => index switch
+    public KeyValuePair<string, object> this[int index]
     {
-        0 => _0, 1 => _1, 2 => _2, 3 => _3,
-        4 => _4, 5 => _5, 6 => _6, 7 => _7,
-        _ => throw new IndexOutOfRangeException()
-    };
+        get
+        {
+            if ((uint)index >= 8) Throw.IndexOutOfRange();
+            return index switch { 0 => _0, 1 => _1, 2 => _2, 3 => _3, 4 => _4, 5 => _5, 6 => _6, _ => _7 };
+        }
+    }
 
     public Enumerator GetEnumerator() => new(this);
     IEnumerator<KeyValuePair<string, object>> IEnumerable<KeyValuePair<string, object>>.GetEnumerator() => GetEnumerator();
@@ -43,6 +45,49 @@ internal readonly struct LogScope8 : IReadOnlyList<KeyValuePair<string, object>>
         public KeyValuePair<string, object> Current => _scope[_index];
         object IEnumerator.Current => Current;
         public bool MoveNext() => ++_index < 8;
+        public void Reset() => _index = -1;
+        public void Dispose() { }
+    }
+}
+
+/// <summary>
+/// Zero-allocation log scope with 2 entries. Implements IReadOnlyList so
+/// Microsoft.Extensions.Logging can enumerate properties without a Dictionary allocation.
+/// </summary>
+internal readonly struct LogScope2 : IReadOnlyList<KeyValuePair<string, object>>
+{
+    private readonly KeyValuePair<string, object> _0, _1;
+
+    public LogScope2(KeyValuePair<string, object> p0, KeyValuePair<string, object> p1)
+    {
+        _0 = p0; _1 = p1;
+    }
+
+    public int Count => 2;
+
+    public KeyValuePair<string, object> this[int index]
+    {
+        get
+        {
+            if ((uint)index >= 2) Throw.IndexOutOfRange();
+            return index switch { 0 => _0, _ => _1 };
+        }
+    }
+
+    public Enumerator GetEnumerator() => new(this);
+    IEnumerator<KeyValuePair<string, object>> IEnumerable<KeyValuePair<string, object>>.GetEnumerator() => GetEnumerator();
+    IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
+
+    public struct Enumerator : IEnumerator<KeyValuePair<string, object>>
+    {
+        private readonly LogScope2 _scope;
+        private int _index;
+
+        internal Enumerator(LogScope2 scope) { _scope = scope; _index = -1; }
+
+        public KeyValuePair<string, object> Current => _scope[_index];
+        object IEnumerator.Current => Current;
+        public bool MoveNext() => ++_index < 2;
         public void Reset() => _index = -1;
         public void Dispose() { }
     }
@@ -82,12 +127,14 @@ internal readonly struct LogScope4 : IReadOnlyList<KeyValuePair<string, object>>
 
     public int Count => _count;
 
-    public KeyValuePair<string, object> this[int index] =>
-        index < _count ? index switch
+    public KeyValuePair<string, object> this[int index]
+    {
+        get
         {
-            0 => _0, 1 => _1, 2 => _2, 3 => _3,
-            _ => throw new IndexOutOfRangeException()
-        } : throw new IndexOutOfRangeException();
+            if ((uint)index >= (uint)_count) Throw.IndexOutOfRange();
+            return index switch { 0 => _0, 1 => _1, 2 => _2, _ => _3 };
+        }
+    }
 
     public Enumerator GetEnumerator() => new(this);
     IEnumerator<KeyValuePair<string, object>> IEnumerable<KeyValuePair<string, object>>.GetEnumerator() => GetEnumerator();

@@ -7,7 +7,7 @@ namespace Goa.Clients.Dynamo.Operations.PutItem;
 /// <summary>
 /// Request for putting an item into DynamoDB.
 /// </summary>
-public class PutItemRequest
+public sealed class PutItemRequest
 {
     /// <summary>
     /// The name of the table to contain the item.

@@ -3,7 +3,7 @@ namespace Goa.Clients.Bedrock.Models;
 /// <summary>
 /// An image block in a message.
 /// </summary>
-public class ImageBlock
+public sealed class ImageBlock
 {
     /// <summary>
     /// The format of the image (e.g., "png", "jpeg", "gif", "webp").
@@ -19,7 +19,7 @@ public class ImageBlock
 /// <summary>
 /// The source of an image.
 /// </summary>
-public class ImageSource
+public sealed class ImageSource
 {
     /// <summary>
     /// Base64-encoded image bytes.
@@ -35,7 +35,7 @@ public class ImageSource
 /// <summary>
 /// S3 location reference for content.
 /// </summary>
-public class S3Location
+public sealed class S3Location
 {
     /// <summary>
     /// The S3 URI of the content.

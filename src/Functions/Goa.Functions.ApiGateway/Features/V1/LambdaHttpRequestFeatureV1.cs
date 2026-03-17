@@ -29,7 +29,19 @@ internal sealed class LambdaHttpRequestFeatureV1 : IHttpRequestFeature
     private static string BuildQueryString(IDictionary<string, string>? queryStringParameters)
     {
         if (queryStringParameters == null || queryStringParameters.Count == 0) return string.Empty;
-        return "?" + string.Join("&", queryStringParameters.Select(kvp => $"{Uri.EscapeDataString(kvp.Key)}={Uri.EscapeDataString(kvp.Value)}"));
+
+        var sb = new StringBuilder("?");
+        var first = true;
+        foreach (var kvp in queryStringParameters)
+        {
+            if (!first)
+                sb.Append('&');
+            sb.Append(Uri.EscapeDataString(kvp.Key));
+            sb.Append('=');
+            sb.Append(Uri.EscapeDataString(kvp.Value));
+            first = false;
+        }
+        return sb.ToString();
     }
 
     private static IHeaderDictionary BuildHeaderDictionary(IDictionary<string, string>? headers, IDictionary<string, IList<string>>? multiValueHeaders)

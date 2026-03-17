@@ -5,7 +5,7 @@ namespace Goa.Clients.Bedrock.Models;
 /// <summary>
 /// A block of content in a message. Only one type of content can be set per block.
 /// </summary>
-public class ContentBlock
+public sealed class ContentBlock
 {
     /// <summary>
     /// Text content.

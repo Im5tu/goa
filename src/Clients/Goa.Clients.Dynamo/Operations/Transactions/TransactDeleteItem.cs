@@ -7,7 +7,7 @@ namespace Goa.Clients.Dynamo.Operations.Transactions;
 /// <summary>
 /// Delete operation in a transaction.
 /// </summary>
-public class TransactDeleteItem
+public sealed class TransactDeleteItem
 {
     /// <summary>
     /// The name of the table from which to delete the item.

@@ -1,6 +1,7 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Goa.Clients.Bedrock.Models;
+using Goa.Clients.Core;
 
 namespace Goa.Clients.Bedrock.Serialization;
 
@@ -19,7 +20,7 @@ public sealed class ServiceTierConverter : JsonConverter<ServiceTier>
             "default" => ServiceTier.Default,
             "priority" => ServiceTier.Priority,
             "flex" => ServiceTier.Flex,
-            _ => throw new JsonException($"Unknown ServiceTier: {value}")
+            _ => Throw.JsonException<ServiceTier>($"Unknown ServiceTier: {value}")
         };
     }
 
@@ -31,7 +32,7 @@ public sealed class ServiceTierConverter : JsonConverter<ServiceTier>
             ServiceTier.Default => "default",
             ServiceTier.Priority => "priority",
             ServiceTier.Flex => "flex",
-            _ => throw new JsonException($"Unknown ServiceTier: {value}")
+            _ => Throw.JsonException<string>($"Unknown ServiceTier: {value}")
         };
         writer.WriteStringValue(stringValue);
     }

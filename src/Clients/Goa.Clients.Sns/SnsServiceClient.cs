@@ -11,6 +11,7 @@ namespace Goa.Clients.Sns;
 
 internal sealed class SnsServiceClient : AwsServiceClient<SnsServiceClientConfiguration>, ISnsClient
 {
+    private static readonly MediaTypeHeaderValue FormUrlEncodedContentType = new("application/x-www-form-urlencoded");
     private static readonly ApiError DeserializationError = new("Failed to deserialize response", "DeserializationError");
 
     public SnsServiceClient(
@@ -47,20 +48,20 @@ internal sealed class SnsServiceClient : AwsServiceClient<SnsServiceClientConfig
                 HttpMethod.Post,
                 "/",
                 content,
-                new MediaTypeHeaderValue("application/x-www-form-urlencoded"));
+                FormUrlEncodedContentType);
 
             // Send request and get raw HTTP response
             var httpResponse = await SendAsync(requestMessage, "Publish", cancellationToken);
 
             // Process the response
-            var apiResponse = await ProcessSnsResponseAsync<PublishResponse>(httpResponse);
+            var apiResponse = await ProcessSnsResponseAsync<PublishResponse>(httpResponse, cancellationToken);
 
             return ConvertApiResponse(apiResponse);
         }
         catch (Exception ex)
         {
             var target = request.TopicArn ?? request.TargetArn ?? request.PhoneNumber;
-            Logger.LogError(ex, "Failed to publish message to SNS target {Target}", target);
+            Logger.PublishFailed(ex, target);
             return Error.Failure("SNS.Publish.Failed", $"Failed to publish message to SNS target {target}");
         }
     }
@@ -70,7 +71,7 @@ internal sealed class SnsServiceClient : AwsServiceClient<SnsServiceClientConfig
     /// </summary>
     private static string SerializeToQueryParameters(PublishRequest request)
     {
-        var parameters = new List<string>
+        var parameters = new List<string>(12)
         {
             "Action=Publish",
             "Version=2010-03-31"
@@ -126,20 +127,19 @@ internal sealed class SnsServiceClient : AwsServiceClient<SnsServiceClientConfig
     /// <summary>
     /// Processes an SNS HTTP response and converts it to an API response.
     /// </summary>
-    private async Task<ApiResponse<TResponse>> ProcessSnsResponseAsync<TResponse>(HttpResponseMessage response)
+    private async Task<ApiResponse<TResponse>> ProcessSnsResponseAsync<TResponse>(HttpResponseMessage response, CancellationToken cancellationToken)
         where TResponse : class, IDeserializeFromXml, new()
     {
-        var headers = ResponseHeaders.FromHttpResponse(response.Headers);
-
         if (!response.IsSuccessStatusCode)
         {
-            var errorPayload = await response.Content.ReadAsStringAsync();
-            if (string.IsNullOrWhiteSpace(errorPayload))
+            using var errorBuffer = await ReadResponseBytesAsync(response, cancellationToken);
+            if (errorBuffer.Length == 0)
             {
                 Logger.RequestFailed("No payload present");
                 return new ApiResponse<TResponse>(new ApiError("Request not successful.") { StatusCode = response.StatusCode });
             }
 
+            var errorPayload = Encoding.UTF8.GetString(errorBuffer.Span);
             var error = DeserializeSnsError(errorPayload);
             if (error is not null)
             {
@@ -161,46 +161,17 @@ internal sealed class SnsServiceClient : AwsServiceClient<SnsServiceClientConfig
             return new ApiResponse<TResponse>(error ?? DeserializationError);
         }
 
-        var contentPayload = await response.Content.ReadAsStringAsync();
+        using var pooledBuffer = await ReadResponseBytesAsync(response, cancellationToken);
+        var contentPayload = pooledBuffer.Length > 0 ? Encoding.UTF8.GetString(pooledBuffer.Span) : string.Empty;
 
         if (string.IsNullOrWhiteSpace(contentPayload))
         {
-            return new ApiResponse<TResponse>(default(TResponse), headers);
+            return new ApiResponse<TResponse>(default(TResponse));
         }
 
         var result = new TResponse();
         result.DeserializeFromXml(contentPayload);
-        return new ApiResponse<TResponse>(result, headers);
-    }
-
-    /// <summary>
-    /// Applies AWS-specific error header processing to the error object.
-    /// </summary>
-    private ApiError ProcessAwsErrorHeaders(HttpResponseMessage response, ApiError error)
-    {
-        if (response.Headers.TryGetValues(XAmznErrorMessage, out var messages))
-        {
-            error = error with { Message = string.Join(", ", messages) };
-        }
-
-        if (string.IsNullOrWhiteSpace(error.Type) && response.Headers.TryGetValues(XAmzErrorType, out var types))
-        {
-            error = error with { Type = string.Join(", ", types) };
-        }
-
-        var infoSeparator = error.Type?.LastIndexOf(':') ?? -1;
-        if (infoSeparator > 0)
-        {
-            error = error with { Type = error.Type![..infoSeparator] };
-        }
-
-        var typeSeparator = error.Type?.LastIndexOf('#') ?? -1;
-        if (typeSeparator > 0)
-        {
-            error = error with { Type = error.Type![(typeSeparator + 1)..] };
-        }
-
-        return error;
+        return new ApiResponse<TResponse>(result);
     }
 
     /// <summary>
@@ -219,7 +190,7 @@ internal sealed class SnsServiceClient : AwsServiceClient<SnsServiceClientConfig
         }
         catch (Exception ex)
         {
-            Logger.LogWarning(ex, "Failed to deserialize SNS XML error response: {Content}", content);
+            Logger.DeserializeSnsErrorFailed(ex, content);
             return null;
         }
     }

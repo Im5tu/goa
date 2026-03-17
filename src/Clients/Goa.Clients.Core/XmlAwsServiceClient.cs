@@ -15,6 +15,7 @@ namespace Goa.Clients.Core;
 /// <typeparam name="T">The configuration type that extends AwsServiceConfiguration.</typeparam>
 public abstract class XmlAwsServiceClient<T> : AwsServiceClient<T> where T : AwsServiceConfiguration
 {
+    private static readonly MediaTypeHeaderValue XmlContentType = new("application/xml");
     private readonly ApiError _deserializationError = new("Failed to deserialize response", "DeserializationError");
 
     /// <summary>
@@ -57,29 +58,28 @@ public abstract class XmlAwsServiceClient<T> : AwsServiceClient<T> where T : Aws
             }
         }
 
-        using var requestMessage = CreateRequestMessage(method, requestUri + $"?Action={UrlEncoder.Default.Encode(target)}", content, new MediaTypeHeaderValue("application/xml"), headers);
+        using var requestMessage = CreateRequestMessage(method, requestUri + $"?Action={UrlEncoder.Default.Encode(target)}", content, XmlContentType, headers);
         using var response = await SendAsync(requestMessage, target, cancellationToken);
 
-        return await ProcessXmlResponseAsync<TResponse>(response);
+        return await ProcessXmlResponseAsync<TResponse>(response, cancellationToken);
     }
 
     /// <summary>
     /// Processes an HTTP response and converts it to an API response with XML deserialization.
     /// </summary>
-    private async Task<ApiResponse<TResponse>> ProcessXmlResponseAsync<TResponse>(HttpResponseMessage response)
+    private async Task<ApiResponse<TResponse>> ProcessXmlResponseAsync<TResponse>(HttpResponseMessage response, CancellationToken cancellationToken)
         where TResponse : class, IDeserializeFromXml, new()
     {
-        var headers = ResponseHeaders.FromHttpResponse(response.Headers);
-
         if (!response.IsSuccessStatusCode)
         {
-            var errorPayload = await response.Content.ReadAsStringAsync();
-            if (string.IsNullOrWhiteSpace(errorPayload))
+            using var errorBuffer = await ReadResponseBytesAsync(response, cancellationToken);
+            if (errorBuffer.Length == 0)
             {
                 Logger.RequestFailed("No payload present");
                 return new ApiResponse<TResponse>(new ApiError("Request not successful.") { StatusCode = response.StatusCode });
             }
 
+            var errorPayload = Encoding.UTF8.GetString(errorBuffer.Span);
             var error = DeserializeXmlError(errorPayload);
             if (error is not null)
             {
@@ -101,53 +101,24 @@ public abstract class XmlAwsServiceClient<T> : AwsServiceClient<T> where T : Aws
             return new ApiResponse<TResponse>(error ?? _deserializationError);
         }
 
-        var contentPayload = await response.Content.ReadAsStringAsync();
+        using var pooledBuffer = await ReadResponseBytesAsync(response, cancellationToken);
+        var contentPayload = pooledBuffer.Length > 0 ? Encoding.UTF8.GetString(pooledBuffer.Span) : string.Empty;
         Debug.WriteLine("RESPONSE: " + contentPayload);
 
         // Handle string responses specially
         if (typeof(TResponse) == typeof(string))
         {
-            return new ApiResponse<TResponse>(contentPayload as TResponse, headers);
+            return new ApiResponse<TResponse>(contentPayload as TResponse);
         }
 
         if (string.IsNullOrWhiteSpace(contentPayload))
         {
-            return new ApiResponse<TResponse>(default(TResponse), headers);
+            return new ApiResponse<TResponse>(default(TResponse));
         }
 
         var result = new TResponse();
         result.DeserializeFromXml(contentPayload);
-        return new ApiResponse<TResponse>(result, headers);
-    }
-
-    /// <summary>
-    /// Applies AWS-specific error header processing to the error object.
-    /// </summary>
-    private ApiError ProcessAwsErrorHeaders(HttpResponseMessage response, ApiError error)
-    {
-        if (response.Headers.TryGetValues(XAmznErrorMessage, out var messages))
-        {
-            error = error with { Message = string.Join(", ", messages) };
-        }
-
-        if (string.IsNullOrWhiteSpace(error.Type) && response.Headers.TryGetValues(XAmzErrorType, out var types))
-        {
-            error = error with { Type = string.Join(", ", types) };
-        }
-
-        var infoSeparator = error.Type?.LastIndexOf(':') ?? -1;
-        if (infoSeparator > 0)
-        {
-            error = error with { Type = error.Type![..infoSeparator] };
-        }
-
-        var typeSeparator = error.Type?.LastIndexOf('#') ?? -1;
-        if (typeSeparator > 0)
-        {
-            error = error with { Type = error.Type![(typeSeparator + 1)..] };
-        }
-
-        return error;
+        return new ApiResponse<TResponse>(result);
     }
 
     /// <summary>
@@ -179,7 +150,9 @@ public abstract class XmlAwsServiceClient<T> : AwsServiceClient<T> where T : Aws
         }
         catch (Exception ex)
         {
+#pragma warning disable GOA1001 // Error-handling path: params allocation is acceptable here
             Logger.LogWarning(ex, "Failed to deserialize XML error response: {Content}", content);
+#pragma warning restore GOA1001
             return null;
         }
     }
@@ -189,6 +162,6 @@ public abstract class XmlAwsServiceClient<T> : AwsServiceClient<T> where T : Aws
     /// </summary>
     private static bool IsXmlSerialized(string input)
     {
-        return input.TrimStart().StartsWith('<');
+        return input.AsSpan().TrimStart().StartsWith("<");
     }
 }

@@ -6,7 +6,7 @@ namespace Goa.Clients.Dynamo.Operations.Batch;
 /// <summary>
 /// Response for BatchGetItem operations.
 /// </summary>
-public class BatchGetItemResponse
+public sealed class BatchGetItemResponse
 {
     /// <summary>
     /// A map of table name to a list of items. Each item is represented as a set of attributes.

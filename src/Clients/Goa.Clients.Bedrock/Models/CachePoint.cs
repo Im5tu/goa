@@ -3,7 +3,7 @@ namespace Goa.Clients.Bedrock.Models;
 /// <summary>
 /// A cache checkpoint for prompt caching in Bedrock.
 /// </summary>
-public class CachePoint
+public sealed class CachePoint
 {
     /// <summary>
     /// The type of cache point. Currently only "default" is supported.

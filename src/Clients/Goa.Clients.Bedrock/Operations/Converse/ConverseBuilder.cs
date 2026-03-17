@@ -8,7 +8,7 @@ namespace Goa.Clients.Bedrock.Operations.Converse;
 /// Fluent builder for constructing Bedrock Converse requests.
 /// </summary>
 /// <param name="modelId">The identifier of the model to use.</param>
-public class ConverseBuilder(string modelId)
+public sealed class ConverseBuilder(string modelId)
 {
     private readonly ConverseRequest _request = new()
     {

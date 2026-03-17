@@ -2,6 +2,7 @@
 using Goa.Clients.Core.Http;
 using Goa.Clients.Core.Logging;
 using Microsoft.Extensions.Logging;
+using System.Buffers;
 using System.Diagnostics;
 using System.Net.Http.Headers;
 
@@ -22,6 +23,17 @@ public abstract class AwsServiceClient<T> where T : AwsServiceConfiguration
     /// HTTP header name for Amazon error types.
     /// </summary>
     public const string XAmzErrorType = "x-amzn-ErrorType";
+
+    private const string LogKeyClient = "Client";
+    private const string LogKeyRegion = "Region";
+    private const string LogKeyService = "Service";
+    private const string LogKeySigningService = "SigningService";
+    private const string LogKeyTarget = "Target";
+    private const string LogKeyApiVersion = "ApiVersion";
+    private const string LogKeyMethod = "Method";
+    private const string LogKeyUri = "Uri";
+    private const string LogKeyStatusCode = "StatusCode";
+    private const string LogKeyReasonPhrase = "ReasonPhrase";
 
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly string _clientType;
@@ -67,16 +79,18 @@ public abstract class AwsServiceClient<T> where T : AwsServiceConfiguration
         request.Options.Set(HttpOptions.Target, target);
         request.Options.Set(HttpOptions.ApiVersion, Configuration.ApiVersion);
 
-        using var logContext = Logger.BeginScope(new LogScope8(
-            new("Client", _clientType),
-            new("Region", Configuration.Region),
-            new("Service", Configuration.Service),
-            new("SigningService", Configuration.SigningService),
-            new("Target", target),
-            new("ApiVersion", Configuration.ApiVersion),
-            new("Method", request.Method.Method),
-            new("Uri", request.RequestUri?.AbsoluteUri ?? "Unknown")
-        ));
+        using var logContext = Logger.IsEnabled(Configuration.LogLevel)
+            ? Logger.BeginScope(new LogScope8(
+                new(LogKeyClient, _clientType),
+                new(LogKeyRegion, Configuration.Region),
+                new(LogKeyService, Configuration.Service),
+                new(LogKeySigningService, Configuration.SigningService),
+                new(LogKeyTarget, target),
+                new(LogKeyApiVersion, Configuration.ApiVersion),
+                new(LogKeyMethod, request.Method.Method),
+                new(LogKeyUri, request.RequestUri?.AbsoluteUri ?? "Unknown")
+            ))
+            : null;
 
         try
         {
@@ -85,18 +99,33 @@ public abstract class AwsServiceClient<T> where T : AwsServiceConfiguration
             var start = Stopwatch.GetTimestamp();
             var response = await client.SendAsync(request, cancellationToken);
 
-            // Ensure that we log the applicable response headers and status code
-            var context = new Dictionary<string, object>
+            // Log fixed response fields with zero-allocation scope
+            using var responseLogContext = Logger.IsEnabled(Configuration.LogLevel)
+                ? Logger.BeginScope(new LogScope2(
+                    new(LogKeyStatusCode, GetStatusCodeString(response.StatusCode)),
+                    new(LogKeyReasonPhrase, response.ReasonPhrase ?? GetStatusCodeString(response.StatusCode))
+                ))
+                : null;
+
+            // Log x-amz response headers separately with capacity hint
+            IDisposable? amzLogContext = null;
+            if (Logger.IsEnabled(Configuration.LogLevel))
             {
-                ["StatusCode"] = ((int)response.StatusCode).ToString(),
-                ["ReasonPhrase"] = response.ReasonPhrase ?? response.StatusCode.ToString()
-            };
-            foreach (var header in response.Headers)
-            {
-                if (header.Key.StartsWith("x-amz", StringComparison.OrdinalIgnoreCase))
-                    context[header.Key] = string.Join(", ", header.Value);
+                Dictionary<string, object>? amzHeaders = null;
+                foreach (var header in response.Headers.NonValidated)
+                {
+                    if (header.Key.StartsWith("x-amz", StringComparison.OrdinalIgnoreCase))
+                    {
+                        amzHeaders ??= new Dictionary<string, object>(4);
+#pragma warning disable GOA1501 // Boxing HeaderStringValues to object is required for ILogger.BeginScope
+                        amzHeaders[header.Key] = string.Join(", ", header.Value);
+#pragma warning restore GOA1501
+                    }
+                }
+                if (amzHeaders is not null)
+                    amzLogContext = Logger.BeginScope(amzHeaders);
             }
-            using var responseLogContext = Logger.BeginScope(context);
+            using var _ = amzLogContext;
 
             Logger.RequestComplete(Configuration.LogLevel, Stopwatch.GetElapsedTime(start).TotalMilliseconds);
 
@@ -108,6 +137,46 @@ public abstract class AwsServiceClient<T> where T : AwsServiceConfiguration
             throw;
         }
     }
+
+    /// <summary>
+    /// Applies AWS-specific error header processing to the error object.
+    /// </summary>
+    protected static ApiError ProcessAwsErrorHeaders(HttpResponseMessage response, ApiError error)
+    {
+        if (response.Headers.TryGetValues(XAmznErrorMessage, out var messages))
+        {
+            error = error with { Message = string.Join(", ", messages) };
+        }
+
+        if (string.IsNullOrWhiteSpace(error.Type) && response.Headers.TryGetValues(XAmzErrorType, out var types))
+        {
+            error = error with { Type = string.Join(", ", types) };
+        }
+
+        var infoSeparator = error.Type?.LastIndexOf(':') ?? -1;
+        if (infoSeparator > 0)
+        {
+            error = error with { Type = error.Type![..infoSeparator] };
+        }
+
+        var typeSeparator = error.Type?.LastIndexOf('#') ?? -1;
+        if (typeSeparator > 0)
+        {
+            error = error with { Type = error.Type![(typeSeparator + 1)..] };
+        }
+
+        return error;
+    }
+
+    private static string GetStatusCodeString(System.Net.HttpStatusCode statusCode) => statusCode switch
+    {
+        System.Net.HttpStatusCode.OK => "200", System.Net.HttpStatusCode.Created => "201", System.Net.HttpStatusCode.Accepted => "202", System.Net.HttpStatusCode.NoContent => "204",
+        System.Net.HttpStatusCode.MovedPermanently => "301", System.Net.HttpStatusCode.Found => "302", System.Net.HttpStatusCode.NotModified => "304",
+        System.Net.HttpStatusCode.BadRequest => "400", System.Net.HttpStatusCode.Unauthorized => "401", System.Net.HttpStatusCode.Forbidden => "403", System.Net.HttpStatusCode.NotFound => "404",
+        System.Net.HttpStatusCode.Conflict => "409", System.Net.HttpStatusCode.TooManyRequests => "429",
+        System.Net.HttpStatusCode.InternalServerError => "500", System.Net.HttpStatusCode.BadGateway => "502", System.Net.HttpStatusCode.ServiceUnavailable => "503", System.Net.HttpStatusCode.GatewayTimeout => "504",
+        _ => ((int)statusCode).ToString()
+    };
 
     /// <summary>
     /// Creates an HTTP request message with the specified content.
@@ -208,5 +277,124 @@ public abstract class AwsServiceClient<T> where T : AwsServiceConfiguration
         }
 
         return requestMessage;
+    }
+
+    /// <summary>
+    /// Maximum allowed response size in bytes (4 MB).
+    /// </summary>
+    protected const int MaxResponseSize = 4 * 1024 * 1024;
+
+    /// <summary>
+    /// Reads the HTTP response body into a pooled byte buffer for zero-copy deserialization.
+    /// </summary>
+    /// <param name="response">The HTTP response message.</param>
+    /// <param name="cancellationToken">Token to cancel the operation.</param>
+    /// <returns>A pooled buffer containing the response bytes. Must be disposed after use.</returns>
+    protected static async Task<PooledBuffer> ReadResponseBytesAsync(
+        HttpResponseMessage response, CancellationToken cancellationToken)
+    {
+        var headerLength = response.Content.Headers.ContentLength;
+        if (headerLength is 0)
+            return default;
+
+        if (headerLength is not null)
+        {
+            if (headerLength < 0 || headerLength > MaxResponseSize)
+                Throw.InvalidOperation($"Response Content-Length {headerLength} exceeds maximum {MaxResponseSize} bytes.");
+
+            var contentLength = (int)headerLength;
+            var knownBuffer = ArrayPool<byte>.Shared.Rent(contentLength);
+            try
+            {
+                var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
+                var totalRead = 0;
+                while (totalRead < contentLength)
+                {
+                    var read = await stream.ReadAsync(knownBuffer.AsMemory(totalRead, contentLength - totalRead), cancellationToken);
+                    if (read == 0) break;
+                    totalRead += read;
+                }
+                return new PooledBuffer(knownBuffer, totalRead);
+            }
+            catch
+            {
+                ArrayPool<byte>.Shared.Return(knownBuffer);
+                throw;
+            }
+        }
+
+        const int initialSize = 4096;
+        var buffer = ArrayPool<byte>.Shared.Rent(initialSize);
+        try
+        {
+            var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
+            var totalRead = 0;
+            while (true)
+            {
+                if (totalRead == buffer.Length)
+                {
+                    var newSize = buffer.Length * 2;
+                    if (newSize > MaxResponseSize)
+                        newSize = MaxResponseSize + 1; // allow one more read to detect overflow
+
+                    var newBuffer = ArrayPool<byte>.Shared.Rent(newSize);
+                    buffer.AsSpan(0, totalRead).CopyTo(newBuffer);
+                    ArrayPool<byte>.Shared.Return(buffer);
+                    buffer = newBuffer;
+                }
+
+                var read = await stream.ReadAsync(buffer.AsMemory(totalRead, buffer.Length - totalRead), cancellationToken);
+                if (read == 0) break;
+                totalRead += read;
+
+                if (totalRead > MaxResponseSize)
+                    Throw.InvalidOperation($"Response size exceeds maximum {MaxResponseSize} bytes.");
+            }
+
+            if (totalRead == 0)
+            {
+                ArrayPool<byte>.Shared.Return(buffer);
+                return default;
+            }
+
+            return new PooledBuffer(buffer, totalRead);
+        }
+        catch
+        {
+            ArrayPool<byte>.Shared.Return(buffer);
+            throw;
+        }
+    }
+
+    /// <summary>
+    /// A disposable buffer backed by ArrayPool for zero-allocation response reading.
+    /// </summary>
+    protected struct PooledBuffer : IDisposable
+    {
+        private byte[]? _buffer;
+
+        /// <summary>The number of valid bytes in the buffer.</summary>
+        public readonly int Length;
+
+        /// <summary>Creates a new PooledBuffer wrapping the given rented array.</summary>
+        public PooledBuffer(byte[] buffer, int length)
+        {
+            _buffer = buffer;
+            Length = length;
+        }
+
+        /// <summary>Gets a read-only span over the valid portion of the buffer.</summary>
+        public readonly ReadOnlySpan<byte> Span => _buffer is null ? default : _buffer.AsSpan(0, Length);
+
+        /// <summary>Returns the rented buffer to the shared ArrayPool.</summary>
+        public void Dispose()
+        {
+            var buf = _buffer;
+            if (buf is not null)
+            {
+                _buffer = null;
+                ArrayPool<byte>.Shared.Return(buf);
+            }
+        }
     }
 }

@@ -50,7 +50,7 @@ internal sealed class SqsServiceClient : JsonAwsServiceClient<SqsServiceClientCo
         }
         catch (Exception ex)
         {
-            Logger.LogError(ex, "Failed to send message to SQS queue {QueueUrl}", request.QueueUrl);
+            Logger.SendMessageFailed(ex, request.QueueUrl);
             return Error.Failure("SQS.SendMessage.Failed", $"Failed to send message to SQS queue {request.QueueUrl}");
         }
     }
@@ -90,7 +90,7 @@ internal sealed class SqsServiceClient : JsonAwsServiceClient<SqsServiceClientCo
         }
         catch (Exception ex)
         {
-            Logger.LogError(ex, "Failed to send message batch to SQS queue {QueueUrl}", request.QueueUrl);
+            Logger.SendMessageBatchFailed(ex, request.QueueUrl);
             return Error.Failure("SQS.SendMessageBatch.Failed", $"Failed to send message batch to SQS queue {request.QueueUrl}");
         }
     }
@@ -118,7 +118,7 @@ internal sealed class SqsServiceClient : JsonAwsServiceClient<SqsServiceClientCo
         }
         catch (Exception ex)
         {
-            Logger.LogError(ex, "Failed to receive messages from SQS queue {QueueUrl}", request.QueueUrl);
+            Logger.ReceiveMessageFailed(ex, request.QueueUrl);
             return Error.Failure("SQS.ReceiveMessage.Failed", $"Failed to receive messages from SQS queue {request.QueueUrl}");
         }
     }
@@ -146,7 +146,7 @@ internal sealed class SqsServiceClient : JsonAwsServiceClient<SqsServiceClientCo
         }
         catch (Exception ex)
         {
-            Logger.LogError(ex, "Failed to delete message from SQS queue {QueueUrl}", request.QueueUrl);
+            Logger.DeleteMessageFailed(ex, request.QueueUrl);
             return Error.Failure("SQS.DeleteMessage.Failed", $"Failed to delete message from SQS queue {request.QueueUrl}");
         }
     }

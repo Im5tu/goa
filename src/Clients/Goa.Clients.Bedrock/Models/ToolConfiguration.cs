@@ -3,7 +3,7 @@ namespace Goa.Clients.Bedrock.Models;
 /// <summary>
 /// Configuration for tool use in a conversation.
 /// </summary>
-public class ToolConfiguration
+public sealed class ToolConfiguration
 {
     /// <summary>
     /// The list of tools available to the model.
@@ -19,7 +19,7 @@ public class ToolConfiguration
 /// <summary>
 /// Configuration for how the model should choose which tool to use.
 /// </summary>
-public class ToolChoice
+public sealed class ToolChoice
 {
     /// <summary>
     /// If set, the model will automatically decide whether to use a tool.
@@ -40,17 +40,17 @@ public class ToolChoice
 /// <summary>
 /// Marker class indicating automatic tool choice.
 /// </summary>
-public class AutoToolChoice { }
+public sealed class AutoToolChoice { }
 
 /// <summary>
 /// Marker class indicating any tool can be chosen.
 /// </summary>
-public class AnyToolChoice { }
+public sealed class AnyToolChoice { }
 
 /// <summary>
 /// Configuration to force the model to use a specific tool.
 /// </summary>
-public class SpecificToolChoice
+public sealed class SpecificToolChoice
 {
     /// <summary>
     /// The name of the tool the model must use.

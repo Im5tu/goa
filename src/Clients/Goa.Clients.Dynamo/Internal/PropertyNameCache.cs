@@ -11,7 +11,11 @@ internal struct PropertyNameCache
 {
     private readonly Dictionary<ulong, string> _cache;
 
-    public PropertyNameCache(int capacity = 16)
+    public PropertyNameCache() : this(15)
+    {
+    }
+
+    public PropertyNameCache(int capacity)
     {
         _cache = new Dictionary<ulong, string>(capacity);
     }

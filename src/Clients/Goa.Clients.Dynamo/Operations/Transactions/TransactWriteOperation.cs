@@ -6,7 +6,7 @@ namespace Goa.Clients.Dynamo.Operations.Transactions;
 /// <summary>
 /// Represents a transaction write operation.
 /// </summary>
-public class TransactWriteOperation
+public sealed class TransactWriteOperation
 {
     /// <summary>
     /// The type of operation to perform (Put, Update, Delete, or ConditionCheck).

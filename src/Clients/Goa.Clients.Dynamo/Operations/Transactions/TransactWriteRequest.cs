@@ -6,7 +6,7 @@ namespace Goa.Clients.Dynamo.Operations.Transactions;
 /// <summary>
 /// Request for transactional write operations.
 /// </summary>
-public class TransactWriteRequest
+public sealed class TransactWriteRequest
 {
     /// <summary>
     /// An ordered array of up to 100 TransactWriteItem objects, each of which contains a ConditionCheck, Put, Update, or Delete operation.

@@ -3,7 +3,7 @@ namespace Goa.Clients.Bedrock.Models;
 /// <summary>
 /// Configuration for guardrails to apply to the conversation.
 /// </summary>
-public class GuardrailConfiguration
+public sealed class GuardrailConfiguration
 {
     /// <summary>
     /// The identifier of the guardrail to apply.

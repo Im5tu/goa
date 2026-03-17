@@ -5,7 +5,7 @@
 /// This attribute is inherited, allowing base classes to define common PK/SK patterns.
 /// </summary>
 [AttributeUsage(AttributeTargets.Class, AllowMultiple = false, Inherited = true)]
-public class DynamoModelAttribute : Attribute
+public sealed class DynamoModelAttribute : Attribute
 {
     /// <summary>
     /// The partition key pattern. Supports placeholders like "ENTITY#&lt;PropertyName&gt;" 

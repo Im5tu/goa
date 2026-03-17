@@ -5,7 +5,7 @@ namespace Goa.Clients.Bedrock.Models;
 /// <summary>
 /// A tool use block indicating the model wants to invoke a tool.
 /// </summary>
-public class ToolUseBlock
+public sealed class ToolUseBlock
 {
     /// <summary>
     /// A unique identifier for this tool use request.

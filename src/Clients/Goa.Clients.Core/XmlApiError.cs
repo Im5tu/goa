@@ -6,7 +6,7 @@ namespace Goa.Clients.Core;
 /// <summary>
 /// Represents an XML API error response from AWS services, extending the base ApiError with XML deserialization capabilities.
 /// </summary>
-public class XmlApiError : IDeserializeFromXml
+public sealed class XmlApiError : IDeserializeFromXml
 {
     /// <summary>
     /// Gets or sets the AWS request ID associated with this error.

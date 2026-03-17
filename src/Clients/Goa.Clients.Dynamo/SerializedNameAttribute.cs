@@ -5,7 +5,7 @@ namespace Goa.Clients.Dynamo;
 /// By default, property names are used as-is for DynamoDB attribute names.
 /// </summary>
 [AttributeUsage(AttributeTargets.Property, AllowMultiple = false, Inherited = true)]
-public class SerializedNameAttribute : Attribute
+public sealed class SerializedNameAttribute : Attribute
 {
     /// <summary>
     /// Initializes a new instance of the SerializedNameAttribute class.

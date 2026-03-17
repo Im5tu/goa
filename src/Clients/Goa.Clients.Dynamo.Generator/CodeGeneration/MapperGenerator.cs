@@ -37,6 +37,7 @@ public class MapperGenerator : ICodeGenerator
         builder.AppendLine("using Goa.Clients.Dynamo.Models;");
         builder.AppendLine("using Goa.Clients.Dynamo.Exceptions;");
         builder.AppendLine("using Goa.Clients.Dynamo.Extensions;");
+        builder.AppendLine("using Goa.Clients.Core;");
 
         foreach (var ns in typesByNamespace)
         {
@@ -135,7 +136,7 @@ public class MapperGenerator : ICodeGenerator
             builder.AppendLine($"{concreteType.FullName} concrete => DynamoMapper.{normalizedTypeName}.ToDynamoRecord(concrete),");
         }
 
-        builder.AppendLine($"_ => throw new InvalidOperationException($\"Unknown concrete type: {{model.GetType().FullName}} for abstract type {type.FullName}\")");
+        builder.AppendLine($"_ => Throw.InvalidOperation<DynamoRecord>($\"Unknown concrete type: {{model.GetType().FullName}} for abstract type {type.FullName}\")");
         builder.CloseBrace().Append(";");
     }
 
@@ -378,7 +379,7 @@ public class MapperGenerator : ICodeGenerator
         var typeNameField = dynamoModelAttr?.TypeName ?? "Type";
 
         builder.AppendLine($"if (!record.TryGetNullableString(\"{typeNameField}\", out var typeValue) || typeValue == null)");
-        builder.Indent().AppendLine($"throw new InvalidOperationException(\"Missing {typeNameField} discriminator for abstract type {type.FullName}\");").Unindent();
+        builder.Indent().AppendLine($"Throw.InvalidOperation(\"Missing {typeNameField} discriminator for abstract type {type.FullName}\");").Unindent();
         builder.AppendLine();
         builder.OpenBraceWithLine("return typeValue switch");
 
@@ -391,7 +392,7 @@ public class MapperGenerator : ICodeGenerator
             }
         }
 
-        builder.AppendLine($"_ => throw new InvalidOperationException($\"Unknown type: {{typeValue}} for abstract type {type.FullName}\")");
+        builder.AppendLine($"_ => Throw.InvalidOperation<{type.FullName}>($\"Unknown type: {{typeValue}} for abstract type {type.FullName}\")");
         builder.CloseBrace().Append(";");
     }
 

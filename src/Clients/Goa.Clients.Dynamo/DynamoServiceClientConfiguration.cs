@@ -5,7 +5,7 @@ namespace Goa.Clients.Dynamo;
 /// <summary>
 /// Configuration class for DynamoDB service providing DynamoDB-specific settings.
 /// </summary>
-public class DynamoServiceClientConfiguration : AwsServiceConfiguration
+public sealed class DynamoServiceClientConfiguration : AwsServiceConfiguration
 {
     /// <summary>
     /// Initializes a new instance of the DynamoServiceClientConfiguration class.

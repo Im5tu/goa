@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using ErrorOr;
 
 namespace Goa.Clients.Dynamo.Exceptions;
@@ -6,7 +7,7 @@ namespace Goa.Clients.Dynamo.Exceptions;
 /// Exception thrown when an auto-pagination operation encounters an error during a page request.
 /// This prevents silent truncation of results in methods like QueryAllAsync, ScanAllAsync, and BatchGetAllAsync.
 /// </summary>
-public class DynamoPaginationException : Exception
+public sealed class DynamoPaginationException : Exception
 {
     /// <summary>
     /// Gets the underlying error that caused the pagination failure.
@@ -33,4 +34,7 @@ public class DynamoPaginationException : Exception
     {
         Error = error;
     }
+
+    [DoesNotReturn]
+    internal static void Throw(Error error) => throw new DynamoPaginationException(error);
 }

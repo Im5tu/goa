@@ -11,6 +11,6 @@ namespace Goa.Clients.Dynamo;
 /// in your project file.
 /// </remarks>
 [AttributeUsage(AttributeTargets.Class, AllowMultiple = false, Inherited = false)]
-public class ExtensionAttribute : Attribute
+public sealed class ExtensionAttribute : Attribute
 {
 }

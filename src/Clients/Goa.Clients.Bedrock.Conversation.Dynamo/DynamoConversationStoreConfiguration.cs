@@ -3,7 +3,7 @@ namespace Goa.Clients.Bedrock.Conversation.Dynamo;
 /// <summary>
 /// Configuration for the DynamoDB-backed conversation store.
 /// </summary>
-public class DynamoConversationStoreConfiguration
+public sealed class DynamoConversationStoreConfiguration
 {
     /// <summary>
     /// The name of the DynamoDB table to store conversations.

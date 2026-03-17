@@ -1,6 +1,7 @@
 using Goa.Clients.Core.Credentials;
 using System.Buffers;
 using System.Diagnostics.CodeAnalysis;
+using System.Net.Http.Headers;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Security.Cryptography;
@@ -29,6 +30,12 @@ internal sealed class RequestSigner
     private static readonly string? _cachedAwsRegion = Environment.GetEnvironmentVariable("AWS_REGION");
     private const string RootPath = "/";
     private const string CredentialSuffix = "/aws4_request";
+    private const string HeaderHost = "host";
+    private const string HeaderAmzContentSha256 = "x-amz-content-sha256";
+    private const string HeaderAmzDate = "x-amz-date";
+    private const string HeaderAmzTarget = "x-amz-target";
+    private const string HeaderAmzApiVersion = "x-amz-api-version";
+    private const string HeaderAmzSecurityToken = "x-amz-security-token";
 
     private readonly ICredentialProviderChain _credentialProvider;
 
@@ -59,7 +66,7 @@ internal sealed class RequestSigner
                 if (i != 0) sb.Append("; ");
                 sb.Append(errs[i].Description);
             }
-            ThrowInvalidOperationException($"Failed to retrieve AWS credentials: {sb}");
+            Throw.InvalidOperation($"Failed to retrieve AWS credentials: {sb}");
         }
         var credentials = credentialsResult.Value;
 
@@ -146,7 +153,7 @@ internal sealed class RequestSigner
                 if (i != 0) sb.Append("; ");
                 sb.Append(errs[i].Description);
             }
-            ThrowInvalidOperationException($"Failed to retrieve AWS credentials: {sb}");
+            Throw.InvalidOperation($"Failed to retrieve AWS credentials: {sb}");
         }
         var credentials = credentialsResult.Value;
 
@@ -229,11 +236,11 @@ internal sealed class RequestSigner
         // ---- Build Canonical Request with precise memory management ----
         // Enumerate headers ONCE into rented arrays to avoid repeated GetEnumeratorCore allocations
         const int InitialHeaderCapacity = 16;
-        var reqHeaders = ArrayPool<KeyValuePair<string, IEnumerable<string>>>.Shared.Rent(InitialHeaderCapacity);
-        var contentHeaders = ArrayPool<KeyValuePair<string, IEnumerable<string>>>.Shared.Rent(InitialHeaderCapacity);
+        var reqHeaders = ArrayPool<KeyValuePair<string, HeaderStringValues>>.Shared.Rent(InitialHeaderCapacity);
+        var contentHeaders = ArrayPool<KeyValuePair<string, HeaderStringValues>>.Shared.Rent(InitialHeaderCapacity);
         int rhIndex = 0, chIndex = 0;
 
-        foreach (var kv in request.Headers)
+        foreach (var kv in request.Headers.NonValidated)
         {
             if (rhIndex == reqHeaders.Length)
                 reqHeaders = GrowArray(reqHeaders, ref rhIndex);
@@ -241,7 +248,7 @@ internal sealed class RequestSigner
         }
 
         if (request.Content?.Headers is not null)
-            foreach (var kv in request.Content.Headers)
+            foreach (var kv in request.Content.Headers.NonValidated)
             {
                 if (chIndex == contentHeaders.Length)
                     contentHeaders = GrowArray(contentHeaders, ref chIndex);
@@ -268,13 +275,13 @@ internal sealed class RequestSigner
 
         // Build AWS required headers first
         if (request.RequestUri is not null)
-            headerRefs[hrefIndex++] = HeaderRef.Create("host", HeaderKind.Host, -1);
-        headerRefs[hrefIndex++] = HeaderRef.Create("x-amz-content-sha256", HeaderKind.AmzSha256, -1);
-        headerRefs[hrefIndex++] = HeaderRef.Create("x-amz-date", HeaderKind.AmzDate, -1);
+            headerRefs[hrefIndex++] = HeaderRef.Create(HeaderHost, HeaderKind.Host, -1);
+        headerRefs[hrefIndex++] = HeaderRef.Create(HeaderAmzContentSha256, HeaderKind.AmzSha256, -1);
+        headerRefs[hrefIndex++] = HeaderRef.Create(HeaderAmzDate, HeaderKind.AmzDate, -1);
 
-        if (hasApiVersion) headerRefs[hrefIndex++] = HeaderRef.Create("x-amz-api-version", HeaderKind.AmzApiVersion, -1);
-        if (!string.IsNullOrWhiteSpace(credentials.SessionToken)) headerRefs[hrefIndex++] = HeaderRef.Create("x-amz-security-token", HeaderKind.AmzSecurityToken, -1);
-        if (hasTarget) headerRefs[hrefIndex++] = HeaderRef.Create("x-amz-target", HeaderKind.AmzTarget, -1);
+        if (hasApiVersion) headerRefs[hrefIndex++] = HeaderRef.Create(HeaderAmzApiVersion, HeaderKind.AmzApiVersion, -1);
+        if (!string.IsNullOrWhiteSpace(credentials.SessionToken)) headerRefs[hrefIndex++] = HeaderRef.Create(HeaderAmzSecurityToken, HeaderKind.AmzSecurityToken, -1);
+        if (hasTarget) headerRefs[hrefIndex++] = HeaderRef.Create(HeaderAmzTarget, HeaderKind.AmzTarget, -1);
 
         // Add request headers from cached array, skipping AWS-managed headers
         var filteredIndex = 0;
@@ -461,8 +468,8 @@ internal sealed class RequestSigner
 
         // Return rented arrays
         ArrayPool<HeaderRef>.Shared.Return(headerRefs);
-        ArrayPool<KeyValuePair<string, IEnumerable<string>>>.Shared.Return(reqHeaders);
-        ArrayPool<KeyValuePair<string, IEnumerable<string>>>.Shared.Return(contentHeaders);
+        ArrayPool<KeyValuePair<string, HeaderStringValues>>.Shared.Return(reqHeaders);
+        ArrayPool<KeyValuePair<string, HeaderStringValues>>.Shared.Return(contentHeaders);
 
         return (signature, signedHeaders);
     }
@@ -664,8 +671,8 @@ internal sealed class RequestSigner
         in HeaderRef r,
         HttpRequestMessage req,
         AwsCredentials creds,
-        KeyValuePair<string, IEnumerable<string>>[] reqHeaders,
-        KeyValuePair<string, IEnumerable<string>>[] contentHeaders,
+        KeyValuePair<string, HeaderStringValues>[] reqHeaders,
+        KeyValuePair<string, HeaderStringValues>[] contentHeaders,
         ReadOnlySpan<char> longDate,
         ReadOnlySpan<byte> payloadHashBytes)
     {
@@ -729,7 +736,7 @@ internal sealed class RequestSigner
     /// Collapses whitespace and joins with commas as per HTTP/AWS specifications.
     /// </summary>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static int WriteNormalizedJoined(Span<char> dest, IEnumerable<string> values)
+    private static int WriteNormalizedJoined(Span<char> dest, HeaderStringValues values)
     {
         var pos = 0; var firstVal = true;
         foreach (var raw in values)
@@ -756,8 +763,8 @@ internal sealed class RequestSigner
     private static int EstimateHeadersCharCount(
         HeaderRef[] refs, int count,
         HttpRequestMessage req, AwsCredentials creds,
-        KeyValuePair<string, IEnumerable<string>>[] reqHeaders,
-        KeyValuePair<string, IEnumerable<string>>[] contentHeaders)
+        KeyValuePair<string, HeaderStringValues>[] reqHeaders,
+        KeyValuePair<string, HeaderStringValues>[] contentHeaders)
     {
         var total = 0;
         for (var i = 0; i < count; i++)
@@ -885,10 +892,10 @@ internal sealed class RequestSigner
             region = regionOption;
 
         if (string.IsNullOrWhiteSpace(region))
-            ThrowInvalidOperationException("Region is required");
+            Throw.InvalidOperation("Region is required");
 
         if (!request.Options.TryGetValue(HttpOptions.Service, out var service) || string.IsNullOrWhiteSpace(service))
-            ThrowInvalidOperationException("Service name is required");
+            Throw.InvalidOperation("Service name is required");
 
         return (region!, service);
     }
@@ -1101,24 +1108,13 @@ internal sealed class RequestSigner
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static bool IsAwsManagedHeader(string headerName)
     {
-        return string.Equals(headerName, "Host", StringComparison.OrdinalIgnoreCase) ||
-               string.Equals(headerName, "x-amz-content-sha256", StringComparison.OrdinalIgnoreCase) ||
-               string.Equals(headerName, "x-amz-date", StringComparison.OrdinalIgnoreCase) ||
-               string.Equals(headerName, "x-amz-target", StringComparison.OrdinalIgnoreCase) ||
-               string.Equals(headerName, "x-amz-api-version", StringComparison.OrdinalIgnoreCase) ||
-               string.Equals(headerName, "x-amz-security-token", StringComparison.OrdinalIgnoreCase);
+        return string.Equals(headerName, HeaderHost, StringComparison.OrdinalIgnoreCase) ||
+               string.Equals(headerName, HeaderAmzContentSha256, StringComparison.OrdinalIgnoreCase) ||
+               string.Equals(headerName, HeaderAmzDate, StringComparison.OrdinalIgnoreCase) ||
+               string.Equals(headerName, HeaderAmzTarget, StringComparison.OrdinalIgnoreCase) ||
+               string.Equals(headerName, HeaderAmzApiVersion, StringComparison.OrdinalIgnoreCase) ||
+               string.Equals(headerName, HeaderAmzSecurityToken, StringComparison.OrdinalIgnoreCase);
     }
-
-    /// <summary>
-    /// Exception helpers with no-inlining to keep hot paths small.
-    /// </summary>
-    [MethodImpl(MethodImplOptions.NoInlining)]
-    [DoesNotReturn]
-    private static void ThrowInvalidOperationException(string message) => throw new InvalidOperationException(message);
-
-    [MethodImpl(MethodImplOptions.NoInlining)]
-    [DoesNotReturn]
-    private static void ThrowArgumentNullException(string paramName) => throw new ArgumentNullException(paramName);
 
     /// <summary>
     /// Creates credential scope string for AWS signature computation.

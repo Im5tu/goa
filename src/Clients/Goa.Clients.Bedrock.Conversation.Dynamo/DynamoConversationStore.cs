@@ -63,7 +63,7 @@ public sealed class DynamoConversationStore : IConversationStore
         var conversationId = Guid.CreateVersion7().ToString("N");
         var now = DateTimeOffset.UtcNow;
 
-        var item = new Dictionary<string, AttributeValue>
+        var item = new Dictionary<string, AttributeValue>(8)
         {
             [_configuration.PartitionKeyName] = _configuration.ConversationPkFormat(conversationId),
             [_configuration.SortKeyName] = _configuration.ConversationSkValue,
@@ -111,7 +111,7 @@ public sealed class DynamoConversationStore : IConversationStore
         var request = new GetItemRequest
         {
             TableName = _configuration.TableName,
-            Key = new Dictionary<string, AttributeValue>
+            Key = new Dictionary<string, AttributeValue>(2)
             {
                 [_configuration.PartitionKeyName] = _configuration.ConversationPkFormat(conversationId),
                 [_configuration.SortKeyName] = _configuration.ConversationSkValue
@@ -145,7 +145,7 @@ public sealed class DynamoConversationStore : IConversationStore
         {
             TableName = _configuration.TableName,
             KeyConditionExpression = $"{_configuration.PartitionKeyName} = :pk AND begins_with({_configuration.SortKeyName}, :skPrefix)",
-            ExpressionAttributeValues = new Dictionary<string, AttributeValue>
+            ExpressionAttributeValues = new Dictionary<string, AttributeValue>(2)
             {
                 [":pk"] = _configuration.ConversationPkFormat(conversationId),
                 [":skPrefix"] = _configuration.MessageSkPrefix
@@ -212,10 +212,10 @@ public sealed class DynamoConversationStore : IConversationStore
         IEnumerable<(ConversationRole Role, Message Message, TokenUsage? TokenUsage)> messages,
         CancellationToken ct)
     {
-        return AddMessagesInternalAsync(
-            conversationId,
-            messages.Select(m => (m.Role, m.Message, m.TokenUsage, (IReadOnlyDictionary<string, IReadOnlyList<string>>?)null)),
-            ct);
+        var expanded = new List<(ConversationRole Role, Message Message, TokenUsage? TokenUsage, IReadOnlyDictionary<string, IReadOnlyList<string>>? ExtractedTags)>();
+        foreach (var m in messages)
+            expanded.Add((m.Role, m.Message, m.TokenUsage, null));
+        return AddMessagesInternalAsync(conversationId, expanded, ct);
     }
 
     private async Task<ErrorOr<IReadOnlyList<ConversationMessage>>> AddMessagesInternalAsync(
@@ -223,7 +223,7 @@ public sealed class DynamoConversationStore : IConversationStore
         IEnumerable<(ConversationRole Role, Message Message, TokenUsage? TokenUsage, IReadOnlyDictionary<string, IReadOnlyList<string>>? ExtractedTags)> messages,
         CancellationToken ct)
     {
-        var messageList = messages.ToList();
+        var messageList = new List<(ConversationRole Role, Message Message, TokenUsage? TokenUsage, IReadOnlyDictionary<string, IReadOnlyList<string>>? ExtractedTags)>(messages);
         if (messageList.Count == 0)
             return Error.Validation(ConversationErrorCodes.MessagesEmpty, "At least one message must be provided");
 
@@ -255,7 +255,7 @@ public sealed class DynamoConversationStore : IConversationStore
             var sequenceNumber = startSequence + i;
             var messageId = Guid.NewGuid().ToString("N");
 
-            var messageItem = new Dictionary<string, AttributeValue>
+            var messageItem = new Dictionary<string, AttributeValue>(12)
             {
                 [_configuration.PartitionKeyName] = _configuration.ConversationPkFormat(conversationId),
                 [_configuration.SortKeyName] = _configuration.MessageSkFormat(conversationId, sequenceNumber),
@@ -292,7 +292,7 @@ public sealed class DynamoConversationStore : IConversationStore
             // Add extracted tags if present
             if (extractedTags is not null && extractedTags.Count > 0)
             {
-                var tagsMap = new Dictionary<string, AttributeValue>();
+                var tagsMap = new Dictionary<string, AttributeValue>(extractedTags.Count);
                 foreach (var kvp in extractedTags)
                 {
                     var tagValues = new List<AttributeValue>();
@@ -335,13 +335,13 @@ public sealed class DynamoConversationStore : IConversationStore
         }
 
         // Build update expression for conversation
-        var updateParts = new List<string>
+        var updateParts = new List<string>(5)
         {
             $"{MessageCountAttribute} = {MessageCountAttribute} + :msgCount",
             $"{UpdatedAtAttribute} = :updatedAt"
         };
 
-        var updateExpressionValues = new Dictionary<string, AttributeValue>
+        var updateExpressionValues = new Dictionary<string, AttributeValue>(6)
         {
             [":msgCount"] = AttributeValue.Number(messageList.Count.ToString()),
             [":updatedAt"] = AttributeValue.Number(now.ToUnixTimeSeconds().ToString())
@@ -363,7 +363,7 @@ public sealed class DynamoConversationStore : IConversationStore
             Update = new TransactUpdateItem
             {
                 TableName = _configuration.TableName,
-                Key = new Dictionary<string, AttributeValue>
+                Key = new Dictionary<string, AttributeValue>(2)
                 {
                     [_configuration.PartitionKeyName] = _configuration.ConversationPkFormat(conversationId),
                     [_configuration.SortKeyName] = _configuration.ConversationSkValue
@@ -393,12 +393,12 @@ public sealed class DynamoConversationStore : IConversationStore
     {
         var now = DateTimeOffset.UtcNow;
 
-        var updateParts = new List<string> { $"{UpdatedAtAttribute} = :updatedAt" };
-        var expressionAttributeValues = new Dictionary<string, AttributeValue>
+        var updateParts = new List<string>(4) { $"{UpdatedAtAttribute} = :updatedAt" };
+        var expressionAttributeValues = new Dictionary<string, AttributeValue>(4)
         {
             [":updatedAt"] = AttributeValue.Number(now.ToUnixTimeSeconds().ToString())
         };
-        var expressionAttributeNames = new Dictionary<string, string>();
+        var expressionAttributeNames = new Dictionary<string, string>(1);
 
         if (metadata.Title is not null)
         {
@@ -422,7 +422,7 @@ public sealed class DynamoConversationStore : IConversationStore
         {
             updateParts.Add($"#customData = :customData");
             expressionAttributeNames["#customData"] = CustomDataAttribute;
-            var customDataMap = new Dictionary<string, AttributeValue>();
+            var customDataMap = new Dictionary<string, AttributeValue>(metadata.CustomData.Count);
             foreach (var kvp in metadata.CustomData)
             {
                 customDataMap[kvp.Key] = kvp.Value;
@@ -433,7 +433,7 @@ public sealed class DynamoConversationStore : IConversationStore
         var updateRequest = new UpdateItemRequest
         {
             TableName = _configuration.TableName,
-            Key = new Dictionary<string, AttributeValue>
+            Key = new Dictionary<string, AttributeValue>(2)
             {
                 [_configuration.PartitionKeyName] = _configuration.ConversationPkFormat(conversationId),
                 [_configuration.SortKeyName] = _configuration.ConversationSkValue
@@ -469,7 +469,7 @@ public sealed class DynamoConversationStore : IConversationStore
             {
                 TableName = _configuration.TableName,
                 KeyConditionExpression = $"{_configuration.PartitionKeyName} = :pk",
-                ExpressionAttributeValues = new Dictionary<string, AttributeValue>
+                ExpressionAttributeValues = new Dictionary<string, AttributeValue>(1)
                 {
                     [":pk"] = pk
                 }
@@ -486,7 +486,7 @@ public sealed class DynamoConversationStore : IConversationStore
 
             foreach (var item in queryResult.Value.Items)
             {
-                allItems.Add(new Dictionary<string, AttributeValue>
+                allItems.Add(new Dictionary<string, AttributeValue>(2)
                 {
                     [_configuration.PartitionKeyName] = item[_configuration.PartitionKeyName]!.Value,
                     [_configuration.SortKeyName] = item[_configuration.SortKeyName]!.Value
@@ -503,15 +503,19 @@ public sealed class DynamoConversationStore : IConversationStore
         const int batchSize = 25;
         for (var i = 0; i < allItems.Count; i += batchSize)
         {
-            var batch = allItems.Skip(i).Take(batchSize).ToList();
-            var transactItems = batch.Select(key => new TransactWriteItem
+            var end = Math.Min(i + batchSize, allItems.Count);
+            var transactItems = new List<TransactWriteItem>(end - i);
+            for (var j = i; j < end; j++)
             {
-                Delete = new TransactDeleteItem
+                transactItems.Add(new TransactWriteItem
                 {
-                    TableName = _configuration.TableName,
-                    Key = key
-                }
-            }).ToList();
+                    Delete = new TransactDeleteItem
+                    {
+                        TableName = _configuration.TableName,
+                        Key = allItems[j]
+                    }
+                });
+            }
 
             var transactRequest = new TransactWriteRequest
             {
@@ -539,7 +543,7 @@ public sealed class DynamoConversationStore : IConversationStore
 
         if (metadata.CustomData.Count > 0)
         {
-            var customDataMap = new Dictionary<string, AttributeValue>();
+            var customDataMap = new Dictionary<string, AttributeValue>(metadata.CustomData.Count);
             foreach (var kvp in metadata.CustomData)
             {
                 customDataMap[kvp.Key] = kvp.Value;
@@ -607,7 +611,7 @@ public sealed class DynamoConversationStore : IConversationStore
 
         if (record.TryGetStringSet(TagsAttribute, out var tags))
         {
-            metadata.Tags = tags.ToList();
+            metadata.Tags = new List<string>(tags);
             hasMetadata = true;
         }
 
@@ -665,7 +669,7 @@ public sealed class DynamoConversationStore : IConversationStore
         IReadOnlyDictionary<string, IReadOnlyList<string>>? extractedTags = null;
         if (record.TryGetMap(ExtractedTagsAttribute, out var tagsMap) && tagsMap is not null)
         {
-            var tags = new Dictionary<string, IReadOnlyList<string>>();
+            var tags = new Dictionary<string, IReadOnlyList<string>>(tagsMap.Count);
             foreach (var kvp in tagsMap)
             {
                 if (kvp.Value.L is not null)

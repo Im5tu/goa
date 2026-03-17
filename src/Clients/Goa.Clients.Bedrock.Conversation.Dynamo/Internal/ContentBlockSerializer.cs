@@ -26,7 +26,7 @@ internal static class ContentBlockSerializer
     {
         if (block.Text is not null)
         {
-            return AttributeValue.FromMap(new Dictionary<string, AttributeValue>
+            return AttributeValue.FromMap(new Dictionary<string, AttributeValue>(2)
             {
                 [TypeAttribute] = TextType,
                 ["text"] = block.Text
@@ -39,7 +39,7 @@ internal static class ContentBlockSerializer
             if (validation.IsError)
                 return validation.Errors;
 
-            var imageMap = new Dictionary<string, AttributeValue>
+            var imageMap = new Dictionary<string, AttributeValue>(4)
             {
                 [TypeAttribute] = ImageType,
                 ["format"] = block.Image.Format
@@ -61,7 +61,7 @@ internal static class ContentBlockSerializer
             if (validation.IsError)
                 return validation.Errors;
 
-            var docMap = new Dictionary<string, AttributeValue>
+            var docMap = new Dictionary<string, AttributeValue>(5)
             {
                 [TypeAttribute] = DocumentType,
                 ["format"] = block.Document.Format,
@@ -80,7 +80,7 @@ internal static class ContentBlockSerializer
 
         if (block.ToolUse is not null)
         {
-            var toolUseMap = new Dictionary<string, AttributeValue>
+            var toolUseMap = new Dictionary<string, AttributeValue>(4)
             {
                 [TypeAttribute] = ToolUseType,
                 ["toolUseId"] = block.ToolUse.ToolUseId,
@@ -102,7 +102,7 @@ internal static class ContentBlockSerializer
                 contentList.Add(serialized.Value);
             }
 
-            var toolResultMap = new Dictionary<string, AttributeValue>
+            var toolResultMap = new Dictionary<string, AttributeValue>(4)
             {
                 [TypeAttribute] = ToolResultType,
                 ["toolUseId"] = block.ToolResult.ToolUseId,

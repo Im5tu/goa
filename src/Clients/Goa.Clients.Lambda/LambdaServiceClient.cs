@@ -41,7 +41,12 @@ internal sealed class LambdaServiceClient : JsonAwsServiceClient<LambdaServiceCl
 
             // Add log type header
             if (request.LogType != LogType.None)
-                headers["X-Amz-Log-Type"] = request.LogType.ToString();
+                headers["X-Amz-Log-Type"] = request.LogType switch
+                {
+                    LogType.None => nameof(LogType.None),
+                    LogType.Tail => nameof(LogType.Tail),
+                    _ => throw new ArgumentOutOfRangeException(nameof(request.LogType), request.LogType, null)
+                };
 
             // Add client context header
             if (!string.IsNullOrWhiteSpace(request.ClientContext))
@@ -66,7 +71,7 @@ internal sealed class LambdaServiceClient : JsonAwsServiceClient<LambdaServiceCl
                 return ConvertApiError(response.Error!);
 
             // TODO: Lambda-specific headers (X-Amz-Function-Error, X-Amz-Log-Result, X-Amz-Executed-Version)
-            // are not captured by ResponseHeaders. Will be addressed when Lambda invoke is refactored
+            // are not captured. Will be addressed when Lambda invoke is refactored
             // to read directly from HttpResponseMessage.
             var invokeResponse = InvokeResponse.FromHttpResponse(
                 200,
@@ -77,7 +82,7 @@ internal sealed class LambdaServiceClient : JsonAwsServiceClient<LambdaServiceCl
         }
         catch (Exception ex)
         {
-            Logger.LogError(ex, "Failed to invoke Lambda function synchronously {FunctionName}", request.FunctionName);
+            Logger.InvokeSynchronousFailed(ex, request.FunctionName);
             return Error.Failure("Lambda.InvokeSynchronous.Failed", $"Failed to invoke Lambda function synchronously {request.FunctionName}");
         }
     }
@@ -125,7 +130,7 @@ internal sealed class LambdaServiceClient : JsonAwsServiceClient<LambdaServiceCl
         }
         catch (Exception ex)
         {
-            Logger.LogError(ex, "Failed to invoke Lambda function asynchronously {FunctionName}", request.FunctionName);
+            Logger.InvokeAsynchronousFailed(ex, request.FunctionName);
             return Error.Failure("Lambda.InvokeAsynchronous.Failed", $"Failed to invoke Lambda function asynchronously {request.FunctionName}");
         }
     }
@@ -173,7 +178,7 @@ internal sealed class LambdaServiceClient : JsonAwsServiceClient<LambdaServiceCl
         }
         catch (Exception ex)
         {
-            Logger.LogError(ex, "Failed to dry run Lambda function {FunctionName}", request.FunctionName);
+            Logger.InvokeDryRunFailed(ex, request.FunctionName);
             return Error.Failure("Lambda.InvokeDryRun.Failed", $"Failed to dry run Lambda function {request.FunctionName}");
         }
     }

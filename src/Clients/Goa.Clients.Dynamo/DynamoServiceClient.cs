@@ -21,7 +21,7 @@ namespace Goa.Clients.Dynamo;
 /// High-performance DynamoDB service client that implements IDynamoClient using AWS service client infrastructure.
 /// Provides strongly-typed DynamoDB operations with built-in error handling, logging, and AWS authentication.
 /// </summary>
-public class DynamoServiceClient : JsonAwsServiceClient<DynamoServiceClientConfiguration>, IDynamoClient
+public sealed class DynamoServiceClient : JsonAwsServiceClient<DynamoServiceClientConfiguration>, IDynamoClient
 {
     /// <summary>
     /// Initializes a new instance of the DynamoServiceClient class.
@@ -366,7 +366,9 @@ public class DynamoServiceClient : JsonAwsServiceClient<DynamoServiceClientConfi
         var metadata = new Dictionary<string, object>
         {
             ["Payload"] = errorPayload,
+#pragma warning disable GOA1501 // Boxing unavoidable with Dictionary<string, object> on error path
             ["StatusCode"] = response.StatusCode
+#pragma warning restore GOA1501
         };
         return Error.Failure(
             code: MapErrorCodeToDynamo(errorType),

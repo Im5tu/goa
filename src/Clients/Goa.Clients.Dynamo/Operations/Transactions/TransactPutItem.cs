@@ -7,7 +7,7 @@ namespace Goa.Clients.Dynamo.Operations.Transactions;
 /// <summary>
 /// Put operation in a transaction.
 /// </summary>
-public class TransactPutItem
+public sealed class TransactPutItem
 {
     /// <summary>
     /// The name of the table to contain the item.

@@ -3,7 +3,7 @@ namespace Goa.Clients.Dynamo.Models;
 /// <summary>
 /// Represents a DynamoDB record with strongly-typed attribute values.
 /// </summary>
-public class DynamoRecord : Dictionary<string, AttributeValue>
+public sealed class DynamoRecord : Dictionary<string, AttributeValue>
 {
     /// <summary>
     /// Initializes a new, empty instance of the <see cref="DynamoRecord"/> class.

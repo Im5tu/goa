@@ -127,7 +127,9 @@ public static class SqsExtensions
         }
 
         // Chunk into batches of 10
-        var chunks = entries.Chunk(MaxBatchSize).ToList();
+        var chunkCount = (entries.Count + MaxBatchSize - 1) / MaxBatchSize;
+        var chunks = new List<SendMessageBatchRequestEntry[]>(chunkCount);
+        chunks.AddRange(entries.Chunk(MaxBatchSize));
 
         // Create batch requests
         var batchTasks = chunks.Select((chunk, batchIndex) =>

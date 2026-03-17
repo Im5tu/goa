@@ -7,7 +7,7 @@ namespace Goa.Clients.Dynamo.Operations.Query;
 /// <summary>
 /// Request for querying items from DynamoDB.
 /// </summary>
-public class QueryRequest
+public sealed class QueryRequest
 {
     /// <summary>
     /// The name of the table containing the requested items.

@@ -3,7 +3,7 @@ namespace Goa.Clients.Bedrock.Models;
 /// <summary>
 /// A document block in a message.
 /// </summary>
-public class DocumentBlock
+public sealed class DocumentBlock
 {
     /// <summary>
     /// The format of the document (e.g., "pdf", "csv", "doc", "docx", "xls", "xlsx", "html", "txt", "md").
@@ -24,7 +24,7 @@ public class DocumentBlock
 /// <summary>
 /// The source of a document.
 /// </summary>
-public class DocumentSource
+public sealed class DocumentSource
 {
     /// <summary>
     /// Base64-encoded document bytes.

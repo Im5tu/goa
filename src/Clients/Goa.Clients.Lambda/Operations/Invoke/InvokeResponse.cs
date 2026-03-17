@@ -57,11 +57,11 @@ public sealed class InvokeResponse
         if (headers != null)
         {
             if (headers.TryGetValue("X-Amz-Function-Error", out var functionError))
-                response.FunctionError = functionError.FirstOrDefault();
+                foreach (var v in functionError) { response.FunctionError = v; break; }
 
             if (headers.TryGetValue("X-Amz-Log-Result", out var logResult))
             {
-                response.LogResult = logResult.FirstOrDefault();
+                foreach (var v in logResult) { response.LogResult = v; break; }
                 if (!string.IsNullOrWhiteSpace(response.LogResult))
                 {
                     try
@@ -76,7 +76,7 @@ public sealed class InvokeResponse
             }
 
             if (headers.TryGetValue("X-Amz-Executed-Version", out var executedVersion))
-                response.ExecutedVersion = executedVersion.FirstOrDefault();
+                foreach (var v in executedVersion) { response.ExecutedVersion = v; break; }
         }
 
         return response;

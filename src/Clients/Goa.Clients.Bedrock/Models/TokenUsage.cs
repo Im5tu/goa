@@ -3,7 +3,7 @@ namespace Goa.Clients.Bedrock.Models;
 /// <summary>
 /// Token usage information for a conversation request.
 /// </summary>
-public class TokenUsage
+public sealed class TokenUsage
 {
     /// <summary>
     /// The number of tokens in the input.

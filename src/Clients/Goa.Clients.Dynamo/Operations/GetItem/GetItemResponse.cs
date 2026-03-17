@@ -6,7 +6,7 @@ namespace Goa.Clients.Dynamo.Operations.GetItem;
 /// <summary>
 /// Response for GetItem operations.
 /// </summary>
-public class GetItemResponse
+public sealed class GetItemResponse
 {
     /// <summary>
     /// A map of attribute names to AttributeValue objects, as specified by ProjectionExpression.

@@ -7,7 +7,7 @@ namespace Goa.Clients.Dynamo.Operations.DeleteItem;
 /// <summary>
 /// Request for deleting an item from DynamoDB.
 /// </summary>
-public class DeleteItemRequest
+public sealed class DeleteItemRequest
 {
     /// <summary>
     /// The name of the table from which to delete the item.

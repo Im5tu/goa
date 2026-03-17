@@ -5,7 +5,7 @@ namespace Goa.Clients.Bedrock.Models;
 /// <summary>
 /// Configuration for performance optimization.
 /// </summary>
-public class PerformanceConfiguration
+public sealed class PerformanceConfiguration
 {
     /// <summary>
     /// The latency mode for model inference.

@@ -120,11 +120,11 @@ public sealed class JsonLogger : ILogger
             }
             else if (scope is KeyValuePair<string, string> kvp)
             {
-                data[kvp.Key] = kvp.Value;
+                state[kvp.Key] = kvp.Value;
             }
             else if (scope is not null)
             {
-                data[FieldState] = scope;
+                state[FieldState] = scope;
             }
         }, data);
     }

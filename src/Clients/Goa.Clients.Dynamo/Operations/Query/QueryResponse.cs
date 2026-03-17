@@ -6,7 +6,7 @@ namespace Goa.Clients.Dynamo.Operations.Query;
 /// <summary>
 /// Response for Query operations with pagination support.
 /// </summary>
-public class QueryResponse
+public sealed class QueryResponse
 {
     /// <summary>
     /// An array of item attributes that match the query criteria.

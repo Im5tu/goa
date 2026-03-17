@@ -88,7 +88,7 @@ internal sealed class ChatSession : IChatSession
         var userMessage = new Message
         {
             Role = ConversationRole.User,
-            Content = content.ToList()
+            Content = new List<ContentBlock>(content)
         };
 
         // Clean message content (extract XML tags)
@@ -163,16 +163,24 @@ internal sealed class ChatSession : IChatSession
                 }
 
                 // Execute tools
-                var toolUseBlocks = assistantMessage.Content
-                    .Where(c => c.ToolUse != null)
-                    .Select(c => c.ToolUse!)
-                    .ToList();
-
                 var toolResults = new List<ContentBlock>();
-                foreach (var toolUse in toolUseBlocks)
+                foreach (var block in assistantMessage.Content)
                 {
+                    var toolUse = block.ToolUse;
+                    if (toolUse is null) continue;
+
                     var toolResult = await _toolAdapter.ExecuteToolAsync(toolUse, ct).ConfigureAwait(false);
                     toolResults.Add(new ContentBlock { ToolResult = toolResult });
+
+                    string resultText = string.Empty;
+                    foreach (var resultContent in toolResult.Content)
+                    {
+                        if (resultContent.Text is not null)
+                        {
+                            resultText = resultContent.Text;
+                            break;
+                        }
+                    }
 
                     // Track tool execution
                     toolExecutions.Add(new ToolExecution
@@ -180,7 +188,7 @@ internal sealed class ChatSession : IChatSession
                         ToolName = toolUse.Name,
                         ToolUseId = toolUse.ToolUseId,
                         Input = JsonDocument.Parse(toolUse.Input.GetRawText()),
-                        Result = toolResult.Content.FirstOrDefault()?.Text ?? string.Empty,
+                        Result = resultText,
                         Success = toolResult.Status == "success"
                     });
                 }
@@ -218,10 +226,15 @@ internal sealed class ChatSession : IChatSession
                 var (cleanedFinalMessage, finalExtractedTags) = CleanMessageContent(finalMessage);
 
                 // Extract cleaned text content
-                var cleanedText = cleanedFinalMessage.Content
-                    .Where(c => c.Text != null)
-                    .Select(c => c.Text!)
-                    .FirstOrDefault() ?? string.Empty;
+                var cleanedText = string.Empty;
+                foreach (var block in cleanedFinalMessage.Content)
+                {
+                    if (block.Text is not null)
+                    {
+                        cleanedText = block.Text;
+                        break;
+                    }
+                }
 
                 // Detect thinking-only response: tags were extracted but no real text remains.
                 // Note: CleanMessageContent preserves original content when all text blocks are
@@ -305,13 +318,17 @@ internal sealed class ChatSession : IChatSession
     /// <inheritdoc />
     public Task<ErrorOr<IReadOnlyList<ChatMessage>>> GetHistoryAsync(CancellationToken ct = default)
     {
-        var history = _messages.Select((m, index) => new ChatMessage
+        var history = new List<ChatMessage>(_messages.Count);
+        foreach (var m in _messages)
         {
-            Role = m.Role,
-            Content = m.Content,
-            Timestamp = DateTimeOffset.UtcNow, // In-memory messages don't have timestamps
-            TokenUsage = null
-        }).ToList();
+            history.Add(new ChatMessage
+            {
+                Role = m.Role,
+                Content = m.Content,
+                Timestamp = DateTimeOffset.UtcNow, // In-memory messages don't have timestamps
+                TokenUsage = null
+            });
+        }
 
         return Task.FromResult<ErrorOr<IReadOnlyList<ChatMessage>>>(history);
     }
@@ -416,14 +433,16 @@ internal sealed class ChatSession : IChatSession
             }
         }
 
-        var result = allTags.ToDictionary(
-            kvp => kvp.Key,
-            kvp => (IReadOnlyList<string>)kvp.Value);
+        var result = new Dictionary<string, IReadOnlyList<string>>(allTags.Count);
+        foreach (var kvp in allTags)
+        {
+            result[kvp.Key] = kvp.Value;
+        }
 
         if (cleanedContent.Count == 0 && message.Content.Count > 0)
         {
             // Tag extraction emptied all content - preserve original to avoid empty messages
-            return (new Message { Role = message.Role, Content = message.Content.ToList() }, result);
+            return (new Message { Role = message.Role, Content = new List<ContentBlock>(message.Content) }, result);
         }
 
         return (new Message { Role = message.Role, Content = cleanedContent }, result);
@@ -452,7 +471,10 @@ internal sealed class ChatSession : IChatSession
 
         if (_options.StopSequences is { Count: > 0 })
         {
-            builder.WithStopSequences(_options.StopSequences.ToArray());
+            if (_options.StopSequences is string[] arr)
+                builder.WithStopSequences(arr);
+            else
+                builder.WithStopSequences(_options.StopSequences.ToArray());
         }
 
         if (_options.ServiceTier.HasValue)
@@ -471,7 +493,7 @@ internal sealed class ChatSession : IChatSession
         // Add tools if any are registered
         if (bedrockTools is { Count: > 0 })
         {
-            request.ToolConfig = new ToolConfiguration { Tools = bedrockTools.ToList() };
+            request.ToolConfig = new ToolConfiguration { Tools = new List<Tool>(bedrockTools) };
         }
 
         if (_options.OutputConfig is not null)
