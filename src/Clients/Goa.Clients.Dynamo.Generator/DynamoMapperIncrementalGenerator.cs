@@ -218,9 +218,10 @@ public class DynamoMapperIncrementalGenerator : IIncrementalGenerator
         {
             var propertyType = member.Type;
 
-            // Handle collection types first, before the system type check,
-            // so that system collections (e.g. List<T>) are unwrapped to their element type
-            if (IsCollectionType(propertyType, out var elementType))
+            // Recursively unwrap collection types (e.g. List<List<MyType>> -> MyType)
+            // before the system type check, so that system collections are resolved
+            // to their innermost element type
+            while (IsCollectionType(propertyType, out var elementType))
             {
                 propertyType = elementType;
             }
