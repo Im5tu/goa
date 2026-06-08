@@ -233,6 +233,70 @@ public class AttributeHandlerRegistryTests
     }
 
     [Test]
+    public async Task ProcessAttributes_UnixTimestampOnLongProperty_ShouldBeFilteredOut()
+    {
+        // Arrange: [UnixTimestamp] is only valid on DateTime/DateTimeOffset.
+        // When applied to a long property (e.g. TTL), it should be silently filtered out.
+        var registry = new AttributeHandlerRegistry();
+        var mockHandler = new Mock<IAttributeHandler>();
+        var mockAttributeData = MockSymbolFactory.CreateAttributeData("Goa.Clients.Dynamo.UnixTimestampAttribute");
+        var unixTimestampInfo = new UnixTimestampAttributeInfo
+        {
+            AttributeData = mockAttributeData,
+            AttributeTypeName = "Goa.Clients.Dynamo.UnixTimestampAttribute",
+            Format = Generator.Models.UnixTimestampFormat.Seconds
+        };
+
+        mockHandler.Setup(h => h.CanHandle(It.IsAny<AttributeData>())).Returns(true);
+        mockHandler.Setup(h => h.ParseAttribute(It.IsAny<AttributeData>())).Returns(unixTimestampInfo);
+
+        registry.RegisterHandler(mockHandler.Object);
+
+        // Create a property symbol with Int64 type (long)
+        var propertySymbol = MockSymbolFactory.CreatePropertySymbol("TTL", MockSymbolFactory.PrimitiveTypes.Int64);
+        propertySymbol.Setup(p => p.GetAttributes())
+            .Returns(System.Collections.Immutable.ImmutableArray.Create(mockAttributeData));
+
+        // Act
+        var attributes = registry.ProcessAttributes(propertySymbol.Object);
+
+        // Assert: UnixTimestamp on long should be filtered out
+        await Assert.That(attributes).IsEmpty();
+    }
+
+    [Test]
+    public async Task ProcessAttributes_UnixTimestampOnDateTimeOffsetProperty_ShouldBeIncluded()
+    {
+        // Arrange: [UnixTimestamp] on DateTimeOffset is valid and should be kept.
+        var registry = new AttributeHandlerRegistry();
+        var mockHandler = new Mock<IAttributeHandler>();
+        var mockAttributeData = MockSymbolFactory.CreateAttributeData("Goa.Clients.Dynamo.UnixTimestampAttribute");
+        var unixTimestampInfo = new UnixTimestampAttributeInfo
+        {
+            AttributeData = mockAttributeData,
+            AttributeTypeName = "Goa.Clients.Dynamo.UnixTimestampAttribute",
+            Format = Generator.Models.UnixTimestampFormat.Seconds
+        };
+
+        mockHandler.Setup(h => h.CanHandle(It.IsAny<AttributeData>())).Returns(true);
+        mockHandler.Setup(h => h.ParseAttribute(It.IsAny<AttributeData>())).Returns(unixTimestampInfo);
+
+        registry.RegisterHandler(mockHandler.Object);
+
+        // Create a property symbol with DateTimeOffset type
+        var propertySymbol = MockSymbolFactory.CreatePropertySymbol("UpdatedAt", MockSymbolFactory.PrimitiveTypes.DateTimeOffset);
+        propertySymbol.Setup(p => p.GetAttributes())
+            .Returns(System.Collections.Immutable.ImmutableArray.Create(mockAttributeData));
+
+        // Act
+        var attributes = registry.ProcessAttributes(propertySymbol.Object);
+
+        // Assert: UnixTimestamp on DateTimeOffset should be kept
+        await Assert.That(attributes).Count().IsEqualTo(1);
+        await Assert.That(attributes[0]).IsTypeOf<UnixTimestampAttributeInfo>();
+    }
+
+    [Test]
     public async Task ProcessAttributes_HandlerReturnsNull_ShouldNotAddToResults()
     {
         // Arrange

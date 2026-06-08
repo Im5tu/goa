@@ -30,7 +30,7 @@ public class AttributeHandlerRegistry
                 if (handler.CanHandle(attributeData))
                 {
                     var attributeInfo = handler.ParseAttribute(attributeData);
-                    if (attributeInfo != null)
+                    if (attributeInfo != null && IsAttributeApplicable(attributeInfo, symbol))
                     {
                         result.Add(attributeInfo);
                         break; // Only first handler that can process it
@@ -42,6 +42,25 @@ public class AttributeHandlerRegistry
         return result;
     }
     
+    /// <summary>
+    /// Checks if a parsed attribute is applicable to the given symbol.
+    /// Filters out attributes that are semantically invalid for the target type.
+    /// </summary>
+    private static bool IsAttributeApplicable(AttributeInfo attributeInfo, ISymbol symbol)
+    {
+        // UnixTimestamp is only valid on DateTime/DateTimeOffset properties
+        if (attributeInfo is UnixTimestampAttributeInfo && symbol is IPropertySymbol property)
+        {
+            var type = property.Type;
+            if (type is INamedTypeSymbol { IsGenericType: true } nullable)
+                type = nullable.TypeArguments[0];
+
+            return type.Name is nameof(DateTime) or nameof(DateTimeOffset);
+        }
+
+        return true;
+    }
+
     /// <summary>
     /// Validates all attributes on a symbol and reports diagnostics.
     /// </summary>
