@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
+using System.Net.Http;
 using System.Text.Json.Serialization;
 
 namespace Goa.Functions.ApiGateway;
@@ -21,6 +22,7 @@ namespace Goa.Functions.ApiGateway;
 [JsonSerializable(typeof(short))]
 [JsonSerializable(typeof(int))]
 [JsonSerializable(typeof(long))]
+[JsonSerializable(typeof(HttpMethod))]
 [JsonSerializable(typeof(Guid))]
 [JsonSerializable(typeof(DateTime))]
 [JsonSerializable(typeof(HostString))]
