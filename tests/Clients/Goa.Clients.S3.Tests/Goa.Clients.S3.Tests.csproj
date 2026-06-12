@@ -5,15 +5,14 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="AWSSDK.Core" />
         <PackageReference Include="AWSSDK.S3" />
-        <PackageReference Include="AWSSDK.SQS" />
         <PackageReference Include="Moq" />
         <PackageReference Include="TUnit" />
+        <PackageReference Include="Testcontainers" />
     </ItemGroup>
 
     <ItemGroup>
-        <ProjectReference Include="..\..\..\src\Clients\Goa.Clients.Core\Goa.Clients.Core.csproj" />
+        <ProjectReference Include="..\..\..\src\Clients\Goa.Clients.S3\Goa.Clients.S3.csproj" />
     </ItemGroup>
 
 </Project>

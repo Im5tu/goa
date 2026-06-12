@@ -4,10 +4,11 @@
   </PropertyGroup>
   <ItemGroup>
     <!-- AWS SDK -->
-    <PackageVersion Include="AWSSDK.Core" Version="4.0.3.6" />
+    <PackageVersion Include="AWSSDK.Core" Version="4.0.9" />
     <PackageVersion Include="AWSSDK.DynamoDBv2" Version="4.0.10.5" />
     <PackageVersion Include="AWSSDK.EventBridge" Version="4.0.5.10" />
     <PackageVersion Include="AWSSDK.Lambda" Version="4.0.12.1" />
+    <PackageVersion Include="AWSSDK.S3" Version="4.0.24.3" />
     <PackageVersion Include="AWSSDK.SecurityToken" Version="4.0.5.4" />
     <PackageVersion Include="AWSSDK.SimpleNotificationService" Version="4.0.2.10" />
     <PackageVersion Include="AWSSDK.SQS" Version="4.0.2.9" />

@@ -141,6 +141,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Goa.Clients.Sns.Benchmarks"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Goa.Clients.EventBridge.Benchmarks", "tests\Clients\Goa.Clients.EventBridge.Benchmarks\Goa.Clients.EventBridge.Benchmarks.csproj", "{71D5E069-1555-4C11-B45C-399BC26FC258}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Goa.Clients.S3.Tests", "tests\Clients\Goa.Clients.S3.Tests\Goa.Clients.S3.Tests.csproj", "{CC3715F8-340F-4F1E-BB46-1078CD764E99}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -691,6 +693,18 @@ Global
 		{71D5E069-1555-4C11-B45C-399BC26FC258}.Release|x64.Build.0 = Release|Any CPU
 		{71D5E069-1555-4C11-B45C-399BC26FC258}.Release|x86.ActiveCfg = Release|Any CPU
 		{71D5E069-1555-4C11-B45C-399BC26FC258}.Release|x86.Build.0 = Release|Any CPU
+		{CC3715F8-340F-4F1E-BB46-1078CD764E99}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{CC3715F8-340F-4F1E-BB46-1078CD764E99}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{CC3715F8-340F-4F1E-BB46-1078CD764E99}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{CC3715F8-340F-4F1E-BB46-1078CD764E99}.Debug|x64.Build.0 = Debug|Any CPU
+		{CC3715F8-340F-4F1E-BB46-1078CD764E99}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{CC3715F8-340F-4F1E-BB46-1078CD764E99}.Debug|x86.Build.0 = Debug|Any CPU
+		{CC3715F8-340F-4F1E-BB46-1078CD764E99}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{CC3715F8-340F-4F1E-BB46-1078CD764E99}.Release|Any CPU.Build.0 = Release|Any CPU
+		{CC3715F8-340F-4F1E-BB46-1078CD764E99}.Release|x64.ActiveCfg = Release|Any CPU
+		{CC3715F8-340F-4F1E-BB46-1078CD764E99}.Release|x64.Build.0 = Release|Any CPU
+		{CC3715F8-340F-4F1E-BB46-1078CD764E99}.Release|x86.ActiveCfg = Release|Any CPU
+		{CC3715F8-340F-4F1E-BB46-1078CD764E99}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -747,5 +761,6 @@ Global
 		{22A37049-1E03-4D6A-817C-47B74BF6DF1B} = {B5DC1548-387B-4ABB-B4E8-CED73AFD8863}
 		{C3D8BB6D-BAA5-4458-B835-1E44F5826A43} = {B5DC1548-387B-4ABB-B4E8-CED73AFD8863}
 		{71D5E069-1555-4C11-B45C-399BC26FC258} = {B5DC1548-387B-4ABB-B4E8-CED73AFD8863}
+		{CC3715F8-340F-4F1E-BB46-1078CD764E99} = {B5DC1548-387B-4ABB-B4E8-CED73AFD8863}
 	EndGlobalSection
 EndGlobal

@@ -6,6 +6,7 @@ using Moq;
 using Amazon.Runtime;
 using Amazon.Runtime.Internal;
 using Amazon.Runtime.Internal.Auth;
+using Amazon.S3;
 using Amazon.SQS;
 
 namespace Goa.Clients.Core.Tests.Http;
@@ -608,5 +609,118 @@ public class RequestSignerComparisonTests
 
         // If signatures don't match, this helps debug the canonical request construction
         await Assert.That(goaSignature).IsEqualTo(awsSignature);
+    }
+
+    [Test]
+    public async Task RequestSigner_SingleUriEncoding_Matches_AwsSdk_For_PercentEncoded_S3_Path()
+    {
+        // Proves Goa's single-encoding (S3-style) signature is byte-identical to AWS SDK's signer
+        // for a key that requires percent-encoding including the sub-delimiters S3 leaves literal
+        // ('+', '(' , ')' and a space). The S3 client encodes object keys with the same character
+        // set the AWS SDKs use, so the canonical URI Goa signs matches AWS exactly. This guards
+        // against signing regressions that LocalStack's lax validation would not catch.
+
+        // Arrange
+        const string key = "folder name/file+v1 (final).txt";
+
+        // Mirror the S3 client's key encoding by using the AWS SDK's S3 path encoder, which leaves
+        // sub-delimiters such as '+' '(' ')' literal. The resulting path is used as the Goa request URI.
+        var encodedPath = Amazon.Util.AWSSDKUtils.UrlEncode(key, true);
+
+        var awsCredentials = new BasicAWSCredentials("AKIAIOSFODNN7EXAMPLE", "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY");
+        var awsSigner = new AWS4Signer();
+
+        // Use credentials without a session token so the signed-header sets match the AWS SDK
+        // (the shared _goaSigner carries a session token, which would add x-amz-security-token).
+        var goaCredentials = new AwsCredentials("AKIAIOSFODNN7EXAMPLE", "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY", null, DateTime.UtcNow.AddHours(1));
+        var mockCredProvider = new Mock<ICredentialProviderChain>();
+        mockCredProvider.Setup(x => x.GetCredentialsAsync())
+            .ReturnsAsync(ErrorOrFactory.From(goaCredentials));
+        var goaSigner = new RequestSigner(mockCredProvider.Object);
+
+        var awsRequest = new DefaultRequest(new Amazon.S3.Model.GetObjectRequest(), "S3");
+        awsRequest.HttpMethod = "GET";
+        awsRequest.Endpoint = new Uri("https://my-bucket.s3.us-east-1.amazonaws.com/");
+        awsRequest.ResourcePath = "/" + key; // AWS SDK encodes this itself
+
+        // AWS SDK signs with its own timestamp; capture it and reuse for Goa.
+        var awsSigningResult = awsSigner.SignRequest(
+            awsRequest,
+            new Amazon.S3.AmazonS3Config { RegionEndpoint = Amazon.RegionEndpoint.USEast1 },
+            null,
+            awsCredentials.GetCredentials().AccessKey,
+            awsCredentials.GetCredentials().SecretKey);
+        var awsSignature = awsSigningResult.Signature;
+
+        var awsTimestamp = awsRequest.Headers["X-Amz-Date"];
+        var awsTime = DateTime.ParseExact(awsTimestamp, "yyyyMMddTHHmmssZ", null, System.Globalization.DateTimeStyles.AdjustToUniversal);
+
+        var goaRequest = new HttpRequestMessage(HttpMethod.Get, $"https://my-bucket.s3.us-east-1.amazonaws.com/{encodedPath}");
+        goaRequest.Options.Set(HttpOptions.Region, "us-east-1");
+        goaRequest.Options.Set(HttpOptions.Service, "s3");
+        goaRequest.Options.Set(HttpOptions.UseSingleUriEncoding, true);
+        goaRequest.Headers.Host = goaRequest.RequestUri?.Host;
+        goaRequest.Headers.TryAddWithoutValidation("X-Amz-Date", awsTimestamp);
+        goaRequest.Headers.TryAddWithoutValidation("X-Amz-Content-SHA256", awsRequest.Headers["X-Amz-Content-SHA256"]);
+
+        // Act
+        var goaSignature = await goaSigner.SignRequestAsync(goaRequest, awsTime);
+
+        // Assert
+        await Assert.That(goaSignature).IsEqualTo(awsSignature);
+    }
+
+    [Test]
+    public async Task RequestSigner_SingleUriEncoding_Uses_Encoded_Path_AsIs()
+    {
+        // S3-style signing must use the once-encoded request path as the canonical URI.
+        // Without the option, the signer re-encodes '%' characters (double encoding), so the
+        // signatures for a percent-encoded path must differ between the two modes.
+
+        // Arrange - path contains percent-encoded characters
+        var requestUri = "https://s3.us-east-1.amazonaws.com/my-bucket/folder%20name/object%2Bkey";
+
+        var doubleEncodedRequest = new HttpRequestMessage(HttpMethod.Get, requestUri);
+        doubleEncodedRequest.Options.Set(HttpOptions.Region, "us-east-1");
+        doubleEncodedRequest.Options.Set(HttpOptions.Service, "s3");
+
+        var singleEncodedRequest = new HttpRequestMessage(HttpMethod.Get, requestUri);
+        singleEncodedRequest.Options.Set(HttpOptions.Region, "us-east-1");
+        singleEncodedRequest.Options.Set(HttpOptions.Service, "s3");
+        singleEncodedRequest.Options.Set(HttpOptions.UseSingleUriEncoding, true);
+
+        // Act
+        var doubleEncodedSignature = await _goaSigner.SignRequestAsync(doubleEncodedRequest, _goaCredentials, _fixedDateTime);
+        var singleEncodedSignature = await _goaSigner.SignRequestAsync(singleEncodedRequest, _goaCredentials, _fixedDateTime);
+
+        // Assert
+        await Assert.That(singleEncodedSignature).IsNotNull();
+        await Assert.That(singleEncodedSignature).IsNotEqualTo(doubleEncodedSignature);
+    }
+
+    [Test]
+    public async Task RequestSigner_SingleUriEncoding_Matches_Default_For_Unreserved_Paths()
+    {
+        // For paths containing only unreserved characters and '/', single and double encoding
+        // produce the same canonical URI, so the signatures must match.
+
+        // Arrange
+        var requestUri = "https://my-bucket.s3.us-east-1.amazonaws.com/folder/object-key_1.txt";
+
+        var defaultRequest = new HttpRequestMessage(HttpMethod.Get, requestUri);
+        defaultRequest.Options.Set(HttpOptions.Region, "us-east-1");
+        defaultRequest.Options.Set(HttpOptions.Service, "s3");
+
+        var singleEncodedRequest = new HttpRequestMessage(HttpMethod.Get, requestUri);
+        singleEncodedRequest.Options.Set(HttpOptions.Region, "us-east-1");
+        singleEncodedRequest.Options.Set(HttpOptions.Service, "s3");
+        singleEncodedRequest.Options.Set(HttpOptions.UseSingleUriEncoding, true);
+
+        // Act
+        var defaultSignature = await _goaSigner.SignRequestAsync(defaultRequest, _goaCredentials, _fixedDateTime);
+        var singleEncodedSignature = await _goaSigner.SignRequestAsync(singleEncodedRequest, _goaCredentials, _fixedDateTime);
+
+        // Assert
+        await Assert.That(singleEncodedSignature).IsEqualTo(defaultSignature);
     }
 }
