@@ -297,6 +297,74 @@ public class AttributeHandlerRegistryTests
     }
 
     [Test]
+    public async Task ProcessAttributes_UnixTimestampOnNullableDateTimeProperty_ShouldBeIncluded()
+    {
+        // Arrange: [UnixTimestamp] on DateTime? must be unwrapped before the compatibility check
+        // and kept, just like the non-nullable variant.
+        var registry = new AttributeHandlerRegistry();
+        var mockHandler = new Mock<IAttributeHandler>();
+        var mockAttributeData = MockSymbolFactory.CreateAttributeData("Goa.Clients.Dynamo.UnixTimestampAttribute");
+        var unixTimestampInfo = new UnixTimestampAttributeInfo
+        {
+            AttributeData = mockAttributeData,
+            AttributeTypeName = "Goa.Clients.Dynamo.UnixTimestampAttribute",
+            Format = Generator.Models.UnixTimestampFormat.Seconds
+        };
+
+        mockHandler.Setup(h => h.CanHandle(It.IsAny<AttributeData>())).Returns(true);
+        mockHandler.Setup(h => h.ParseAttribute(It.IsAny<AttributeData>())).Returns(unixTimestampInfo);
+
+        registry.RegisterHandler(mockHandler.Object);
+
+        // Create a property symbol with DateTime? (Nullable<DateTime>) type
+        var nullableDateTime = MockSymbolFactory.CreateNullableType(MockSymbolFactory.PrimitiveTypes.DateTime).Object;
+        var propertySymbol = MockSymbolFactory.CreatePropertySymbol("ExpiresAt", nullableDateTime);
+        propertySymbol.Setup(p => p.GetAttributes())
+            .Returns(System.Collections.Immutable.ImmutableArray.Create(mockAttributeData));
+
+        // Act
+        var attributes = registry.ProcessAttributes(propertySymbol.Object);
+
+        // Assert: UnixTimestamp on DateTime? should be kept
+        await Assert.That(attributes).Count().IsEqualTo(1);
+        await Assert.That(attributes[0]).IsTypeOf<UnixTimestampAttributeInfo>();
+    }
+
+    [Test]
+    public async Task ProcessAttributes_UnixTimestampOnNullableDateTimeOffsetProperty_ShouldBeIncluded()
+    {
+        // Arrange: [UnixTimestamp] on DateTimeOffset? must be unwrapped before the compatibility check
+        // and kept, just like the non-nullable variant.
+        var registry = new AttributeHandlerRegistry();
+        var mockHandler = new Mock<IAttributeHandler>();
+        var mockAttributeData = MockSymbolFactory.CreateAttributeData("Goa.Clients.Dynamo.UnixTimestampAttribute");
+        var unixTimestampInfo = new UnixTimestampAttributeInfo
+        {
+            AttributeData = mockAttributeData,
+            AttributeTypeName = "Goa.Clients.Dynamo.UnixTimestampAttribute",
+            Format = Generator.Models.UnixTimestampFormat.Seconds
+        };
+
+        mockHandler.Setup(h => h.CanHandle(It.IsAny<AttributeData>())).Returns(true);
+        mockHandler.Setup(h => h.ParseAttribute(It.IsAny<AttributeData>())).Returns(unixTimestampInfo);
+
+        registry.RegisterHandler(mockHandler.Object);
+
+        // Create a property symbol with DateTimeOffset? (Nullable<DateTimeOffset>) type
+        var nullableDateTimeOffset = MockSymbolFactory.CreateNullableType(MockSymbolFactory.PrimitiveTypes.DateTimeOffset).Object;
+        var propertySymbol = MockSymbolFactory.CreatePropertySymbol("UpdatedAt", nullableDateTimeOffset);
+        propertySymbol.Setup(p => p.GetAttributes())
+            .Returns(System.Collections.Immutable.ImmutableArray.Create(mockAttributeData));
+
+        // Act
+        var attributes = registry.ProcessAttributes(propertySymbol.Object);
+
+        // Assert: UnixTimestamp on DateTimeOffset? should be kept
+        await Assert.That(attributes).Count().IsEqualTo(1);
+        await Assert.That(attributes[0]).IsTypeOf<UnixTimestampAttributeInfo>();
+    }
+
+    [Test]
     public async Task ProcessAttributes_HandlerReturnsNull_ShouldNotAddToResults()
     {
         // Arrange
