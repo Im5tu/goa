@@ -52,13 +52,33 @@ public class AttributeHandlerRegistry
         if (attributeInfo is UnixTimestampAttributeInfo && symbol is IPropertySymbol property)
         {
             var type = property.Type;
-            if (type is INamedTypeSymbol { IsGenericType: true } nullable)
-                type = nullable.TypeArguments[0];
 
-            return type.Name is nameof(DateTime) or nameof(DateTimeOffset);
+            // Only unwrap genuine Nullable<T>, not arbitrary generics such as List<DateTime>.
+            if (type is INamedTypeSymbol named &&
+                named.OriginalDefinition.SpecialType == SpecialType.System_Nullable_T &&
+                named.TypeArguments.Length == 1)
+            {
+                type = named.TypeArguments[0];
+            }
+
+            return IsDateTimeType(type);
         }
 
         return true;
+    }
+
+    /// <summary>
+    /// Determines whether the given type is System.DateTime or System.DateTimeOffset
+    /// using robust symbol identity rather than brittle name comparisons.
+    /// </summary>
+    private static bool IsDateTimeType(ITypeSymbol type)
+    {
+        if (type.SpecialType == SpecialType.System_DateTime)
+            return true;
+
+        // DateTimeOffset has no SpecialType, so identify it by its fully-qualified name.
+        return type.Name == nameof(DateTimeOffset)
+               && type.ContainingNamespace?.ToDisplayString() == "System";
     }
 
     /// <summary>
