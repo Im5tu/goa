@@ -30,7 +30,7 @@ public class AttributeHandlerRegistry
                 if (handler.CanHandle(attributeData))
                 {
                     var attributeInfo = handler.ParseAttribute(attributeData);
-                    if (attributeInfo != null)
+                    if (attributeInfo != null && IsAttributeApplicable(attributeInfo, symbol))
                     {
                         result.Add(attributeInfo);
                         break; // Only first handler that can process it
@@ -42,6 +42,45 @@ public class AttributeHandlerRegistry
         return result;
     }
     
+    /// <summary>
+    /// Checks if a parsed attribute is applicable to the given symbol.
+    /// Filters out attributes that are semantically invalid for the target type.
+    /// </summary>
+    private static bool IsAttributeApplicable(AttributeInfo attributeInfo, ISymbol symbol)
+    {
+        // UnixTimestamp is only valid on DateTime/DateTimeOffset properties
+        if (attributeInfo is UnixTimestampAttributeInfo && symbol is IPropertySymbol property)
+        {
+            var type = property.Type;
+
+            // Only unwrap genuine Nullable<T>, not arbitrary generics such as List<DateTime>.
+            if (type is INamedTypeSymbol named &&
+                named.OriginalDefinition.SpecialType == SpecialType.System_Nullable_T &&
+                named.TypeArguments.Length == 1)
+            {
+                type = named.TypeArguments[0];
+            }
+
+            return IsDateTimeType(type);
+        }
+
+        return true;
+    }
+
+    /// <summary>
+    /// Determines whether the given type is System.DateTime or System.DateTimeOffset
+    /// using robust symbol identity rather than brittle name comparisons.
+    /// </summary>
+    private static bool IsDateTimeType(ITypeSymbol type)
+    {
+        if (type.SpecialType == SpecialType.System_DateTime)
+            return true;
+
+        // DateTimeOffset has no SpecialType, so identify it by its fully-qualified name.
+        return type.Name == nameof(DateTimeOffset)
+               && type.ContainingNamespace?.ToDisplayString() == "System";
+    }
+
     /// <summary>
     /// Validates all attributes on a symbol and reports diagnostics.
     /// </summary>
