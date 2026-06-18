@@ -4,4 +4,12 @@
     <Description>S3 client for object storage operations in high-performance AWS Lambda functions</Description>
     <PackageTags>$(PackageBaseTags);s3;client;storage;objects</PackageTags>
   </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="ErrorOr" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Goa.Clients.S3.Tests" />
+  </ItemGroup>
 </Project>

@@ -166,9 +166,16 @@ internal sealed class RequestSigner
         time.TryFormat(shortDate, out _, "yyyyMMdd".AsSpan());
         time.TryFormat(longDate, out _, "yyyyMMdd'T'HHmmss'Z'".AsSpan());
 
-        // Add required headers to the request for immediate usage
-        if (request.RequestUri != null)
-            request.Headers.Host = request.RequestUri.Host;
+        // Add required headers to the request for immediate usage.
+        // Match the canonical host written by WriteHost: include a non-default port so the Host
+        // header sent on the wire agrees with the signed canonical host (otherwise SigV4 validation
+        // fails against endpoints on non-default ports, e.g. LocalStack's mapped port).
+        if (request.RequestUri is { } uri)
+        {
+            // Mirror WriteHost exactly: use IdnHost and append a non-default port.
+            var hostName = uri.IdnHost ?? uri.Host;
+            request.Headers.Host = uri.IsDefaultPort ? hostName : $"{hostName}:{uri.Port}";
+        }
         request.Headers.TryAddWithoutValidation(RequestHeaders.AmzDate, new string(longDate));
 
         Span<char> payloadHex = stackalloc char[64];
@@ -306,9 +313,18 @@ internal sealed class RequestSigner
         else Array.Sort(headerRefs, 0, totalHeaders, HeaderRefComparer.OrdinalIgnoreCase);
 
         var pathStr = request.RequestUri?.AbsolutePath ?? RootPath;
-        var canonUriLen = MeasureCanonicalUri(pathStr);
 
-        // Process query parameters with efficient encoding
+        // S3-style signing uses the already-encoded request path as-is for the canonical URI,
+        // whereas other services require the path to be URI-encoded a second time.
+        var useSingleUriEncoding = request.Options.TryGetValue(HttpOptions.UseSingleUriEncoding, out var singleEncode) && singleEncode;
+        var canonUriLen = useSingleUriEncoding
+            ? Math.Max(pathStr.Length, 1)
+            : MeasureCanonicalUri(pathStr);
+
+        // Process query parameters with efficient encoding.
+        // NOTE: query values are RFC 3986 encoded once here. If/when an S3 list operation
+        // (e.g. ListObjectsV2) is added, ensure its query string is built pre-encoded so the
+        // signed canonical query matches the value sent on the wire.
         var rawQuery = request.RequestUri?.Query;
         QueryPart[]? qparts = null;
         char[]? qEncodedBuf = null;
@@ -363,7 +379,22 @@ internal sealed class RequestSigner
         var m = request.Method.Method ?? "GET";
         m.AsSpan().CopyTo(canonical.Slice(pos)); pos += m.Length; canonical[pos++] = '\n';
 
-        pos += WriteCanonicalUri(canonical.Slice(pos), pathStr);
+        if (useSingleUriEncoding)
+        {
+            if (pathStr.Length == 0)
+            {
+                canonical[pos++] = '/';
+            }
+            else
+            {
+                pathStr.AsSpan().CopyTo(canonical.Slice(pos));
+                pos += pathStr.Length;
+            }
+        }
+        else
+        {
+            pos += WriteCanonicalUri(canonical.Slice(pos), pathStr);
+        }
         canonical[pos++] = '\n';
 
         if (qparts is null || qEncodedBuf is null)
