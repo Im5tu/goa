@@ -1,3 +1,5 @@
+using Goa.Clients.S3;
+
 namespace Goa.Clients.S3.Operations.PutObject;
 
 /// <summary>
@@ -86,7 +88,7 @@ public sealed class PutObjectBuilder
         ArgumentException.ThrowIfNullOrWhiteSpace(name);
         ArgumentNullException.ThrowIfNull(value);
 
-        if (!IsValidHttpToken(name))
+        if (!S3RequestValidation.IsValidHttpToken(name))
             throw new ArgumentException(
                 $"Metadata name '{name}' is not a valid HTTP token. Names must not contain spaces, colons, control or separator characters.",
                 nameof(name));
@@ -94,30 +96,6 @@ public sealed class PutObjectBuilder
         _metadata ??= new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         _metadata[name] = value;
         return this;
-    }
-
-    /// <summary>
-    /// Determines whether a string is a valid HTTP token per RFC 7230 (used for header names).
-    /// Invalid tokens would be silently dropped by the HTTP stack, so they are rejected up-front.
-    /// </summary>
-    private static bool IsValidHttpToken(string value)
-    {
-        foreach (var ch in value)
-        {
-            if (ch <= ' ' || ch >= 0x7F)
-                return false;
-
-            switch (ch)
-            {
-                case '(' or ')' or '<' or '>' or '@'
-                    or ',' or ';' or ':' or '\\' or '"'
-                    or '/' or '[' or ']' or '?' or '='
-                    or '{' or '}':
-                    return false;
-            }
-        }
-
-        return true;
     }
 
     /// <summary>
@@ -141,7 +119,8 @@ public sealed class PutObjectBuilder
             ContentType = _contentType,
             ServerSideEncryption = _serverSideEncryption,
             SseKmsKeyId = _sseKmsKeyId,
-            Metadata = _metadata
+            // Copy so a built request keeps its own metadata, independent of later builder mutations.
+            Metadata = _metadata is null ? null : new Dictionary<string, string>(_metadata, StringComparer.OrdinalIgnoreCase)
         };
     }
 }

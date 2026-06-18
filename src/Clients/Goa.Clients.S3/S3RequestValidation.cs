@@ -74,6 +74,52 @@ internal static class S3RequestValidation
         return Result.Success;
     }
 
+    /// <summary>
+    /// Validates user-defined metadata. Each name is sent as an "x-amz-meta-{name}" header, so it
+    /// must be a valid HTTP token; invalid tokens would otherwise be silently dropped by the HTTP
+    /// stack. This mirrors the validation enforced by <c>PutObjectBuilder.AddMetadata</c> so that
+    /// directly-constructed requests are held to the same rules.
+    /// </summary>
+    public static ErrorOr<Success> ValidateMetadata(IReadOnlyDictionary<string, string>? metadata)
+    {
+        if (metadata is null || metadata.Count == 0)
+            return Result.Success;
+
+        foreach (var entry in metadata)
+        {
+            if (string.IsNullOrWhiteSpace(entry.Key) || !IsValidHttpToken(entry.Key))
+                return Error.Validation(
+                    S3ErrorCodes.InvalidMetadata,
+                    $"Metadata name '{entry.Key}' is not a valid HTTP token. Names must not contain spaces, colons, control or separator characters.");
+        }
+
+        return Result.Success;
+    }
+
+    /// <summary>
+    /// Determines whether a string is a valid HTTP token per RFC 7230 (used for header names).
+    /// Invalid tokens would be silently dropped by the HTTP stack, so they are rejected up-front.
+    /// </summary>
+    public static bool IsValidHttpToken(string value)
+    {
+        foreach (var ch in value)
+        {
+            if (ch <= ' ' || ch >= 0x7F)
+                return false;
+
+            switch (ch)
+            {
+                case '(' or ')' or '<' or '>' or '@'
+                    or ',' or ';' or ':' or '\\' or '"'
+                    or '/' or '[' or ']' or '?' or '='
+                    or '{' or '}':
+                    return false;
+            }
+        }
+
+        return true;
+    }
+
     private static bool IsBucketBoundaryChar(char ch) =>
         ch is (>= 'a' and <= 'z') or (>= '0' and <= '9');
 

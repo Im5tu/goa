@@ -54,4 +54,9 @@ public static class S3ErrorCodes
     /// The supplied bucket name does not satisfy S3 bucket naming rules.
     /// </summary>
     public const string InvalidBucketName = "S3.InvalidBucketName";
+
+    /// <summary>
+    /// A user-defined metadata name is not a valid HTTP token.
+    /// </summary>
+    public const string InvalidMetadata = "S3.InvalidMetadata";
 }

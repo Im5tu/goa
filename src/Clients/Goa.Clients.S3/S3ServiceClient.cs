@@ -36,6 +36,12 @@ internal sealed class S3ServiceClient : AwsServiceClient<S3ServiceClientConfigur
         if (validation.IsError)
             return validation.Errors;
 
+        // Validate metadata for directly-constructed requests so invalid names cannot reach
+        // TryAddWithoutValidation (where they would be silently dropped), matching the builder.
+        var metadataValidation = S3RequestValidation.ValidateMetadata(request.Metadata);
+        if (metadataValidation.IsError)
+            return metadataValidation.Errors;
+
         try
         {
             using var requestMessage = CreateObjectRequest(HttpMethod.Put, request.Bucket, request.Key);

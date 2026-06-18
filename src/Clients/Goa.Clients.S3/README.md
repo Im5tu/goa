@@ -154,6 +154,8 @@ var result = await _s3.DeleteObjectAsync(new DeleteObjectRequest
 Missing objects are surfaced as `ErrorType.NotFound` rather than exceptions:
 
 ```csharp
+using ErrorOr;
+
 var result = await _s3.GetObjectAsync(new GetObjectRequest { Bucket = "my-bucket", Key = "missing" });
 
 if (result.IsError && result.FirstError.Type == ErrorType.NotFound)

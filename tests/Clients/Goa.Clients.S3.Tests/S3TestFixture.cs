@@ -92,11 +92,23 @@ public class S3TestFixture : IAsyncInitializer, IAsyncDisposable
 
             try
             {
-                var objects = await tempClient.ListObjectsV2Async(new ListObjectsV2Request { BucketName = BucketName });
-                foreach (var s3Object in objects.S3Objects ?? [])
+                string? continuationToken = null;
+                do
                 {
-                    await tempClient.DeleteObjectAsync(BucketName, s3Object.Key);
+                    var objects = await tempClient.ListObjectsV2Async(new ListObjectsV2Request
+                    {
+                        BucketName = BucketName,
+                        ContinuationToken = continuationToken
+                    });
+
+                    foreach (var s3Object in objects.S3Objects ?? [])
+                    {
+                        await tempClient.DeleteObjectAsync(BucketName, s3Object.Key);
+                    }
+
+                    continuationToken = objects.IsTruncated == true ? objects.NextContinuationToken : null;
                 }
+                while (continuationToken is not null);
 
                 await tempClient.DeleteBucketAsync(BucketName);
             }

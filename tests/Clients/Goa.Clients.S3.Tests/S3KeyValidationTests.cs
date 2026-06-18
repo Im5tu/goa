@@ -12,10 +12,14 @@ public class S3KeyValidationTests
 {
     private const string InvalidKeyErrorCode = "S3.InvalidKey";
 
-    // Points at an unroutable endpoint - invalid keys must be rejected before any request is sent.
-    private static readonly IS3Client Client = CreateClient();
+    // Kept alive for the lifetime of the test class - the client resolves an IHttpClientFactory from
+    // this provider, so it must not be disposed until all tests have run (see DisposeProvider).
+    private static readonly ServiceProvider Provider = BuildProvider();
 
-    private static IS3Client CreateClient()
+    // Points at an unroutable endpoint - invalid keys must be rejected before any request is sent.
+    private static readonly IS3Client Client = Provider.GetRequiredService<IS3Client>();
+
+    private static ServiceProvider BuildProvider()
     {
         var services = new ServiceCollection();
 
@@ -27,8 +31,11 @@ public class S3KeyValidationTests
             config.Region = "us-east-1";
         });
 
-        return services.BuildServiceProvider().GetRequiredService<IS3Client>();
+        return services.BuildServiceProvider();
     }
+
+    [After(Class)]
+    public static async Task DisposeProvider() => await Provider.DisposeAsync();
 
     [Test]
     [Arguments(".")]

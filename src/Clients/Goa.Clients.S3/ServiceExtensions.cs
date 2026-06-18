@@ -47,6 +47,11 @@ public static class ServiceExtensions
         if (string.IsNullOrWhiteSpace(configuration.Region) && string.IsNullOrWhiteSpace(configuration.ServiceUrl))
             throw new Exception("Either region or service url must be provided");
 
+        // SigV4 signing always needs a region, even when only a ServiceUrl is configured. Apply the
+        // same fallback as the other AddS3 overload so requests sign correctly when AWS_REGION is unset.
+        if (string.IsNullOrWhiteSpace(configuration.Region))
+            configuration.Region = Environment.GetEnvironmentVariable("AWS_REGION") ?? "us-east-1";
+
         return services.AddS3Core(configuration);
     }
 
