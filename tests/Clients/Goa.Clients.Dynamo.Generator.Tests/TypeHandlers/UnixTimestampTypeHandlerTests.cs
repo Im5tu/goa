@@ -1,3 +1,4 @@
+using Microsoft.CodeAnalysis;
 using Goa.Clients.Dynamo.Generator.TypeHandlers;
 using Goa.Clients.Dynamo.Generator.Tests.Helpers;
 
@@ -80,6 +81,33 @@ public class UnixTimestampTypeHandlerTests
         var propertyInfo = TestModelBuilders.CreateUnixTimestampPropertyInfo(
             "InvalidProperty",
             MockSymbolFactory.PrimitiveTypes.String,
+            isNullable: false,
+            format: Models.UnixTimestampFormat.Seconds
+        );
+
+        // Act
+        var result = _handler.CanHandle(propertyInfo);
+
+        // Assert
+        await Assert.That(result)
+            .IsFalse();
+    }
+
+    [Test]
+    public async Task CanHandle_WithUserDefinedTypeNamedDateTime_ShouldReturnFalse()
+    {
+        // Arrange: a user-defined type named "DateTime" outside the System namespace
+        // must not be treated as System.DateTime. The robust symbol-based check relies
+        // on SpecialType/namespace rather than the type name alone.
+        var spoofedDateTime = MockSymbolFactory.CreateNamedTypeSymbol(
+            "DateTime",
+            "MyApp.DateTime",
+            namespaceName: "MyApp",
+            specialType: SpecialType.None).Object;
+
+        var propertyInfo = TestModelBuilders.CreateUnixTimestampPropertyInfo(
+            "FakeTimestamp",
+            spoofedDateTime,
             isNullable: false,
             format: Models.UnixTimestampFormat.Seconds
         );

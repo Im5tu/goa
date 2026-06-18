@@ -13,9 +13,8 @@ public class UnixTimestampTypeHandler : ITypeHandler
     {
         var underlyingType = propertyInfo.UnderlyingType;
         var hasUnixTimestamp = propertyInfo.Attributes.Any(a => a is UnixTimestampAttributeInfo);
-        
-        return hasUnixTimestamp && 
-               (underlyingType.Name == nameof(DateTime) || underlyingType.Name == nameof(DateTimeOffset));
+
+        return hasUnixTimestamp && underlyingType.IsDateTimeOrDateTimeOffset();
     }
     
     public string GenerateToAttributeValue(PropertyInfo propertyInfo)
