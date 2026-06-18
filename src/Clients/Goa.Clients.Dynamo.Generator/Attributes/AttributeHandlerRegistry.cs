@@ -61,24 +61,10 @@ public class AttributeHandlerRegistry
                 type = named.TypeArguments[0];
             }
 
-            return IsDateTimeType(type);
+            return type.IsDateTimeOrDateTimeOffset();
         }
 
         return true;
-    }
-
-    /// <summary>
-    /// Determines whether the given type is System.DateTime or System.DateTimeOffset
-    /// using robust symbol identity rather than brittle name comparisons.
-    /// </summary>
-    private static bool IsDateTimeType(ITypeSymbol type)
-    {
-        if (type.SpecialType == SpecialType.System_DateTime)
-            return true;
-
-        // DateTimeOffset has no SpecialType, so identify it by its fully-qualified name.
-        return type.Name == nameof(DateTimeOffset)
-               && type.ContainingNamespace?.ToDisplayString() == "System";
     }
 
     /// <summary>
