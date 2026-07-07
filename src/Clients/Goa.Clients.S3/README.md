@@ -17,6 +17,7 @@ dotnet add package Goa.Clients.S3
 - Server-side encryption support (SSE-KMS)
 - User-defined object metadata
 - Ranged downloads
+- Pre-signed URLs for direct-to-S3 upload and download (SigV4 query signing)
 
 ## Usage
 
@@ -148,6 +149,41 @@ var result = await _s3.DeleteObjectAsync(new DeleteObjectRequest
 
 // Deleting a missing key also succeeds - S3 deletes are idempotent on unversioned buckets.
 ```
+
+### Pre-signed URLs
+
+Generate time-limited URLs that let a client upload or download object bytes directly to/from S3
+without AWS credentials. This keeps large payloads off your application (e.g. off the AWS Lambda
+6&nbsp;MB invoke limit) by transferring them straight to S3.
+
+```csharp
+using Goa.Clients.S3.Operations.PresignGetObject;
+using Goa.Clients.S3.Operations.PresignPutObject;
+
+// Upload: hand this URL to the client, which PUTs the bytes directly to S3.
+// Binding ContentLength signs an exact size, so S3 rejects a larger body.
+var uploadUrl = await _s3.PresignPutObjectAsync(new PresignPutObjectRequest
+{
+    Bucket = "my-bucket",
+    Key = "documents/report.pdf",
+    Expiry = TimeSpan.FromMinutes(5),
+    ContentLength = fileSizeBytes
+});
+
+// Download: the response-* overrides set the Content-Type and Content-Disposition S3 returns.
+var downloadUrl = await _s3.PresignGetObjectAsync(new PresignGetObjectRequest
+{
+    Bucket = "my-bucket",
+    Key = "documents/report.pdf",
+    Expiry = TimeSpan.FromMinutes(2),
+    ResponseContentType = "application/pdf",
+    ResponseContentDisposition = "attachment; filename=\"report.pdf\""
+});
+```
+
+Expiry is clamped to the SigV4 maximum of 7 days. The URLs carry the signer's own credentials
+(including a session token when running under an IAM role), so they inherit that principal's S3
+permissions and require no bucket CORS for non-browser clients.
 
 ### Error Handling
 

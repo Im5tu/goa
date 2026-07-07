@@ -6,6 +6,8 @@ using Goa.Clients.S3.Errors;
 using Goa.Clients.S3.Operations.DeleteObject;
 using Goa.Clients.S3.Operations.GetObject;
 using Goa.Clients.S3.Operations.HeadObject;
+using Goa.Clients.S3.Operations.PresignGetObject;
+using Goa.Clients.S3.Operations.PresignPutObject;
 using Goa.Clients.S3.Operations.PutObject;
 using Microsoft.Extensions.Logging;
 using System.Net;
@@ -18,14 +20,22 @@ internal sealed class S3ServiceClient : AwsServiceClient<S3ServiceClientConfigur
 {
     private const string MetadataHeaderPrefix = "x-amz-meta-";
 
+    // S3 always signs under the "s3" service name; the base configuration exposes this only
+    // internally to Core, so it is repeated here for the pre-signer which lives in a separate assembly.
+    private const string SigningService = "s3";
+
+    private readonly IRequestPresigner _presigner;
+
     private string? _cachedPathStyleBaseUrl;
 
     public S3ServiceClient(
         IHttpClientFactory httpClientFactory,
         S3ServiceClientConfiguration configuration,
+        IRequestPresigner presigner,
         ILogger<S3ServiceClient> logger)
         : base(httpClientFactory, logger, configuration)
     {
+        _presigner = presigner ?? throw new ArgumentNullException(nameof(presigner));
     }
 
     public async Task<ErrorOr<PutObjectResponse>> PutObjectAsync(PutObjectRequest request, CancellationToken cancellationToken = default)
@@ -177,6 +187,75 @@ internal sealed class S3ServiceClient : AwsServiceClient<S3ServiceClientConfigur
         {
             Logger.DeleteObjectFailed(ex, request.Bucket, request.Key);
             return Error.Failure("S3.DeleteObject.Failed", $"Failed to delete object {request.Key} from S3 bucket {request.Bucket}");
+        }
+    }
+
+    public Task<ErrorOr<string>> PresignGetObjectAsync(PresignGetObjectRequest request, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+
+        var validation = ValidateBucketAndKey(request.Bucket, request.Key);
+        if (validation.IsError)
+            return Task.FromResult<ErrorOr<string>>(validation.Errors);
+
+        List<KeyValuePair<string, string>>? queryParameters = null;
+        if (!string.IsNullOrWhiteSpace(request.ResponseContentType))
+            (queryParameters ??= []).Add(new KeyValuePair<string, string>("response-content-type", request.ResponseContentType));
+        if (!string.IsNullOrWhiteSpace(request.ResponseContentDisposition))
+            (queryParameters ??= []).Add(new KeyValuePair<string, string>("response-content-disposition", request.ResponseContentDisposition));
+
+        return PresignAsync(HttpMethod.Get, request.Bucket, request.Key, request.Expiry, signedHeaders: null, queryParameters, cancellationToken);
+    }
+
+    public Task<ErrorOr<string>> PresignPutObjectAsync(PresignPutObjectRequest request, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+
+        var validation = ValidateBucketAndKey(request.Bucket, request.Key);
+        if (validation.IsError)
+            return Task.FromResult<ErrorOr<string>>(validation.Errors);
+
+        List<KeyValuePair<string, string>>? signedHeaders = null;
+        if (request.ContentLength is { } contentLength)
+        {
+            if (contentLength < 0)
+                return Task.FromResult<ErrorOr<string>>(Error.Validation("S3.PresignPutObject.ContentLength", "ContentLength cannot be negative."));
+            (signedHeaders ??= []).Add(new KeyValuePair<string, string>("content-length", contentLength.ToString(System.Globalization.CultureInfo.InvariantCulture)));
+        }
+        if (!string.IsNullOrWhiteSpace(request.ContentType))
+            (signedHeaders ??= []).Add(new KeyValuePair<string, string>("content-type", request.ContentType));
+
+        return PresignAsync(HttpMethod.Put, request.Bucket, request.Key, request.Expiry, signedHeaders, queryParameters: null, cancellationToken);
+    }
+
+    private async Task<ErrorOr<string>> PresignAsync(
+        HttpMethod method,
+        string bucket,
+        string key,
+        TimeSpan expiry,
+        IReadOnlyList<KeyValuePair<string, string>>? signedHeaders,
+        IReadOnlyList<KeyValuePair<string, string>>? queryParameters,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            var parameters = new PresignParameters
+            {
+                Method = method,
+                Uri = BuildObjectUri(bucket, key),
+                Region = Configuration.Region,
+                Service = SigningService,
+                Expiry = expiry,
+                SignedHeaders = signedHeaders,
+                QueryParameters = queryParameters
+            };
+
+            return await _presigner.PresignAsync(parameters, cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            Logger.RequestFailed($"Operation: Presign{method.Method}Object, Bucket: {bucket}, Key: {key}, Error: {ex.Message}");
+            return Error.Failure("S3.Presign.Failed", $"Failed to pre-sign {method.Method} URL for object {key} in S3 bucket {bucket}");
         }
     }
 

@@ -62,6 +62,9 @@ public static class ServiceExtensions
 
         services.TryAddSingleton<ICredentialProviderChain, CredentialProviderChain>();
 
+        // Pre-signed URL generation (query-string SigV4). Reuses the same credential chain.
+        services.TryAddSingleton<IRequestPresigner, RequestPresigner>();
+
         return services;
     }
 

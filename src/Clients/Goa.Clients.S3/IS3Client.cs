@@ -2,6 +2,8 @@ using ErrorOr;
 using Goa.Clients.S3.Operations.DeleteObject;
 using Goa.Clients.S3.Operations.GetObject;
 using Goa.Clients.S3.Operations.HeadObject;
+using Goa.Clients.S3.Operations.PresignGetObject;
+using Goa.Clients.S3.Operations.PresignPutObject;
 using Goa.Clients.S3.Operations.PutObject;
 
 namespace Goa.Clients.S3;
@@ -48,4 +50,22 @@ public interface IS3Client
     /// <param name="cancellationToken">A cancellation token to cancel the operation.</param>
     /// <returns>The delete object response, or an error if the operation failed.</returns>
     Task<ErrorOr<DeleteObjectResponse>> DeleteObjectAsync(DeleteObjectRequest request, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Generates a time-limited pre-signed URL that grants GET access to an object without AWS
+    /// credentials, letting the object bytes be downloaded directly from S3.
+    /// </summary>
+    /// <param name="request">The pre-sign GET request.</param>
+    /// <param name="cancellationToken">A cancellation token to cancel the operation.</param>
+    /// <returns>The pre-signed URL, or an error if the request was invalid or credentials could not be resolved.</returns>
+    Task<ErrorOr<string>> PresignGetObjectAsync(PresignGetObjectRequest request, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Generates a time-limited pre-signed URL that grants PUT access to an object without AWS
+    /// credentials, letting the object bytes be uploaded directly to S3.
+    /// </summary>
+    /// <param name="request">The pre-sign PUT request.</param>
+    /// <param name="cancellationToken">A cancellation token to cancel the operation.</param>
+    /// <returns>The pre-signed URL, or an error if the request was invalid or credentials could not be resolved.</returns>
+    Task<ErrorOr<string>> PresignPutObjectAsync(PresignPutObjectRequest request, CancellationToken cancellationToken = default);
 }
