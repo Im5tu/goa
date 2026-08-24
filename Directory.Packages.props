@@ -4,48 +4,56 @@
   </PropertyGroup>
   <ItemGroup>
     <!-- AWS SDK -->
-    <PackageVersion Include="AWSSDK.Core" Version="4.0.9" />
-    <PackageVersion Include="AWSSDK.DynamoDBv2" Version="4.0.10.5" />
-    <PackageVersion Include="AWSSDK.EventBridge" Version="4.0.5.10" />
-    <PackageVersion Include="AWSSDK.Lambda" Version="4.0.12.1" />
-    <PackageVersion Include="AWSSDK.S3" Version="4.0.24.3" />
-    <PackageVersion Include="AWSSDK.SecurityToken" Version="4.0.5.4" />
-    <PackageVersion Include="AWSSDK.SimpleNotificationService" Version="4.0.2.10" />
-    <PackageVersion Include="AWSSDK.SQS" Version="4.0.2.9" />
+    <PackageVersion Include="AWSSDK.Core" Version="4.0.102" />
+    <PackageVersion Include="AWSSDK.DynamoDBv2" Version="4.0.103.4" />
+    <PackageVersion Include="AWSSDK.EventBridge" Version="4.0.100.10" />
+    <PackageVersion Include="AWSSDK.Lambda" Version="4.0.106" />
+    <PackageVersion Include="AWSSDK.S3" Version="4.0.102.3" />
+    <PackageVersion Include="AWSSDK.SecurityToken" Version="4.0.100.10" />
+    <PackageVersion Include="AWSSDK.SimpleNotificationService" Version="4.0.100.10" />
+    <PackageVersion Include="AWSSDK.SQS" Version="4.0.100.10" />
 
     <!-- Benchmarking -->
-    <PackageVersion Include="EfficientDynamoDb" Version="0.9.18" />
+    <PackageVersion Include="EfficientDynamoDb" Version="0.9.19" />
     <PackageVersion Include="BenchmarkDotNet" Version="0.15.8" />
     <PackageVersion Include="BenchmarkDotNet.Diagnostics.Windows" Version="0.15.8" />
 
     <!-- Core -->
-    <PackageVersion Include="ErrorOr" Version="2.0.1" />
-    <PackageVersion Include="System.IdentityModel.Tokens.Jwt" Version="8.15.0" />
+    <PackageVersion Include="ErrorOr" Version="2.1.1" />
+    <PackageVersion Include="System.IdentityModel.Tokens.Jwt" Version="8.22.0" />
 
-    <!-- Microsoft.CodeAnalysis -->
-    <PackageVersion Include="Microsoft.CodeAnalysis.Analyzers" Version="4.14.0" />
+    <!--
+      Microsoft.CodeAnalysis
+
+      CSharp and CSharp.Workspaces are deliberately held back. They set the minimum Roslyn version
+      required to load the generator and analyzers, so raising them raises the minimum SDK for every
+      consumer. Anything newer than the compiler shipped in the consumer's SDK fails the build with
+      CS9057 ("references version X of the compiler, which is newer than the currently running
+      version"). Bump only when the minimum supported SDK moves.
+    -->
+    <PackageVersion Include="Microsoft.CodeAnalysis.Analyzers" Version="5.9.0" />
     <PackageVersion Include="Microsoft.CodeAnalysis.CSharp" Version="5.0.0" />
     <PackageVersion Include="Microsoft.CodeAnalysis.CSharp.Workspaces" Version="5.0.0" />
 
     <!-- Microsoft.Extensions -->
-    <PackageVersion Include="Microsoft.Extensions.Configuration.EnvironmentVariables" Version="10.0.2" />
-    <PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="10.0.2" />
-    <PackageVersion Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.2" />
-    <PackageVersion Include="Microsoft.Extensions.Hosting" Version="10.0.2" />
-    <PackageVersion Include="Microsoft.Extensions.Http" Version="10.0.2" />
-    <PackageVersion Include="Microsoft.Extensions.Logging" Version="10.0.2" />
-    <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.2" />
-    <PackageVersion Include="Microsoft.Extensions.Logging.Console" Version="10.0.2" />
+    <PackageVersion Include="Microsoft.Extensions.Configuration.EnvironmentVariables" Version="10.0.11" />
+    <PackageVersion Include="Microsoft.Extensions.DependencyInjection" Version="10.0.11" />
+    <PackageVersion Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.11" />
+    <PackageVersion Include="Microsoft.Extensions.Hosting" Version="10.0.11" />
+    <PackageVersion Include="Microsoft.Extensions.Http" Version="10.0.11" />
+    <PackageVersion Include="Microsoft.Extensions.Logging" Version="10.0.11" />
+    <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.11" />
+    <PackageVersion Include="Microsoft.Extensions.Logging.Console" Version="10.0.11" />
 
     <!-- Testing -->
     <PackageVersion Include="Moq" Version="4.20.72" />
-    <PackageVersion Include="Testcontainers" Version="4.10.0" />
-    <PackageVersion Include="Testcontainers.LocalStack" Version="4.10.0" />
-    <PackageVersion Include="TUnit" Version="1.12.15" />
+    <PackageVersion Include="Testcontainers" Version="4.14.0" />
+    <PackageVersion Include="Testcontainers.LocalStack" Version="4.14.0" />
+    <PackageVersion Include="TUnit" Version="1.65.51" />
 
     <!-- Build tooling -->
-    <PackageVersion Include="DotNet.ReproducibleBuilds" Version="1.2.39" />
+    <PackageVersion Include="DotNet.ReproducibleBuilds" Version="2.0.5" />
     <PackageVersion Include="Microsoft.TemplateEngine.Tasks" Version="7.0.120" />
-    <PackageVersion Include="Microsoft.VisualStudio.Threading.Analyzers" Version="17.14.15" />
+    <PackageVersion Include="Microsoft.VisualStudio.Threading.Analyzers" Version="18.7.23" />
   </ItemGroup>
 </Project>

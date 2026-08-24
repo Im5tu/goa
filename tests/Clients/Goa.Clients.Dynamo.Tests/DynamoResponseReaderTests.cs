@@ -165,7 +165,7 @@ public class DynamoResponseReaderTests
         var result = DynamoResponseReader.ReadQueryResponse<TestEntity>(json, ReadTestEntity);
 
         await Assert.That(result.LastEvaluatedKey).IsNotNull();
-        await Assert.That(result.LastEvaluatedKey!["flag"].BOOL).IsEqualTo(true);
+        await Assert.That(result.LastEvaluatedKey!["flag"].BOOL).IsTrue();
     }
 
     [Test]
@@ -186,7 +186,7 @@ public class DynamoResponseReaderTests
         var result = DynamoResponseReader.ReadQueryResponse<TestEntity>(json, ReadTestEntity);
 
         await Assert.That(result.LastEvaluatedKey).IsNotNull();
-        await Assert.That(result.LastEvaluatedKey!["empty"].NULL).IsEqualTo(true);
+        await Assert.That(result.LastEvaluatedKey!["empty"].NULL).IsTrue();
     }
 
     [Test]
@@ -849,7 +849,7 @@ public class DynamoResponseReaderTests
         var result = DynamoResponseReader.ReadQueryResponse<TestEntity>(json, ReadTestEntity);
 
         await Assert.That(result.LastEvaluatedKey).IsNotNull();
-        await Assert.That(result.LastEvaluatedKey!["empty"].NULL).IsEqualTo(true);
+        await Assert.That(result.LastEvaluatedKey!["empty"].NULL).IsTrue();
     }
 
     [Test]

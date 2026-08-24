@@ -292,7 +292,7 @@ public sealed class DynamoServiceClient : JsonAwsServiceClient<DynamoServiceClie
         writer.WritePropertyName("Item");
         itemWriter(writer, item);
         writer.WriteEndObject();
-        writer.Flush();
+        await writer.FlushAsync(cancellationToken);
 
         var content = bufferWriter.WrittenSpan.ToArray();
         using var requestMessage = CreateRequestMessage(
