@@ -388,7 +388,7 @@ public class ConverseBuilderTests
         await Assert.That(request.ToolConfig!.Tools).Count().IsEqualTo(1);
         await Assert.That(request.ToolConfig!.Tools[0].ToolSpec.Name).IsEqualTo("get_weather");
         await Assert.That(request.ToolConfig!.Tools[0].ToolSpec.Description).IsEqualTo("Get the current weather");
-        await Assert.That(request.ToolConfig!.Tools[0].ToolSpec.Strict).IsEqualTo(true);
+        await Assert.That(request.ToolConfig!.Tools[0].ToolSpec.Strict).IsTrue();
     }
 
     [Test]

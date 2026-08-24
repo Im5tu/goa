@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <OutputType>Exe</OutputType>
+        <!--
+          Published and executed as a Native AOT binary by the "AOT layout" CI job.
+
+          This lives apart from Goa.Clients.Dynamo.Tests deliberately: that suite references Moq
+          (Castle DynamicProxy, runtime IL emit) and Testcontainers, neither of which runs under
+          Native AOT. Keeping this project dependency-free is what lets it be published AOT at all.
+        -->
+        <PublishAot>true</PublishAot>
+        <InvariantGlobalization>true</InvariantGlobalization>
+        <IsPackable>false</IsPackable>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\..\..\src\Clients\Goa.Clients.Dynamo\Goa.Clients.Dynamo.csproj" />
+    </ItemGroup>
+
+</Project>

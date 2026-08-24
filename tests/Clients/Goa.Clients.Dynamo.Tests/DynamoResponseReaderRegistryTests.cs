@@ -93,8 +93,8 @@ public class DynamoResponseReaderRegistryTests
         var item = result.Items[0];
         await Assert.That(item["str"]?.S).IsEqualTo("hello");
         await Assert.That(item["num"]?.N).IsEqualTo("42");
-        await Assert.That(item["flag"]?.BOOL).IsEqualTo(true);
-        await Assert.That(item["empty"]?.NULL).IsEqualTo(true);
+        await Assert.That(item["flag"]?.BOOL).IsTrue();
+        await Assert.That(item["empty"]?.NULL).IsTrue();
         await Assert.That(item["tags"]?.SS).IsNotNull();
         await Assert.That(item["tags"]?.SS!.Count).IsEqualTo(2);
         await Assert.That(item["scores"]?.NS).IsNotNull();

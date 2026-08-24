@@ -1,5 +1,4 @@
 using System.Globalization;
-using System.Runtime.InteropServices;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
@@ -7,15 +6,31 @@ namespace Goa.Clients.Dynamo.Models;
 
 /// <summary>
 /// Represents a DynamoDB attribute value with type information for proper serialization.
-/// Uses a union layout to avoid heap allocations for each attribute value.
+/// A single reference field is reused for every reference-typed payload (string, List, Dictionary,
+/// byte[]) so no per-value heap allocation is needed.
 /// </summary>
-[StructLayout(LayoutKind.Explicit, Pack = 1)]
+/// <remarks>
+/// Deliberately NOT <c>Pack = 1</c>, and deliberately not laid out explicitly.
+///
+/// The fields do not overlap, so the explicit layout never unioned anything and never saved a byte
+/// on CoreCLR — but <c>Pack = 1</c> left the struct 10 bytes wide under Native AOT instead of 16.
+/// CoreCLR rounds a struct containing a GC reference up to pointer size
+/// (<c>MethodTableBuilder::ValidateExplicitLayout</c>); ILCompiler does not, so the array stride
+/// stayed 10 and every element past [0] of a <c>List&lt;AttributeValue&gt;</c> or
+/// <c>Dictionary&lt;string, AttributeValue&gt;</c> backing store held its object reference at a
+/// non-pointer-aligned address. A compacting GC then relocated those slots and clobbered the
+/// reference while the type tag survived, producing NullReferenceException and InvalidCastException
+/// on reads of perfectly valid stored data. ECMA-335 II.10.7 also forbids combining pack with
+/// explicit layout.
+///
+/// AttributeValueLayoutTests pins the alignment so this cannot regress.
+/// </remarks>
 [JsonConverter(typeof(AttributeValueJsonConverter))]
 public readonly struct AttributeValue
 {
-    [FieldOffset(0)] private readonly object? _referenceValue;  // string, List<>, Dictionary<>
-    [FieldOffset(8)] private readonly AttributeType _type;
-    [FieldOffset(9)] private readonly bool _boolValue;
+    private readonly object? _referenceValue;  // string, List<>, Dictionary<>
+    private readonly AttributeType _type;
+    private readonly bool _boolValue;
 
     /// <summary>
     /// Gets the type of this attribute value.

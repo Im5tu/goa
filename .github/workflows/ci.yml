@@ -34,6 +34,40 @@ jobs:
         AWS_SECRET_ACCESS_KEY: test
         AWS_DEFAULT_REGION: us-east-1
         LOCALSTACK_ENDPOINT: http://localhost:4566
+        # The LocalStack image refuses to start without an activated licence, and the
+        # fixtures forward this into each container they build.
+        LOCALSTACK_AUTH_TOKEN: ${{ secrets.LOCALSTACK_AUTH_TOKEN }}
 
     - name: List generated packages
       run: find artifacts/package/release -name "*.nupkg" -type f
+
+  # AttributeValue's layout only misbehaves under Native AOT: CoreCLR rounds a struct containing a
+  # GC reference up to pointer size, ILCompiler does not. A JIT test run therefore cannot see a
+  # reintroduced Pack/Size on it, so this job publishes the checks as a real AOT binary and runs it.
+  # The main test suite above is unchanged and still runs under the normal test host.
+  aot-layout:
+    name: AOT layout checks
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v6
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v5
+      with:
+        dotnet-version: |
+          9.0.x
+          10.0.x
+
+    # Published to an explicit directory rather than relying on the artifacts-output layout, so the
+    # run step below cannot drift from wherever the SDK decides to put it.
+    - name: Publish AOT layout checks
+      run: >
+        dotnet publish tests/Clients/Goa.Clients.Dynamo.AotTests/Goa.Clients.Dynamo.AotTests.csproj
+        -c Release -r linux-x64
+        -o ./aot-layout-checks
+        /p:ContinuousIntegrationBuild=true
+
+    - name: Run AOT layout checks
+      run: ./aot-layout-checks/Goa.Clients.Dynamo.AotTests
