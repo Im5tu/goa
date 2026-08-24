@@ -34,6 +34,9 @@ jobs:
         AWS_SECRET_ACCESS_KEY: test
         AWS_DEFAULT_REGION: us-east-1
         LOCALSTACK_ENDPOINT: http://localhost:4566
+        # The LocalStack image refuses to start without an activated licence, and the
+        # fixtures forward this into each container they build.
+        LOCALSTACK_AUTH_TOKEN: ${{ secrets.LOCALSTACK_AUTH_TOKEN }}
 
     - name: List generated packages
       run: find artifacts/package/release -name "*.nupkg" -type f

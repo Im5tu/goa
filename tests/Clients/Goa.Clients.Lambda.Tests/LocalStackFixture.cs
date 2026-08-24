@@ -15,6 +15,7 @@ public class LocalStackFixture : IAsyncInitializer, IAsyncDisposable
     public async Task InitializeAsync()
     {
         _container = new ContainerBuilder(new DockerImage("localstack/localstack"))
+            .WithEnvironment("LOCALSTACK_AUTH_TOKEN", System.Environment.GetEnvironmentVariable("LOCALSTACK_AUTH_TOKEN") ?? string.Empty)
             .WithEnvironment("SERVICES", "lambda")
             .WithEnvironment("DEBUG", "1")
             .WithEnvironment("DOCKER_HOST", "unix:///var/run/docker.sock")

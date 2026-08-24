@@ -15,6 +15,7 @@ public class LocalStackFixture : IAsyncInitializer, IAsyncDisposable
     {
         // Pinned to the v4 community line: localstack/localstack:latest (2026+) requires a licence.
         _container = new ContainerBuilder(new DockerImage("localstack/localstack:4"))
+            .WithEnvironment("LOCALSTACK_AUTH_TOKEN", System.Environment.GetEnvironmentVariable("LOCALSTACK_AUTH_TOKEN") ?? string.Empty)
             .WithEnvironment("SERVICES", "s3")
             // Ask LocalStack to validate SigV4 signatures rather than skipping them, so the
             // integration tests exercise real request signing end-to-end. (Note: the v4 community
