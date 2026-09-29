@@ -33,9 +33,17 @@ public sealed class ReceiveMessageRequest
 
     /// <summary>
     /// A list of attributes that need to be returned along with each message.
+    /// Deprecated by AWS in favour of <see cref="MessageSystemAttributeNames"/>.
     /// </summary>
     [JsonPropertyName("AttributeNames")]
     public List<string>? AttributeNames { get; set; }
+
+    /// <summary>
+    /// A list of system attributes that need to be returned along with each message,
+    /// e.g. <c>ApproximateReceiveCount</c>, <c>MessageGroupId</c>, <c>AWSTraceHeader</c> or <c>All</c>.
+    /// </summary>
+    [JsonPropertyName("MessageSystemAttributeNames")]
+    public List<string>? MessageSystemAttributeNames { get; set; }
 
     /// <summary>
     /// The name of the message attribute.

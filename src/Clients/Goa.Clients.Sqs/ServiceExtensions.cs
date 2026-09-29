@@ -56,7 +56,7 @@ public static class ServiceExtensions
         ArgumentNullException.ThrowIfNull(configuration);
 
         // Add the Goa service infrastructure for SQS
-        services.AddGoaService(nameof(SqsServiceClient));
+        services.AddGoaService(nameof(SqsServiceClient), configuration.HttpTimeout);
 
         // Register the configuration
         services.TryAddSingleton(configuration);
