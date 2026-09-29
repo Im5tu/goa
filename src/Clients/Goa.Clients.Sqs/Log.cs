@@ -21,4 +21,10 @@ internal static partial class Log
 
     [LoggerMessage(EventId = 6, Level = LogLevel.Error, Message = "Failed to change message visibility batch in SQS queue {QueueUrl}")]
     public static partial void ChangeMessageVisibilityBatchFailed(this ILogger logger, Exception exception, string queueUrl);
+
+    [LoggerMessage(EventId = 7, Level = LogLevel.Warning, Message = "Receive from SQS queue {QueueUrl} failed with {ErrorCode}: {ErrorDescription}. Retrying in {RetryDelayMs}ms (consecutive failures: {ConsecutiveFailures})")]
+    public static partial void ReceiveRetrying(this ILogger logger, string queueUrl, string errorCode, string errorDescription, double retryDelayMs, int consecutiveFailures);
+
+    [LoggerMessage(EventId = 8, Level = LogLevel.Error, Message = "Receive from SQS queue {QueueUrl} threw an unexpected exception")]
+    public static partial void ReceiveThrew(this ILogger logger, Exception exception, string queueUrl);
 }

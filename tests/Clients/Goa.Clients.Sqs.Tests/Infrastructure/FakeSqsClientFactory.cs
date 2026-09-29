@@ -8,8 +8,8 @@ namespace Goa.Clients.Sqs.Tests.Infrastructure;
 /// </summary>
 public static class FakeSqsClientFactory
 {
-    // Name of the HttpClient registered by AddSqs (nameof(SqsServiceClient), which is internal).
-    public const string HttpClientName = "SqsServiceClient";
+    // Name of the HttpClient registered by AddSqs.
+    public const string HttpClientName = nameof(SqsServiceClient);
 
     public static ServiceProvider Create(FakeSqsHttpHandler handler, out ISqsClient client)
     {
