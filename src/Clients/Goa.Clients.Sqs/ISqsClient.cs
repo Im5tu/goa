@@ -1,4 +1,6 @@
 using ErrorOr;
+using Goa.Clients.Sqs.Operations.ChangeMessageVisibility;
+using Goa.Clients.Sqs.Operations.ChangeMessageVisibilityBatch;
 using Goa.Clients.Sqs.Operations.DeleteMessage;
 using Goa.Clients.Sqs.Operations.ReceiveMessage;
 using Goa.Clients.Sqs.Operations.SendMessage;
@@ -43,4 +45,20 @@ public interface ISqsClient
     /// <param name="cancellationToken">A cancellation token to cancel the operation.</param>
     /// <returns>The delete message response, or an error if the operation failed.</returns>
     Task<ErrorOr<DeleteMessageResponse>> DeleteMessageAsync(DeleteMessageRequest request, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Changes the visibility timeout of the specified message in the specified queue.
+    /// </summary>
+    /// <param name="request">The change message visibility request.</param>
+    /// <param name="cancellationToken">A cancellation token to cancel the operation.</param>
+    /// <returns>The change message visibility response, or an error if the operation failed.</returns>
+    Task<ErrorOr<ChangeMessageVisibilityResponse>> ChangeMessageVisibilityAsync(ChangeMessageVisibilityRequest request, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Changes the visibility timeout of up to 10 messages in the specified queue in a single batch operation.
+    /// </summary>
+    /// <param name="request">The change message visibility batch request.</param>
+    /// <param name="cancellationToken">A cancellation token to cancel the operation.</param>
+    /// <returns>The change message visibility batch response, or an error if the operation failed.</returns>
+    Task<ErrorOr<ChangeMessageVisibilityBatchResponse>> ChangeMessageVisibilityBatchAsync(ChangeMessageVisibilityBatchRequest request, CancellationToken cancellationToken = default);
 }

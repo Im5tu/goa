@@ -131,6 +131,11 @@ public abstract class AwsServiceClient<T> where T : AwsServiceConfiguration
 
             return response;
         }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            // Cancellation requested by the caller is not a failure; let it propagate without an error log.
+            throw;
+        }
         catch (Exception e)
         {
             Logger.RequestFailed(e);

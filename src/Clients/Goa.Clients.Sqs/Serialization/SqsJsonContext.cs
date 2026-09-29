@@ -1,6 +1,8 @@
 using Goa.Clients.Core.Http;
 using System.Text.Json.Serialization;
 using Goa.Clients.Sqs.Models;
+using Goa.Clients.Sqs.Operations.ChangeMessageVisibility;
+using Goa.Clients.Sqs.Operations.ChangeMessageVisibilityBatch;
 using Goa.Clients.Sqs.Operations.DeleteMessage;
 using Goa.Clients.Sqs.Operations.ReceiveMessage;
 using Goa.Clients.Sqs.Operations.SendMessage;
@@ -17,6 +19,14 @@ namespace Goa.Clients.Sqs.Serialization;
 [JsonSerializable(typeof(ReceiveMessageResponse))]
 [JsonSerializable(typeof(DeleteMessageRequest))]
 [JsonSerializable(typeof(DeleteMessageResponse))]
+[JsonSerializable(typeof(ChangeMessageVisibilityRequest))]
+[JsonSerializable(typeof(ChangeMessageVisibilityResponse))]
+[JsonSerializable(typeof(ChangeMessageVisibilityBatchRequest))]
+[JsonSerializable(typeof(ChangeMessageVisibilityBatchResponse))]
+[JsonSerializable(typeof(ChangeMessageVisibilityBatchRequestEntry))]
+[JsonSerializable(typeof(ChangeMessageVisibilityBatchResultEntry))]
+[JsonSerializable(typeof(List<ChangeMessageVisibilityBatchRequestEntry>))]
+[JsonSerializable(typeof(List<ChangeMessageVisibilityBatchResultEntry>))]
 [JsonSerializable(typeof(SendMessageBatchRequest))]
 [JsonSerializable(typeof(SendMessageBatchResponse))]
 [JsonSerializable(typeof(SendMessageBatchRequestEntry))]
