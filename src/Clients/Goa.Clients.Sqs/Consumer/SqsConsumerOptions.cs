@@ -1,3 +1,5 @@
+using ErrorOr;
+
 namespace Goa.Clients.Sqs.Consumer;
 
 /// <summary>
@@ -16,8 +18,9 @@ public sealed class SqsConsumerOptions
     public int MaxNumberOfMessages { get; set; } = 10;
 
     /// <summary>
-    /// How long each receive waits for messages to arrive (0-20 seconds, rounded up to whole seconds).
-    /// Defaults to 20 seconds (long polling). A value of zero short-polls, which re-requests immediately when the queue is empty.
+    /// How long each receive waits for messages to arrive (1-20 seconds, rounded up to whole seconds).
+    /// Defaults to 20 seconds. Short polling (zero) is not supported because the consumer would re-request
+    /// immediately whenever the queue is empty.
     /// </summary>
     public TimeSpan WaitTime { get; set; } = TimeSpan.FromSeconds(20);
 
@@ -45,7 +48,15 @@ public sealed class SqsConsumerOptions
     public TimeSpan InitialRetryDelay { get; set; } = TimeSpan.FromSeconds(1);
 
     /// <summary>
-    /// The upper bound for the delay between retries of a failed receive. Defaults to 30 seconds.
+    /// The upper bound for the delay between retries of a failed receive (at most 1 hour). Defaults to 30 seconds.
     /// </summary>
     public TimeSpan MaxRetryDelay { get; set; } = TimeSpan.FromSeconds(30);
+
+    /// <summary>
+    /// Invoked after every failed receive with the error and the number of consecutive failures (starting at 1 and
+    /// reset by the next successful receive), before the consumer backs off and retries. Use it to surface consumer
+    /// health, for example to fail a health check after a number of consecutive failures. It is not invoked when the
+    /// consumer is cancelled. An exception thrown by the callback ends the enumeration with that exception.
+    /// </summary>
+    public Action<Error, int>? OnReceiveError { get; set; }
 }

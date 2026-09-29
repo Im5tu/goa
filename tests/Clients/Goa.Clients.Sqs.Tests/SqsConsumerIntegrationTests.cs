@@ -109,6 +109,32 @@ public class SqsConsumerIntegrationTests
     }
 
     [Test]
+    public async Task ConsumeAsync_BreakingOutMidBatch_ReleasesUnyieldedMessages()
+    {
+        var queueUrl = await _fixture.CreateTestQueueAsync();
+        await SendAsync(queueUrl, "one");
+        await SendAsync(queueUrl, "two");
+        await SendAsync(queueUrl, "three");
+
+        // A long visibility timeout: without the release, unyielded messages would stay hidden for 5 minutes.
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+        var options = new SqsConsumerOptions
+        {
+            QueueUrl = queueUrl,
+            WaitTime = TimeSpan.FromSeconds(1),
+            VisibilityTimeout = TimeSpan.FromMinutes(5)
+        };
+
+        await foreach (var _ in _fixture.SqsClient.ConsumeAsync(options, cancellationToken: cts.Token))
+        {
+            break;
+        }
+
+        // Whether or not the first receive returned all three, the two not handed over must be visible now.
+        await Assert.That(await CountVisibleMessagesAsync(queueUrl)).IsEqualTo(2);
+    }
+
+    [Test]
     public async Task ChangeMessageVisibilityAsync_ToZero_MakesMessageVisibleAgain()
     {
         var queueUrl = await _fixture.CreateTestQueueAsync();

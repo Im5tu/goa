@@ -13,7 +13,17 @@ internal static class SqsDurations
     /// <summary>
     /// The maximum long-poll wait SQS accepts (20 seconds).
     /// </summary>
-    public static readonly TimeSpan MaxWaitTime = TimeSpan.FromSeconds(20);
+    public static readonly TimeSpan MaxWaitTime = TimeSpan.FromSeconds(SqsServiceClient.MaxWaitTimeSeconds);
+
+    /// <summary>
+    /// The shortest wait the consumer accepts, so an empty queue never causes a tight receive loop.
+    /// </summary>
+    public static readonly TimeSpan MinWaitTime = TimeSpan.FromSeconds(1);
+
+    /// <summary>
+    /// The longest delay the consumer accepts between retries of a failed receive.
+    /// </summary>
+    public static readonly TimeSpan MaxRetryDelay = TimeSpan.FromHours(1);
 
     /// <summary>
     /// Converts a duration to whole seconds, rounding up, when it lies within [0, <paramref name="max"/>].

@@ -90,12 +90,15 @@ public async Task<List<SqsMessage>> ReceiveMessagesAsync(string queueUrl)
 to settle it. It is designed for long-running workers (for example a `BackgroundService`):
 
 - Cancellation ends the enumeration cleanly; no `OperationCanceledException` escapes.
-- Failed receives (throttling, network errors, service errors) are logged and retried with exponential backoff and
-  jitter (`InitialRetryDelay`, doubling up to `MaxRetryDelay`), so transient errors never fault the stream.
+- Failed receives (throttling, network errors, service errors) are retried with exponential backoff and jitter
+  (`InitialRetryDelay`, doubling up to `MaxRetryDelay`), so errors never fault the stream. They are logged as
+  warnings, then as errors from the fifth consecutive failure, and each one is passed to `OnReceiveError` (the error
+  and the consecutive failure count) so the host can report its health.
 - Invalid options throw an `ArgumentException` when `ConsumeAsync` is called.
-- Messages are never deleted automatically. A message that is not completed, including any message from a received
-  batch that had not been yielded when enumeration stopped, is redelivered once its visibility timeout expires and
-  moves to the dead-letter queue after the queue's `maxReceiveCount`.
+- Messages are never deleted automatically. A yielded message that is not completed is redelivered once its
+  visibility timeout expires and moves to the dead-letter queue after the queue's `maxReceiveCount`.
+- Messages received but not yet yielded when enumeration stops (cancellation or leaving the loop) are released on a
+  best-effort basis (`ChangeMessageVisibilityBatch` to 0) so they can be redelivered straight away.
 
 ```csharp
 using Goa.Clients.Sqs.Consumer;
@@ -104,10 +107,11 @@ var options = new SqsConsumerOptions
 {
     QueueUrl = queueUrl,
     MaxNumberOfMessages = 10,                      // 1-10, default 10
-    WaitTime = TimeSpan.FromSeconds(20),           // 0-20s, default 20s
+    WaitTime = TimeSpan.FromSeconds(20),           // 1-20s, default 20s
     VisibilityTimeout = TimeSpan.FromSeconds(60),  // default: the queue's setting
     MessageAttributeNames = ["traceparent"],
-    MessageSystemAttributeNames = ["MessageGroupId", "ApproximateReceiveCount"]
+    MessageSystemAttributeNames = ["MessageGroupId", "ApproximateReceiveCount"],
+    OnReceiveError = (error, consecutiveFailures) => health.ReportReceiveFailure(error.Code, consecutiveFailures)
 };
 
 await foreach (var message in _sqs.ConsumeAsync(options, logger, stoppingToken))

@@ -27,4 +27,13 @@ internal static partial class Log
 
     [LoggerMessage(EventId = 8, Level = LogLevel.Error, Message = "Receive from SQS queue {QueueUrl} threw an unexpected exception")]
     public static partial void ReceiveThrew(this ILogger logger, Exception exception, string queueUrl);
+
+    [LoggerMessage(EventId = 9, Level = LogLevel.Error, Message = "Receive from SQS queue {QueueUrl} failed with {ErrorCode}: {ErrorDescription}. Retrying in {RetryDelayMs}ms (consecutive failures: {ConsecutiveFailures})")]
+    public static partial void ReceiveStillFailing(this ILogger logger, string queueUrl, string errorCode, string errorDescription, double retryDelayMs, int consecutiveFailures);
+
+    [LoggerMessage(EventId = 10, Level = LogLevel.Warning, Message = "Failed to release {MessageCount} unprocessed message(s) back to SQS queue {QueueUrl} ({ErrorCode}); they become visible when their visibility timeout expires")]
+    public static partial void ReleaseFailed(this ILogger logger, string queueUrl, int messageCount, string errorCode);
+
+    [LoggerMessage(EventId = 11, Level = LogLevel.Warning, Message = "Failed to release unprocessed messages back to SQS queue {QueueUrl}; they become visible when their visibility timeout expires")]
+    public static partial void ReleaseThrew(this ILogger logger, Exception exception, string queueUrl);
 }

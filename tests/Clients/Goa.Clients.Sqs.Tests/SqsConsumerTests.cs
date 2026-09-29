@@ -1,7 +1,10 @@
 using ErrorOr;
 using Goa.Clients.Sqs.Consumer;
 using Goa.Clients.Sqs.Models;
+using Goa.Clients.Sqs.Operations.ChangeMessageVisibilityBatch;
 using Goa.Clients.Sqs.Operations.ReceiveMessage;
+using Goa.Clients.Sqs.Tests.Infrastructure;
+using Microsoft.Extensions.Logging;
 using Moq;
 
 namespace Goa.Clients.Sqs.Tests;
@@ -29,6 +32,21 @@ public class SqsConsumerTests
 
     // Mimics SqsServiceClient, which reports a cancelled request as a failure instead of throwing.
     private static readonly ErrorOr<ReceiveMessageResponse> CancelledFailure = Error.Failure("SQS.ReceiveMessage.Failed", "Failed to receive messages");
+
+    private static void SetupRelease(Mock<ISqsClient> mock, Action<ChangeMessageVisibilityBatchRequest> capture)
+    {
+        mock.Setup(c => c.ChangeMessageVisibilityBatchAsync(It.IsAny<ChangeMessageVisibilityBatchRequest>(), It.IsAny<CancellationToken>()))
+            .Callback<ChangeMessageVisibilityBatchRequest, CancellationToken>((request, _) => capture(request))
+            .ReturnsAsync(new ChangeMessageVisibilityBatchResponse());
+    }
+
+    private static async Task AssertReleased(ChangeMessageVisibilityBatchRequest? released, params string[] receiptHandles)
+    {
+        await Assert.That(released).IsNotNull();
+        await Assert.That(released!.QueueUrl).IsEqualTo(QueueUrl);
+        await Assert.That(released.Entries.Select(e => e.ReceiptHandle)).IsEquivalentTo(receiptHandles);
+        await Assert.That(released.Entries.All(e => e.VisibilityTimeout == 0)).IsTrue();
+    }
 
     [Test]
     public async Task ConsumeAsync_YieldsMessagesAcrossReceives_UntilCancelled()
@@ -240,6 +258,9 @@ public class SqsConsumerTests
         mock.Setup(c => c.ReceiveMessageAsync(It.IsAny<ReceiveMessageRequest>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(Batch("1", "2", "3"));
 
+        ChangeMessageVisibilityBatchRequest? released = null;
+        SetupRelease(mock, request => released = request);
+
         var received = new List<string>();
         await foreach (var message in mock.Object.ConsumeAsync(CreateOptions(), cancellationToken: cts.Token))
         {
@@ -249,6 +270,164 @@ public class SqsConsumerTests
 
         await Assert.That(received).IsEquivalentTo(["1"]);
         mock.Verify(c => c.ReceiveMessageAsync(It.IsAny<ReceiveMessageRequest>(), It.IsAny<CancellationToken>()), Times.Once);
+        await AssertReleased(released, "receipt-2", "receipt-3");
+    }
+
+    [Test]
+    public async Task ConsumeAsync_WhenCallerBreaksMidBatch_ReleasesUnyieldedMessages()
+    {
+        var mock = new Mock<ISqsClient>();
+        mock.Setup(c => c.ReceiveMessageAsync(It.IsAny<ReceiveMessageRequest>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Batch("1", "2", "3"));
+        ChangeMessageVisibilityBatchRequest? released = null;
+        SetupRelease(mock, request => released = request);
+
+        await foreach (var message in mock.Object.ConsumeAsync(CreateOptions()))
+        {
+            if (message.MessageId == "2")
+                break;
+        }
+
+        await AssertReleased(released, "receipt-3");
+    }
+
+    [Test]
+    public async Task ConsumeAsync_WhenCancelledAfterSuccessfulReceive_ReleasesWholeBatch()
+    {
+        using var cts = new CancellationTokenSource(TestTimeout);
+        var mock = new Mock<ISqsClient>();
+        mock.Setup(c => c.ReceiveMessageAsync(It.IsAny<ReceiveMessageRequest>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(() =>
+            {
+                cts.Cancel();
+                return Batch("1", "2");
+            });
+        ChangeMessageVisibilityBatchRequest? released = null;
+        SetupRelease(mock, request => released = request);
+
+        var count = 0;
+        await foreach (var _ in mock.Object.ConsumeAsync(CreateOptions(), cancellationToken: cts.Token))
+        {
+            count++;
+        }
+
+        await Assert.That(count).IsEqualTo(0);
+        await AssertReleased(released, "receipt-1", "receipt-2");
+    }
+
+    [Test]
+    public async Task ConsumeAsync_WhenWholeBatchYielded_DoesNotRelease()
+    {
+        using var cts = new CancellationTokenSource(TestTimeout);
+        var mock = new Mock<ISqsClient>();
+        mock.Setup(c => c.ReceiveMessageAsync(It.IsAny<ReceiveMessageRequest>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Batch("1", "2"));
+
+        await foreach (var message in mock.Object.ConsumeAsync(CreateOptions(), cancellationToken: cts.Token))
+        {
+            if (message.MessageId == "2")
+                cts.Cancel();
+        }
+
+        mock.Verify(c => c.ChangeMessageVisibilityBatchAsync(It.IsAny<ChangeMessageVisibilityBatchRequest>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Test]
+    public async Task ConsumeAsync_WhenReleaseThrows_StillEndsWithoutThrowing()
+    {
+        using var cts = new CancellationTokenSource(TestTimeout);
+        var mock = new Mock<ISqsClient>();
+        mock.Setup(c => c.ReceiveMessageAsync(It.IsAny<ReceiveMessageRequest>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Batch("1", "2"));
+        mock.Setup(c => c.ChangeMessageVisibilityBatchAsync(It.IsAny<ChangeMessageVisibilityBatchRequest>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new HttpRequestException("connection reset"));
+
+        var count = 0;
+        await foreach (var _ in mock.Object.ConsumeAsync(CreateOptions(), cancellationToken: cts.Token))
+        {
+            count++;
+            cts.Cancel();
+        }
+
+        await Assert.That(count).IsEqualTo(1);
+    }
+
+    [Test]
+    public async Task ConsumeAsync_WithNullResponseOrNullMessages_TreatsAsEmpty()
+    {
+        using var cts = new CancellationTokenSource(TestTimeout);
+        var mock = new Mock<ISqsClient>();
+        mock.SetupSequence(c => c.ReceiveMessageAsync(It.IsAny<ReceiveMessageRequest>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new ReceiveMessageResponse { Messages = null! })
+            .ReturnsAsync(new ReceiveMessageResponse { Messages = [null!, new SqsMessage { MessageId = "1", ReceiptHandle = "receipt-1" }] })
+            .ReturnsAsync(Batch("2"));
+
+        var received = new List<string>();
+        await foreach (var message in mock.Object.ConsumeAsync(CreateOptions(), cancellationToken: cts.Token))
+        {
+            received.Add(message.MessageId!);
+            if (received.Count == 2)
+                break;
+        }
+
+        await Assert.That(received).IsEquivalentTo(["1", "2"]);
+    }
+
+    [Test]
+    public async Task ConsumeAsync_ReportsEachFailureToOnReceiveError_AndResetsCountAfterSuccess()
+    {
+        using var cts = new CancellationTokenSource(TestTimeout);
+        var mock = new Mock<ISqsClient>();
+        mock.SetupSequence(c => c.ReceiveMessageAsync(It.IsAny<ReceiveMessageRequest>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Error.Failure("Goa.SQS.RequestThrottled", "Throttled"))
+            .ReturnsAsync(Error.Failure("Goa.SQS.RequestThrottled", "Throttled"))
+            .ReturnsAsync(Batch())
+            .ReturnsAsync(Error.Failure("Goa.SQS.AccessDenied", "Denied"))
+            .ReturnsAsync(() =>
+            {
+                cts.Cancel();
+                return CancelledFailure;
+            });
+
+        var reported = new List<(string Code, int ConsecutiveFailures)>();
+        var options = CreateOptions();
+        options.OnReceiveError = (error, consecutiveFailures) => reported.Add((error.Code, consecutiveFailures));
+
+        await foreach (var _ in mock.Object.ConsumeAsync(options, cancellationToken: cts.Token))
+        {
+        }
+
+        await Assert.That(reported).IsEquivalentTo(
+            [("Goa.SQS.RequestThrottled", 1), ("Goa.SQS.RequestThrottled", 2), ("Goa.SQS.AccessDenied", 1)],
+            TUnit.Assertions.Enums.CollectionOrdering.Matching);
+    }
+
+    [Test]
+    public async Task ConsumeAsync_AfterRepeatedFailures_EscalatesLogToError()
+    {
+        using var cts = new CancellationTokenSource(TestTimeout);
+        var failures = 0;
+        var mock = new Mock<ISqsClient>();
+        mock.Setup(c => c.ReceiveMessageAsync(It.IsAny<ReceiveMessageRequest>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(() =>
+            {
+                if (++failures > SqsConsumerExtensions.ErrorLogThreshold + 1)
+                {
+                    cts.Cancel();
+                    return CancelledFailure;
+                }
+
+                return Error.Failure("Goa.SQS.QueueDoesNotExist", "Queue does not exist");
+            });
+
+        var logs = new CapturingLoggerProvider();
+        await foreach (var _ in mock.Object.ConsumeAsync(CreateOptions(), logs.CreateLogger("test"), cts.Token))
+        {
+        }
+
+        // Failures 1-4 are warnings; failures 5 and 6 are errors.
+        await Assert.That(logs.Entries.Count(e => e.Level == LogLevel.Warning)).IsEqualTo(SqsConsumerExtensions.ErrorLogThreshold - 1);
+        await Assert.That(logs.Entries.Count(e => e.Level == LogLevel.Error)).IsEqualTo(2);
     }
 
     [Test]
@@ -300,6 +479,9 @@ public class SqsConsumerTests
         await Assert.That(() => client.ConsumeAsync(new SqsConsumerOptions { QueueUrl = QueueUrl, MaxNumberOfMessages = 11 })).Throws<ArgumentOutOfRangeException>();
         await Assert.That(() => client.ConsumeAsync(new SqsConsumerOptions { QueueUrl = QueueUrl, WaitTime = TimeSpan.FromSeconds(21) })).Throws<ArgumentOutOfRangeException>();
         await Assert.That(() => client.ConsumeAsync(new SqsConsumerOptions { QueueUrl = QueueUrl, WaitTime = TimeSpan.FromSeconds(-1) })).Throws<ArgumentOutOfRangeException>();
+        await Assert.That(() => client.ConsumeAsync(new SqsConsumerOptions { QueueUrl = QueueUrl, WaitTime = TimeSpan.Zero })).Throws<ArgumentOutOfRangeException>();
+        await Assert.That(() => client.ConsumeAsync(new SqsConsumerOptions { QueueUrl = QueueUrl, WaitTime = TimeSpan.FromMilliseconds(500) })).Throws<ArgumentOutOfRangeException>();
+        await Assert.That(() => client.ConsumeAsync(new SqsConsumerOptions { QueueUrl = QueueUrl, MaxRetryDelay = TimeSpan.FromHours(2) })).Throws<ArgumentOutOfRangeException>();
         await Assert.That(() => client.ConsumeAsync(new SqsConsumerOptions { QueueUrl = QueueUrl, VisibilityTimeout = TimeSpan.FromHours(13) })).Throws<ArgumentOutOfRangeException>();
         await Assert.That(() => client.ConsumeAsync(new SqsConsumerOptions { QueueUrl = QueueUrl, InitialRetryDelay = TimeSpan.Zero })).Throws<ArgumentOutOfRangeException>();
         await Assert.That(() => client.ConsumeAsync(new SqsConsumerOptions { QueueUrl = QueueUrl, InitialRetryDelay = TimeSpan.FromSeconds(5), MaxRetryDelay = TimeSpan.FromSeconds(1) })).Throws<ArgumentOutOfRangeException>();
