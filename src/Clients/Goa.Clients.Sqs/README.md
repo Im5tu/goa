@@ -16,6 +16,8 @@ dotnet add package Goa.Clients.Sqs
 - Support for standard and FIFO queues
 - Batch operations for improved performance
 - Dead letter queue support
+- Long-polling `IAsyncEnumerable` consumer with per-message complete/abandon/extend handles
+- Message visibility control (`ChangeMessageVisibility` and `ChangeMessageVisibilityBatch`)
 
 ## Usage
 
@@ -70,13 +72,85 @@ public async Task<List<SqsMessage>> ReceiveMessagesAsync(string queueUrl)
     {
         QueueUrl = queueUrl,
         MaxNumberOfMessages = 10,
-        WaitTimeSeconds = 20
+        WaitTimeSeconds = 20,
+        MessageSystemAttributeNames = ["ApproximateReceiveCount", "MessageGroupId"]
     };
     
     var result = await _sqs.ReceiveMessageAsync(request);
     return result.IsError ? new List<SqsMessage>() : result.Value.Messages ?? new List<SqsMessage>();
 }
 ```
+
+> The SQS client's `HttpTimeout` defaults to 30 seconds so that 20 second long polls complete. If you lower it,
+> keep it above the `WaitTimeSeconds` you use.
+
+### Consuming a Queue
+
+`ConsumeAsync` long-polls a queue until its cancellation token is cancelled and yields each message with a handle
+to settle it. It is designed for long-running workers (for example a `BackgroundService`):
+
+- Cancellation ends the enumeration cleanly; no `OperationCanceledException` escapes.
+- Failed receives (throttling, network errors, service errors) are logged and retried with exponential backoff and
+  jitter (`InitialRetryDelay`, doubling up to `MaxRetryDelay`), so transient errors never fault the stream.
+- Invalid options throw an `ArgumentException` when `ConsumeAsync` is called.
+- Messages are never deleted automatically. A message that is not completed, including any message from a received
+  batch that had not been yielded when enumeration stopped, is redelivered once its visibility timeout expires and
+  moves to the dead-letter queue after the queue's `maxReceiveCount`.
+
+```csharp
+using Goa.Clients.Sqs.Consumer;
+
+var options = new SqsConsumerOptions
+{
+    QueueUrl = queueUrl,
+    MaxNumberOfMessages = 10,                      // 1-10, default 10
+    WaitTime = TimeSpan.FromSeconds(20),           // 0-20s, default 20s
+    VisibilityTimeout = TimeSpan.FromSeconds(60),  // default: the queue's setting
+    MessageAttributeNames = ["traceparent"],
+    MessageSystemAttributeNames = ["MessageGroupId", "ApproximateReceiveCount"]
+};
+
+await foreach (var message in _sqs.ConsumeAsync(options, logger, stoppingToken))
+{
+    var outcome = await HandleAsync(message.Body, message.ApproximateReceiveCount, stoppingToken);
+
+    if (outcome == Outcome.Success)
+    {
+        await message.CompleteAsync(stoppingToken);          // DeleteMessage
+    }
+    else
+    {
+        await message.AbandonAsync(stoppingToken);           // no request: redelivered when the visibility timeout expires
+        // or: await message.AbandonAsync(TimeSpan.Zero);    // ChangeMessageVisibility: redeliver now (or after a delay)
+    }
+}
+```
+
+For long-running work, call `ExtendVisibilityAsync` before the visibility timeout expires to keep the message hidden
+from other consumers:
+
+```csharp
+await message.ExtendVisibilityAsync(TimeSpan.FromMinutes(2), cancellationToken);
+```
+
+Each settle operation returns `ErrorOr<Success>`, so failures (for example an expired receipt handle) are reported
+rather than thrown.
+
+### Changing Message Visibility
+
+```csharp
+using Goa.Clients.Sqs.Operations.ChangeMessageVisibility;
+
+var result = await _sqs.ChangeMessageVisibilityAsync(new ChangeMessageVisibilityRequest
+{
+    QueueUrl = queueUrl,
+    ReceiptHandle = message.ReceiptHandle!,
+    VisibilityTimeout = 0 // seconds, 0-43200; 0 makes the message visible immediately
+});
+```
+
+`ChangeMessageVisibilityBatchAsync` changes up to 10 messages at once and reports per-entry `Successful` and
+`Failed` results.
 
 ### Multiple Messages
 
