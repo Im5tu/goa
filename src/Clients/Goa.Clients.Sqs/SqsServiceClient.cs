@@ -1,6 +1,8 @@
 using ErrorOr;
 using Goa.Clients.Core;
 using Goa.Clients.Core.Http;
+using Goa.Clients.Sqs.Operations.ChangeMessageVisibility;
+using Goa.Clients.Sqs.Operations.ChangeMessageVisibilityBatch;
 using Goa.Clients.Sqs.Operations.DeleteMessage;
 using Goa.Clients.Sqs.Operations.ReceiveMessage;
 using Goa.Clients.Sqs.Operations.SendMessage;
@@ -12,6 +14,11 @@ namespace Goa.Clients.Sqs;
 
 internal sealed class SqsServiceClient : JsonAwsServiceClient<SqsServiceClientConfiguration>, ISqsClient
 {
+    /// <summary>
+    /// The maximum visibility timeout SQS accepts, in seconds (12 hours).
+    /// </summary>
+    internal const int MaxVisibilityTimeoutSeconds = 43200;
+
     public SqsServiceClient(
         IHttpClientFactory httpClientFactory,
         SqsServiceClientConfiguration configuration,
@@ -148,6 +155,81 @@ internal sealed class SqsServiceClient : JsonAwsServiceClient<SqsServiceClientCo
         {
             Logger.DeleteMessageFailed(ex, request.QueueUrl);
             return Error.Failure("SQS.DeleteMessage.Failed", $"Failed to delete message from SQS queue {request.QueueUrl}");
+        }
+    }
+
+    public async Task<ErrorOr<ChangeMessageVisibilityResponse>> ChangeMessageVisibilityAsync(ChangeMessageVisibilityRequest request, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+
+        if (string.IsNullOrWhiteSpace(request.QueueUrl))
+            return Error.Validation("ChangeMessageVisibilityRequest.QueueUrl", "Queue URL is required.");
+
+        if (string.IsNullOrWhiteSpace(request.ReceiptHandle))
+            return Error.Validation("ChangeMessageVisibilityRequest.ReceiptHandle", "Receipt handle is required.");
+
+        if (request.VisibilityTimeout is < 0 or > MaxVisibilityTimeoutSeconds)
+            return Error.Validation("ChangeMessageVisibilityRequest.VisibilityTimeout", "VisibilityTimeout must be between 0 and 43200 seconds.");
+
+        try
+        {
+            var response = await SendAsync<ChangeMessageVisibilityRequest, ChangeMessageVisibilityResponse>(
+                HttpMethod.Post,
+                "/",
+                request,
+                "AmazonSQS.ChangeMessageVisibility",
+                cancellationToken);
+
+            return ConvertApiResponse(response);
+        }
+        catch (Exception ex)
+        {
+            Logger.ChangeMessageVisibilityFailed(ex, request.QueueUrl);
+            return Error.Failure("SQS.ChangeMessageVisibility.Failed", $"Failed to change message visibility in SQS queue {request.QueueUrl}");
+        }
+    }
+
+    public async Task<ErrorOr<ChangeMessageVisibilityBatchResponse>> ChangeMessageVisibilityBatchAsync(ChangeMessageVisibilityBatchRequest request, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+
+        if (string.IsNullOrWhiteSpace(request.QueueUrl))
+            return Error.Validation("ChangeMessageVisibilityBatchRequest.QueueUrl", "Queue URL is required.");
+
+        if (request.Entries is null || request.Entries.Count == 0)
+            return Error.Validation("ChangeMessageVisibilityBatchRequest.Entries", "At least one entry is required.");
+
+        if (request.Entries.Count > 10)
+            return Error.Validation("ChangeMessageVisibilityBatchRequest.Entries", "Maximum 10 entries allowed per batch.");
+
+        var ids = new HashSet<string>();
+        foreach (var entry in request.Entries)
+        {
+            if (string.IsNullOrWhiteSpace(entry.Id))
+                return Error.Validation("ChangeMessageVisibilityBatchRequestEntry.Id", "Entry ID is required for all entries.");
+            if (!ids.Add(entry.Id))
+                return Error.Validation("ChangeMessageVisibilityBatchRequestEntry.Id", $"Duplicate entry ID: {entry.Id}");
+            if (string.IsNullOrWhiteSpace(entry.ReceiptHandle))
+                return Error.Validation("ChangeMessageVisibilityBatchRequestEntry.ReceiptHandle", "Receipt handle is required for all entries.");
+            if (entry.VisibilityTimeout is < 0 or > MaxVisibilityTimeoutSeconds)
+                return Error.Validation("ChangeMessageVisibilityBatchRequestEntry.VisibilityTimeout", "VisibilityTimeout must be between 0 and 43200 seconds.");
+        }
+
+        try
+        {
+            var response = await SendAsync<ChangeMessageVisibilityBatchRequest, ChangeMessageVisibilityBatchResponse>(
+                HttpMethod.Post,
+                "/",
+                request,
+                "AmazonSQS.ChangeMessageVisibilityBatch",
+                cancellationToken);
+
+            return ConvertApiResponse(response);
+        }
+        catch (Exception ex)
+        {
+            Logger.ChangeMessageVisibilityBatchFailed(ex, request.QueueUrl);
+            return Error.Failure("SQS.ChangeMessageVisibilityBatch.Failed", $"Failed to change message visibility batch in SQS queue {request.QueueUrl}");
         }
     }
 

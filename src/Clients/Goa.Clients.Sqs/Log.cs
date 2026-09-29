@@ -15,4 +15,10 @@ internal static partial class Log
 
     [LoggerMessage(EventId = 4, Level = LogLevel.Error, Message = "Failed to delete message from SQS queue {QueueUrl}")]
     public static partial void DeleteMessageFailed(this ILogger logger, Exception exception, string queueUrl);
+
+    [LoggerMessage(EventId = 5, Level = LogLevel.Error, Message = "Failed to change message visibility in SQS queue {QueueUrl}")]
+    public static partial void ChangeMessageVisibilityFailed(this ILogger logger, Exception exception, string queueUrl);
+
+    [LoggerMessage(EventId = 6, Level = LogLevel.Error, Message = "Failed to change message visibility batch in SQS queue {QueueUrl}")]
+    public static partial void ChangeMessageVisibilityBatchFailed(this ILogger logger, Exception exception, string queueUrl);
 }
