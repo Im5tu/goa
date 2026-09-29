@@ -81,8 +81,8 @@ public async Task<List<SqsMessage>> ReceiveMessagesAsync(string queueUrl)
 }
 ```
 
-> The SQS client's `HttpTimeout` defaults to 30 seconds so that 20 second long polls complete. If you lower it,
-> keep it above the `WaitTimeSeconds` you use.
+> `HttpTimeout` (default 10 seconds) applies to each request. A `ReceiveMessage` request gets its `WaitTimeSeconds`
+> on top of that, so long polls are never cut short by the client.
 
 ### Consuming a Queue
 

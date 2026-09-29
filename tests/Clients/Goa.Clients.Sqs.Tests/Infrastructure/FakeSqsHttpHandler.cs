@@ -11,11 +11,13 @@ public sealed class FakeSqsHttpHandler : HttpMessageHandler
 {
     private readonly HttpStatusCode _statusCode;
     private readonly string _responseBody;
+    private readonly TimeSpan _responseDelay;
 
-    public FakeSqsHttpHandler(string responseBody = "{}", HttpStatusCode statusCode = HttpStatusCode.OK)
+    public FakeSqsHttpHandler(string responseBody = "{}", HttpStatusCode statusCode = HttpStatusCode.OK, TimeSpan? responseDelay = null)
     {
         _responseBody = responseBody;
         _statusCode = statusCode;
+        _responseDelay = responseDelay ?? TimeSpan.Zero;
     }
 
     public List<CapturedRequest> Requests { get; } = [];
@@ -25,6 +27,9 @@ public sealed class FakeSqsHttpHandler : HttpMessageHandler
         var body = request.Content is null ? string.Empty : await request.Content.ReadAsStringAsync(cancellationToken);
         var target = request.Headers.TryGetValues("X-Amz-Target", out var values) ? string.Join(",", values) : null;
         Requests.Add(new CapturedRequest(target, body));
+
+        if (_responseDelay > TimeSpan.Zero)
+            await Task.Delay(_responseDelay, cancellationToken);
 
         return new HttpResponseMessage(_statusCode)
         {

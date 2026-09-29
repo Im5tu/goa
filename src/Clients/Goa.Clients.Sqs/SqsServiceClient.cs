@@ -19,6 +19,11 @@ internal sealed class SqsServiceClient : JsonAwsServiceClient<SqsServiceClientCo
     /// </summary>
     internal const int MaxVisibilityTimeoutSeconds = 43200;
 
+    /// <summary>
+    /// The maximum long-poll wait SQS accepts, in seconds.
+    /// </summary>
+    internal const int MaxWaitTimeSeconds = 20;
+
     public SqsServiceClient(
         IHttpClientFactory httpClientFactory,
         SqsServiceClientConfiguration configuration,
@@ -46,11 +51,10 @@ internal sealed class SqsServiceClient : JsonAwsServiceClient<SqsServiceClientCo
 
         try
         {
-            var response = await SendAsync<SendMessageRequest, SendMessageResponse>(
-                HttpMethod.Post,
-                "/",
+            var response = await SendWithTimeoutAsync<SendMessageRequest, SendMessageResponse>(
                 request,
                 "AmazonSQS.SendMessage",
+                Configuration.HttpTimeout,
                 cancellationToken);
 
             return ConvertApiResponse(response);
@@ -86,11 +90,10 @@ internal sealed class SqsServiceClient : JsonAwsServiceClient<SqsServiceClientCo
 
         try
         {
-            var response = await SendAsync<SendMessageBatchRequest, SendMessageBatchResponse>(
-                HttpMethod.Post,
-                "/",
+            var response = await SendWithTimeoutAsync<SendMessageBatchRequest, SendMessageBatchResponse>(
                 request,
                 "AmazonSQS.SendMessageBatch",
+                Configuration.HttpTimeout,
                 cancellationToken);
 
             return ConvertApiResponse(response);
@@ -114,11 +117,10 @@ internal sealed class SqsServiceClient : JsonAwsServiceClient<SqsServiceClientCo
 
         try
         {
-            var response = await SendAsync<ReceiveMessageRequest, ReceiveMessageResponse>(
-                HttpMethod.Post,
-                "/",
+            var response = await SendWithTimeoutAsync<ReceiveMessageRequest, ReceiveMessageResponse>(
                 request,
                 "AmazonSQS.ReceiveMessage",
+                GetReceiveTimeout(request),
                 cancellationToken);
 
             return ConvertApiResponse(response);
@@ -142,11 +144,10 @@ internal sealed class SqsServiceClient : JsonAwsServiceClient<SqsServiceClientCo
 
         try
         {
-            var response = await SendAsync<DeleteMessageRequest, DeleteMessageResponse>(
-                HttpMethod.Post,
-                "/",
+            var response = await SendWithTimeoutAsync<DeleteMessageRequest, DeleteMessageResponse>(
                 request,
                 "AmazonSQS.DeleteMessage",
+                Configuration.HttpTimeout,
                 cancellationToken);
 
             return ConvertApiResponse(response);
@@ -173,11 +174,10 @@ internal sealed class SqsServiceClient : JsonAwsServiceClient<SqsServiceClientCo
 
         try
         {
-            var response = await SendAsync<ChangeMessageVisibilityRequest, ChangeMessageVisibilityResponse>(
-                HttpMethod.Post,
-                "/",
+            var response = await SendWithTimeoutAsync<ChangeMessageVisibilityRequest, ChangeMessageVisibilityResponse>(
                 request,
                 "AmazonSQS.ChangeMessageVisibility",
+                Configuration.HttpTimeout,
                 cancellationToken);
 
             return ConvertApiResponse(response);
@@ -217,11 +217,10 @@ internal sealed class SqsServiceClient : JsonAwsServiceClient<SqsServiceClientCo
 
         try
         {
-            var response = await SendAsync<ChangeMessageVisibilityBatchRequest, ChangeMessageVisibilityBatchResponse>(
-                HttpMethod.Post,
-                "/",
+            var response = await SendWithTimeoutAsync<ChangeMessageVisibilityBatchRequest, ChangeMessageVisibilityBatchResponse>(
                 request,
                 "AmazonSQS.ChangeMessageVisibilityBatch",
+                Configuration.HttpTimeout,
                 cancellationToken);
 
             return ConvertApiResponse(response);
@@ -231,6 +230,38 @@ internal sealed class SqsServiceClient : JsonAwsServiceClient<SqsServiceClientCo
             Logger.ChangeMessageVisibilityBatchFailed(ex, request.QueueUrl);
             return Error.Failure("SQS.ChangeMessageVisibilityBatch.Failed", $"Failed to change message visibility batch in SQS queue {request.QueueUrl}");
         }
+    }
+
+    /// <summary>
+    /// Sends a request with a per-request timeout. The named HttpClient has no timeout of its own so that
+    /// long-polling receives can wait longer than other operations.
+    /// </summary>
+    private async Task<ApiResponse<TResponse>> SendWithTimeoutAsync<TRequest, TResponse>(TRequest request, string target, TimeSpan timeout, CancellationToken cancellationToken)
+        where TResponse : class
+    {
+        using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        timeoutCts.CancelAfter(timeout);
+
+        try
+        {
+            return await SendAsync<TRequest, TResponse>(HttpMethod.Post, "/", request, target, timeoutCts.Token);
+        }
+        catch (OperationCanceledException ex) when (!cancellationToken.IsCancellationRequested && timeoutCts.IsCancellationRequested)
+        {
+            throw new TimeoutException($"The {target} request did not complete within {timeout.TotalSeconds:0.###} seconds.", ex);
+        }
+    }
+
+    /// <summary>
+    /// A receive may legitimately wait up to <c>WaitTimeSeconds</c> for messages, so it gets that long on top of
+    /// <see cref="Core.Configuration.AwsServiceConfiguration.HttpTimeout"/>.
+    /// </summary>
+    internal TimeSpan GetReceiveTimeout(ReceiveMessageRequest request)
+    {
+        if (Configuration.HttpTimeout == Timeout.InfiniteTimeSpan)
+            return Timeout.InfiniteTimeSpan;
+
+        return Configuration.HttpTimeout + TimeSpan.FromSeconds(Math.Clamp(request.WaitTimeSeconds ?? 0, 0, MaxWaitTimeSeconds));
     }
 
     private static ErrorOr<T> ConvertApiResponse<T>(ApiResponse<T> response)

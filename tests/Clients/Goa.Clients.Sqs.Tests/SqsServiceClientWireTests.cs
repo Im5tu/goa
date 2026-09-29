@@ -17,26 +17,58 @@ public class SqsServiceClientWireTests
     private const string QueueUrl = "http://localhost:4566/000000000000/test-queue";
 
     [Test]
-    public async Task Configuration_DefaultHttpTimeout_ExceedsMaximumLongPollWait()
+    public async Task Configuration_DefaultHttpTimeout_IsTenSeconds()
     {
-        await Assert.That(new SqsServiceClientConfiguration().HttpTimeout).IsEqualTo(TimeSpan.FromSeconds(30));
+        await Assert.That(new SqsServiceClientConfiguration().HttpTimeout).IsEqualTo(TimeSpan.FromSeconds(10));
     }
 
     [Test]
-    public async Task AddSqs_AppliesConfiguredHttpTimeoutToHttpClient()
+    public async Task AddSqs_HttpClientHasNoClientWideTimeout()
     {
         var services = new ServiceCollection();
         services.AddLogging();
-        services.AddSqs(config =>
-        {
-            config.Region = "us-east-1";
-            config.HttpTimeout = TimeSpan.FromSeconds(45);
-        });
+        services.AddSqs(config => config.Region = "us-east-1");
 
         await using var provider = services.BuildServiceProvider();
         var httpClient = provider.GetRequiredService<IHttpClientFactory>().CreateClient(FakeSqsClientFactory.HttpClientName);
 
-        await Assert.That(httpClient.Timeout).IsEqualTo(TimeSpan.FromSeconds(45));
+        // Timeouts are applied per request so that long-polling receives can outlast HttpTimeout.
+        await Assert.That(httpClient.Timeout).IsEqualTo(Timeout.InfiniteTimeSpan);
+    }
+
+    [Test]
+    public async Task ReceiveMessageAsync_LongPollLongerThanHttpTimeout_Succeeds()
+    {
+        var handler = new FakeSqsHttpHandler("""{"Messages":[]}""", responseDelay: TimeSpan.FromMilliseconds(600));
+        await using var provider = FakeSqsClientFactory.Create(handler, out var client, config => config.HttpTimeout = TimeSpan.FromMilliseconds(200));
+
+        var result = await client.ReceiveMessageAsync(new ReceiveMessageRequest { QueueUrl = QueueUrl, WaitTimeSeconds = 1 });
+
+        await Assert.That(result.IsError).IsFalse();
+    }
+
+    [Test]
+    public async Task ReceiveMessageAsync_SlowerThanWaitTimePlusHttpTimeout_ReturnsFailure()
+    {
+        var handler = new FakeSqsHttpHandler("""{"Messages":[]}""", responseDelay: TimeSpan.FromSeconds(5));
+        await using var provider = FakeSqsClientFactory.Create(handler, out var client, config => config.HttpTimeout = TimeSpan.FromMilliseconds(200));
+
+        var result = await client.ReceiveMessageAsync(new ReceiveMessageRequest { QueueUrl = QueueUrl, WaitTimeSeconds = 0 });
+
+        await Assert.That(result.IsError).IsTrue();
+        await Assert.That(result.FirstError.Code).IsEqualTo("SQS.ReceiveMessage.Failed");
+    }
+
+    [Test]
+    public async Task SendMessageAsync_SlowerThanHttpTimeout_ReturnsFailure()
+    {
+        var handler = new FakeSqsHttpHandler("""{"MessageId":"m1"}""", responseDelay: TimeSpan.FromSeconds(5));
+        await using var provider = FakeSqsClientFactory.Create(handler, out var client, config => config.HttpTimeout = TimeSpan.FromMilliseconds(200));
+
+        var result = await client.SendMessageAsync(new Operations.SendMessage.SendMessageRequest { QueueUrl = QueueUrl, MessageBody = "hi" });
+
+        await Assert.That(result.IsError).IsTrue();
+        await Assert.That(result.FirstError.Code).IsEqualTo("SQS.SendMessage.Failed");
     }
 
     [Test]

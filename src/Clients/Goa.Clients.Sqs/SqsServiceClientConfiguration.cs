@@ -11,12 +11,11 @@ public sealed class SqsServiceClientConfiguration : AwsServiceConfiguration
     /// Initializes a new instance of the SqsServiceClientConfiguration class.
     /// </summary>
     /// <remarks>
-    /// <see cref="AwsServiceConfiguration.HttpTimeout"/> defaults to 30 seconds so that long-polling
-    /// receives (<c>WaitTimeSeconds</c> up to 20) complete before the HTTP client gives up.
+    /// <see cref="AwsServiceConfiguration.HttpTimeout"/> is applied to each request. <c>ReceiveMessage</c> requests
+    /// get their <c>WaitTimeSeconds</c> on top of it, so long polls are never cut short by the client.
     /// </remarks>
     public SqsServiceClientConfiguration() : base("sqs")
     {
         ApiVersion = "2012-11-05";
-        HttpTimeout = TimeSpan.FromSeconds(30);
     }
 }

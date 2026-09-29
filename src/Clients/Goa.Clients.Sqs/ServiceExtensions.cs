@@ -56,7 +56,9 @@ public static class ServiceExtensions
         ArgumentNullException.ThrowIfNull(configuration);
 
         // Add the Goa service infrastructure for SQS
-        services.AddGoaService(nameof(SqsServiceClient), configuration.HttpTimeout);
+        // No client-wide timeout: SqsServiceClient applies HttpTimeout per request, and extends it by
+        // WaitTimeSeconds for long-polling receives.
+        services.AddGoaService(nameof(SqsServiceClient), Timeout.InfiniteTimeSpan);
 
         // Register the configuration
         services.TryAddSingleton(configuration);
