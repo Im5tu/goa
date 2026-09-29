@@ -59,6 +59,10 @@ internal sealed class SqsServiceClient : JsonAwsServiceClient<SqsServiceClientCo
 
             return ConvertApiResponse(response);
         }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            return Cancelled("SendMessage");
+        }
         catch (Exception ex)
         {
             Logger.SendMessageFailed(ex, request.QueueUrl);
@@ -98,6 +102,10 @@ internal sealed class SqsServiceClient : JsonAwsServiceClient<SqsServiceClientCo
 
             return ConvertApiResponse(response);
         }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            return Cancelled("SendMessageBatch");
+        }
         catch (Exception ex)
         {
             Logger.SendMessageBatchFailed(ex, request.QueueUrl);
@@ -125,6 +133,10 @@ internal sealed class SqsServiceClient : JsonAwsServiceClient<SqsServiceClientCo
 
             return ConvertApiResponse(response);
         }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            return Cancelled("ReceiveMessage");
+        }
         catch (Exception ex)
         {
             Logger.ReceiveMessageFailed(ex, request.QueueUrl);
@@ -151,6 +163,10 @@ internal sealed class SqsServiceClient : JsonAwsServiceClient<SqsServiceClientCo
                 cancellationToken);
 
             return ConvertApiResponse(response);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            return Cancelled("DeleteMessage");
         }
         catch (Exception ex)
         {
@@ -181,6 +197,10 @@ internal sealed class SqsServiceClient : JsonAwsServiceClient<SqsServiceClientCo
                 cancellationToken);
 
             return ConvertApiResponse(response);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            return Cancelled("ChangeMessageVisibility");
         }
         catch (Exception ex)
         {
@@ -225,6 +245,10 @@ internal sealed class SqsServiceClient : JsonAwsServiceClient<SqsServiceClientCo
 
             return ConvertApiResponse(response);
         }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            return Cancelled("ChangeMessageVisibilityBatch");
+        }
         catch (Exception ex)
         {
             Logger.ChangeMessageVisibilityBatchFailed(ex, request.QueueUrl);
@@ -263,6 +287,9 @@ internal sealed class SqsServiceClient : JsonAwsServiceClient<SqsServiceClientCo
 
         return Configuration.HttpTimeout + TimeSpan.FromSeconds(Math.Clamp(request.WaitTimeSeconds ?? 0, 0, MaxWaitTimeSeconds));
     }
+
+    private static Error Cancelled(string operation) =>
+        Error.Failure($"SQS.{operation}.Cancelled", $"The {operation} request was cancelled.");
 
     private static ErrorOr<T> ConvertApiResponse<T>(ApiResponse<T> response)
     {

@@ -6,6 +6,7 @@ using Goa.Clients.Sqs.Operations.ChangeMessageVisibilityBatch;
 using Goa.Clients.Sqs.Operations.ReceiveMessage;
 using Goa.Clients.Sqs.Tests.Infrastructure;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 
 namespace Goa.Clients.Sqs.Tests;
 
@@ -69,6 +70,38 @@ public class SqsServiceClientWireTests
 
         await Assert.That(result.IsError).IsTrue();
         await Assert.That(result.FirstError.Code).IsEqualTo("SQS.SendMessage.Failed");
+    }
+
+    [Test]
+    public async Task ReceiveMessageAsync_WhenCallerCancels_ReturnsCancelledErrorWithoutErrorLogs()
+    {
+        var logs = new CapturingLoggerProvider();
+        var handler = new FakeSqsHttpHandler("""{"Messages":[]}""", responseDelay: TimeSpan.FromSeconds(30));
+        await using var provider = FakeSqsClientFactory.Create(handler, out var client, loggerProvider: logs);
+        using var cts = new CancellationTokenSource(TimeSpan.FromMilliseconds(100));
+
+        var result = await client.ReceiveMessageAsync(new ReceiveMessageRequest { QueueUrl = QueueUrl, WaitTimeSeconds = 20 }, cts.Token);
+
+        await Assert.That(result.IsError).IsTrue();
+        await Assert.That(result.FirstError.Code).IsEqualTo("SQS.ReceiveMessage.Cancelled");
+        await Assert.That(logs.Entries.Where(e => e.Level >= LogLevel.Error)).IsEmpty();
+    }
+
+    [Test]
+    public async Task ChangeMessageVisibilityAsync_WhenCallerCancels_ReturnsCancelledError()
+    {
+        var handler = new FakeSqsHttpHandler(responseDelay: TimeSpan.FromSeconds(30));
+        await using var provider = FakeSqsClientFactory.Create(handler, out var client);
+        using var cts = new CancellationTokenSource(TimeSpan.FromMilliseconds(100));
+
+        var result = await client.ChangeMessageVisibilityAsync(new ChangeMessageVisibilityRequest
+        {
+            QueueUrl = QueueUrl,
+            ReceiptHandle = "receipt-1",
+            VisibilityTimeout = 0
+        }, cts.Token);
+
+        await Assert.That(result.FirstError.Code).IsEqualTo("SQS.ChangeMessageVisibility.Cancelled");
     }
 
     [Test]
